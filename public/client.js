@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io("https://musicspy.onrender.com");
 
 let currentCode = "";
 let myId = "";
@@ -63,13 +63,19 @@ socket.on("lobbyUpdate", (lobby) => {
 });
 
 socket.on("gameStarted", (data) => {
+  myId = socket.id;
+
+  const isSpy = socket.id === data.spyId;
+
   document.getElementById("theme").innerText =
-    "Theme: " + data.theme;
+    isSpy ? "YOU ARE THE SPY" : "Theme: " + data.theme;
+
+  document.getElementById("game").classList.remove("hidden");
 });
 
-socket.on("turn", ({ playerId }) => {
+socket.on("turn", ({ playerId, name }) => {
   document.getElementById("turn").innerText =
-    "Turn: " + playerId;
+    "🎧 Now playing: " + (name || "Unknown player");
 });
 
 socket.on("newTrack", (url) => {

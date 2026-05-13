@@ -80,16 +80,12 @@ io.on("connection", (socket) => {
     lobby.order = shuffle(lobby.players.map(p => p.id));
     lobby.currentTurn = 0;
 
-    lobby.players.forEach((p) => {
-      const isSpy = p.id === lobby.spy;
-
-      io.to(p.id).emit("gameStarted", {
-        theme: isSpy ? null : lobby.theme,
-        round: lobby.round,
-        order: lobby.order,
-        isSpy
-      });
-    });
+    io.to(code).emit("gameStarted", {
+  theme: lobby.theme,
+  round: lobby.round,
+  order: lobby.order,
+  spyId: lobby.spy
+});
 
     nextTurn(code);
   });
