@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Music Spy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="menu">
+  <h1>Music Spy</h1>
+  <input id="name" placeholder="nickname" />
+  <input id="code" placeholder="room code (optional)" />
+  <button onclick="createLobby()">Create Lobby</button>
+  <button onclick="joinLobby()">Join Lobby</button>
+</div>
+
+<div id="lobby" class="hidden">
+  <h2>Lobby</h2>
+  <p id="roomCode"></p>
+  <button onclick="startGame()">Start Game</button>
+  <div id="players"></div>
+</div>
+
+<div id="game" class="hidden">
+  <h2 id="theme"></h2>
+
+  <div id="youtube"></div>
+
+  <input id="url" placeholder="YouTube link" />
+  <button onclick="sendTrack()">Send Track</button>
+
+  <div id="turn"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+
+</body>
+</html>
