@@ -254,9 +254,7 @@ function advanceTurn(code) {
 
     lobby.round += 1;
     lobby.currentTurnIndex = 0;
-    const activeBaseOrder = lobby.baseOrder.filter((id) => lobby.players.some((player) => player.id === id));
-    lobby.baseOrder = activeBaseOrder;
-    lobby.order = rotateOrder(activeBaseOrder, lobby.round - 1);
+  
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 

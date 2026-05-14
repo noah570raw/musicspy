@@ -310,6 +310,18 @@ button:disabled {
 }
 
 .invite-tools {
+
+  .lobby-actions {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rename-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
   margin: 14px 0 8px;
   display: grid;
   gap: 12px;
