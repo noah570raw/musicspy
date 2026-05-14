@@ -403,6 +403,7 @@ socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, 
   state.votedTarget = null;
   state.anonymousVoting = Boolean(anonymous);
   state.voteCandidates = candidates || [];
+  clearPlayer();
   showScreen("voting");
   renderVoteList(votes);
   updateVoteTimer(votingTime > 0 ? votingTime : null);
@@ -425,12 +426,14 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
+  clearPlayer();
   showScreen("results");
   updateVoteTimer(null);
   renderResults(data);
 });
 
 socket.on("gameCancelled", ({ reason }) => {
+  clearPlayer();
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
