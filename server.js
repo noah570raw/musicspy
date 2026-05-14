@@ -264,6 +264,7 @@ function advanceTurn(code) {
 
     lobby.round += 1;
     lobby.currentTurnIndex = 0;
+codex/scan-project-for-conflicts-with-server.js-and-style.css-slcx9t
     lobby.order = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
