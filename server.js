@@ -44,12 +44,6 @@ function shuffle(items) {
   return arr;
 }
 
-function rotateOrder(order, shift) {
-  if (!Array.isArray(order) || order.length === 0) return [];
-  const normalizedShift = ((shift % order.length) + order.length) % order.length;
-  return order.slice(normalizedShift).concat(order.slice(0, normalizedShift));
-}
-
 function clampNumber(value, allowed, fallback) {
   const number = Number(value);
   return allowed.includes(number) ? number : fallback;
@@ -270,8 +264,8 @@ function advanceTurn(code) {
 
     lobby.round += 1;
     lobby.currentTurnIndex = 0;
-    const activeOrder = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
-    lobby.order = rotateOrder(activeOrder, 1);
+codex/scan-project-for-conflicts-with-server.js-and-style.css-slcx9t
+    lobby.order = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 
@@ -471,7 +465,7 @@ io.on("connection", (socket) => {
     lobby.spies = spies;
     lobby.spy = spies[0] || null;
     lobby.baseOrder = shuffle(lobby.players.map((player) => player.id));
-    lobby.order = rotateOrder(lobby.baseOrder, 0);
+    lobby.order = [...lobby.baseOrder];
     lobby.currentTurnIndex = 0;
     lobby.votes = {};
     lobby.voteRound = 1;
