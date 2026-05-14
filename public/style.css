@@ -95,6 +95,10 @@ button {
   backdrop-filter: blur(22px);
 }
 
+.lobby-card {
+  width: min(100%, 1120px);
+}
+
 .screen {
   animation: pop 0.42s ease both;
 }
@@ -301,6 +305,57 @@ button:disabled {
   font-weight: 800;
 }
 
+.lobby-header .lead {
+  margin: 12px 0 0;
+}
+
+.lobby-grid {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.9fr) minmax(300px, 1.15fr) minmax(300px, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 22px;
+}
+
+.lobby-column {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.panel-title strong {
+  font-size: 1rem;
+}
+
+.panel-title span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.lobby-players {
+  display: grid;
+  gap: 12px;
+}
+
+.lobby-players .players-list,
+.lobby-players .lobby-actions,
+.lobby-players .status {
+  margin: 0;
+}
+
 .players-list,
 .order-list,
 .vote-list {
@@ -310,7 +365,6 @@ button:disabled {
 }
 
 .invite-tools {
-  margin: 14px 0 8px;
   display: grid;
   gap: 12px;
 }
@@ -318,7 +372,6 @@ button:disabled {
 .lobby-actions {
   display: grid;
   gap: 10px;
-  margin-bottom: 16px;
 }
 
 .rename-row {
@@ -339,6 +392,10 @@ button:disabled {
 #inviteQr {
   width: min(220px, 100%);
   border-radius: 12px;
+}
+
+.lobby-invite #inviteQr {
+  width: min(260px, 100%);
 }
 
 .player-row,
@@ -535,6 +592,16 @@ button:disabled {
   cursor: default;
 }
 
+@media (max-width: 1080px) {
+  .lobby-grid {
+    grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  }
+
+  .lobby-settings {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 920px) {
   .game-layout {
     grid-template-columns: 1fr;
@@ -558,7 +625,8 @@ button:disabled {
   }
 
   .two-col,
-  .rules {
+  .rules,
+  .lobby-grid {
     grid-template-columns: 1fr;
   }
 
@@ -586,11 +654,9 @@ select:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin: 18px 0;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.035);
+  padding: 0;
+  border: 0;
+  background: transparent;
   text-align: left;
 }
 
