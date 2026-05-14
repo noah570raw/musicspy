@@ -1,560 +1,240 @@
-:root {
-  --bg: #050505;
-  --panel: rgba(14, 14, 14, 0.86);
-  --panel-strong: rgba(24, 24, 24, 0.96);
-  --line: rgba(255, 255, 255, 0.1);
-  --muted: #b8b8b8;
-  --text: #f7f7fb;
-  --accent: #e50914;
-  --accent-2: #ffffff;
-  --danger: #ff1f2d;
-  --success: #ffffff;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  min-height: 100vh;
-  margin: 0;
-  overflow-x: hidden;
-  background:
-    radial-gradient(circle at 20% 10%, rgba(229, 9, 20, 0.22), transparent 28rem),
-    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.08), transparent 24rem),
-    var(--bg);
-  color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-button,
-input {
-  font: inherit;
-}
-
-button {
-  border: 0;
-}
-
-.noise {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.23;
-  background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: radial-gradient(circle, black, transparent 82%);
-}
-
-.orb {
-  position: fixed;
-  width: 16rem;
-  height: 16rem;
-  border-radius: 999px;
-  filter: blur(24px);
-  opacity: 0.42;
-  animation: float 8s ease-in-out infinite;
-}
-
-.orb-one {
-  top: 8%;
-  left: 7%;
-  background: var(--accent);
-}
-codex/add-lobby-settings-for-customizable-game-rules-kb9lz9
-.orb-two {
-  right: 9%;
-  bottom: 10%;
-  background: var(--accent-2);
-  animation-delay: -3s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(18px, -22px, 0) scale(1.08); }
-}
-
-.app-shell {
-  position: relative;
-  z-index: 1;
-  width: min(1180px, calc(100% - 32px));
-  min-height: 100vh;
-  margin: 0 auto;
-  display: grid;
-  place-items: center;
-  padding: 32px 0;
-}
-
-.card {
-  width: min(100%, 520px);
-  padding: 30px;
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  background: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)), var(--panel);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.08);
-  backdrop-filter: blur(22px);
-}
-
-.screen {
-  animation: pop 0.42s ease both;
-}
-
-@keyframes pop {
-  from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.hidden {
-  display: none !important;
-}
-
-.hero-card {
-  text-align: center;
-}
-
-.eyebrow {
-  margin: 0 0 10px;
-  color: var(--accent-2);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-h1,
-h2 {
-  margin: 0;
-  line-height: 0.95;
-  letter-spacing: -0.06em;
-}
-
-h1 {
-  font-size: clamp(3.5rem, 12vw, 7rem);
-  background: linear-gradient(100deg, #fff, #ff3340 48%, #ffffff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 0 34px rgba(229, 9, 20, 0.22);
-}
-
-h2 {
-  font-size: clamp(2rem, 6vw, 3.5rem);
-}
-
-.lead {
-  margin: 18px auto 24px;
-  max-width: 42rem;
-  color: var(--muted);
-  line-height: 1.65;
-}
-
-.lead.small {
-  margin-top: 12px;
-  font-size: 0.95rem;
-}
-
-.form-grid {
-  display: grid;
-  gap: 14px;
-  text-align: left;
-}
-
-label span {
-  display: block;
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-input {
-  width: 100%;
-  padding: 15px 16px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  outline: none;
-  background: rgba(0, 0, 0, 0.32);
-  color: var(--text);
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
-}
-
-input:focus {
-  border-color: rgba(229, 9, 20, 0.85);
-  box-shadow: 0 0 0 4px rgba(229, 9, 20, 0.18);
-}
-
-input:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.actions,
-.track-form {
-  display: grid;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.two-col {
-  grid-template-columns: 1fr 1fr;
-}
-
-button {
-  min-height: 50px;
-  padding: 13px 18px;
-  border-radius: 16px;
-  color: var(--text);
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
-}
-
-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.08);
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.primary {
-  background: linear-gradient(135deg, #e50914, #a8000b 52%, #ffffff);
-  box-shadow: 0 16px 36px rgba(229, 9, 20, 0.32);
-}
-
-.secondary,
-.code-pill {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.rules {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.rules div,
-.player-row,
-.order-row,
-.vote-row,
-.turn-card {
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255,255,255,0.045);
-}
-
-.rules div {
-  padding: 14px;
-}
-
-.rules strong {
-  display: block;
-  font-size: 1.3rem;
-}
-
-.rules span,
-.status,
-.turn-card span,
-.turn-card small {
-  color: var(--muted);
-  font-size: 0.86rem;
-}
-
-.status {
-  min-height: 20px;
-  margin: 14px 0 0;
-}
-
-.error {
-  color: var(--danger) !important;
-}
-
-.section-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.code-pill {
-  width: auto;
-  min-height: 0;
-  margin-left: 8px;
-  padding: 10px 12px;
-  color: var(--accent-2);
-  letter-spacing: 0.08em;
-}
-
-.badge {
-  flex: 0 0 auto;
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 999px;
-  color: var(--success);
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.players-list,
-.order-list,
-.vote-list {
-  display: grid;
-  gap: 10px;
-  margin: 18px 0;
-}
-
-.invite-tools {
-  margin: 14px 0 8px;
-  display: grid;
-  gap: 12px;
-}
-
-.lobby-actions {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.rename-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-}
-  
-.qr-wrap {
-  display: grid;
-  place-items: center;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-#inviteQr {
-  width: min(220px, 100%);
-  border-radius: 12px;
-}
-
-.player-row,
-.order-row,
-.vote-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-}
-
-.avatar,
-.order-row span {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 12px;
-  background: rgba(229, 9, 20, 0.22);
-  color: #ffffff;
-  font-weight: 800;
-}
-
-.player-row em {
-  margin-left: auto;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  color: var(--muted);
-  font-style: normal;
-  font-size: 0.75rem;
-}
-
-.game-layout {
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(230px, 0.8fr) minmax(360px, 1.4fr) minmax(220px, 0.7fr);
-  gap: 18px;
-  align-items: stretch;
-}
-
-.game-layout .card {
-  width: 100%;
-}
-
-.side-panel,
-.player-card {
-  min-height: 560px;
-}
-
-.theme-text {
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-.round-meter {
-  margin: 24px 0;
-}
-
-.round-meter span {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.round-meter div {
-  height: 10px;
-  margin-top: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.07);
-}
-
-.round-meter i {
-  display: block;
-  width: 33%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #e50914, #ffffff);
-}
-
-.turn-card {
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-}
-
-.turn-card strong {
-  font-size: 1.3rem;
-}
-
-.player-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap: 18px;
-}
-
-.timer-ring {
-  position: relative;
-  width: 132px;
-  height: 132px;
-  margin: 0 auto;
-}
-
-.timer-ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.timer-ring circle {
-  fill: none;
-  stroke-width: 9;
-}
-
-.timer-ring .track {
-  stroke: rgba(255,255,255,0.08);
-}
-
-.timer-ring .progress {
-  stroke: var(--accent-2);
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.35s linear, stroke 0.2s;
-}
-
-.timer-ring .progress.danger {
-  stroke: var(--danger);
-}
-
-.timer-ring div {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  text-align: center;
-}
-
-.timer-ring strong {
-  font-size: 2.5rem;
-  line-height: 1;
-}
-
-.timer-ring span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.embed {
-  display: grid;
-  min-height: 310px;
-  overflow: hidden;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: radial-gradient(circle at center, rgba(229, 9, 20, 0.18), rgba(255,255,255,0.035));
-}
-
-.embed.empty span {
-  color: var(--muted);
-}
-
-.embed iframe {
-  width: 100%;
-  height: 100%;
-  min-height: 310px;
-  border: 0;
-}
-
-.embed a {
-  color: var(--accent-2);
-  font-weight: 800;
-}
-
-.order-row.active {
-  border-color: rgba(229, 9, 20, 0.72);
-  background: rgba(229, 9, 20, 0.13);
-  box-shadow: 0 0 26px rgba(229, 9, 20, 0.18);
-}
-
-.vote-row {
-  width: 100%;
-  justify-content: space-between;
-  text-align: left;
-  background: rgba(255,255,255,0.055);
-}
-
-.vote-row.selected {
-  border-color: rgba(229, 9, 20, 0.85);
-  background: rgba(229, 9, 20, 0.18);
-}
-
-.vote-row.static {
-  cursor: default;
-}
-
-@media (max-width: 920px) {
-  .game-layout {
-    grid-template-columns: 1fr;
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.static("public"));
+
+const lobbies = {};
+const timers = {};
+
+const DEFAULT_SETTINGS = {
+  rounds: 3,
+  listenTime: 30,
+  spyMode: "auto",
+  spyCount: 1,
+  anonymousVoting: false,
+  votingTime: 60,
+  runoffOnTie: true
+};
+
+function generateCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ123456789";
+  let code = "";
+
+  do {
+    code = "";
+    for (let i = 0; i < 5; i += 1) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+  } while (lobbies[code]);
+
+  return code;
+}
+
+function shuffle(items) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function rotateOrder(order, shift) {
+  if (!Array.isArray(order) || order.length === 0) return [];
+  const normalizedShift = ((shift % order.length) + order.length) % order.length;
+  return order.slice(normalizedShift).concat(order.slice(0, normalizedShift));
+}
+
+function clampNumber(value, allowed, fallback) {
+  const number = Number(value);
+  return allowed.includes(number) ? number : fallback;
+}
+
+function normalizeSettings(input = {}) {
+  const next = { ...DEFAULT_SETTINGS };
+  next.rounds = clampNumber(input.rounds, [2, 3, 4, 5], DEFAULT_SETTINGS.rounds);
+  next.listenTime = clampNumber(input.listenTime, [15, 30, 45, 60], DEFAULT_SETTINGS.listenTime);
+  next.spyMode = input.spyMode === "manual" ? "manual" : "auto";
+  next.spyCount = clampNumber(input.spyCount, [1, 2, 3], DEFAULT_SETTINGS.spyCount);
+  next.anonymousVoting = Boolean(input.anonymousVoting);
+  next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], DEFAULT_SETTINGS.votingTime);
+  next.runoffOnTie = input.runoffOnTie !== false;
+  return next;
+}
+
+function getSpyCount(lobby) {
+  const playerCount = lobby.players.length;
+  const maxSpies = Math.max(1, Math.min(3, playerCount - 1));
+
+  if (lobby.settings.spyMode === "manual") {
+    return Math.min(lobby.settings.spyCount, maxSpies);
   }
 
-  .side-panel,
-  .player-card {
-    min-height: auto;
-  }
+  if (playerCount >= 9) return Math.min(3, maxSpies);
+  if (playerCount >= 6) return Math.min(2, maxSpies);
+  return 1;
 }
 
-@media (max-width: 560px) {
-  .app-shell {
-    width: min(100% - 18px, 1180px);
-    padding: 10px 0;
+function publicLobby(lobby) {
+  return {
+    code: lobby.code,
+    host: lobby.host,
+    players: lobby.players,
+    started: lobby.started,
+    phase: lobby.phase,
+    minPlayers: 3,
+    totalRounds: lobby.settings.rounds,
+    settings: lobby.settings
+  };
+}
+
+function emitLobbyUpdate(code) {
+  const lobby = lobbies[code];
+  if (!lobby) return;
+  io.to(code).emit("lobbyUpdate", publicLobby(lobby));
+}
+
+function emitGameState(code) {
+  const lobby = lobbies[code];
+  if (!lobby) return;
+  const currentPlayerId = lobby.order[lobby.currentTurnIndex] || null;
+  const currentPlayer = lobby.players.find((player) => player.id === currentPlayerId);
+
+  io.to(code).emit("gameState", {
+    code,
+    phase: lobby.phase,
+    round: lobby.round,
+    totalRounds: lobby.settings.rounds,
+    order: lobby.order,
+    currentPlayerId,
+    currentPlayerName: currentPlayer?.name || "",
+    turnNumber: lobby.currentTurnIndex + 1,
+    turnsInRound: lobby.order.length,
+    lastTrack: lobby.lastTrack,
+    players: lobby.players,
+    submittedThisTurn: lobby.submittedThisTurn,
+    turnStage: lobby.turnStage,
+    timeLeft: lobby.timeLeft,
+    listenTime: lobby.settings.listenTime,
+    settings: lobby.settings,
+    voteRound: lobby.voteRound,
+    voteCandidates: lobby.voteCandidates,
+    votes: lobby.settings.anonymousVoting && lobby.phase === "voting" ? {} : publicVotes(lobby)
+  });
+}
+
+function publicVotes(lobby) {
+  const totals = {};
+  for (const target of Object.values(lobby.votes)) {
+    totals[target] = (totals[target] || 0) + 1;
+  }
+  return totals;
+}
+
+function normalizeName(name) {
+  return String(name || "").trim().slice(0, 18) || "Без имени";
+}
+
+function makeUniqueName(lobby, rawName, excludeId = null) {
+  const base = normalizeName(rawName);
+  const occupied = new Set(
+    lobby.players
+      .filter((player) => player.id !== excludeId)
+      .map((player) => player.name.toLowerCase())
+  );
+  if (!occupied.has(base.toLowerCase())) return base;
+
+  let index = 2;
+  while (occupied.has(`${base} (${index})`.toLowerCase())) {
+    index += 1;
+  }
+  return `${base} (${index})`;
+}
+
+function normalizeCode(code) {
+  return String(code || "").trim().toUpperCase();
+}
+
+function clearTimer(code) {
+  clearInterval(timers[code]);
+  delete timers[code];
+}
+
+function startListeningTimer(code) {
+  const lobby = lobbies[code];
+  if (!lobby || lobby.phase !== "playing") return;
+
+  clearTimer(code);
+  lobby.turnStage = "listening";
+  lobby.timeLeft = lobby.settings.listenTime;
+  io.to(code).emit("timer", {
+    timeLeft: lobby.timeLeft,
+    stage: lobby.turnStage,
+    listenTime: lobby.settings.listenTime
+  });
+  emitGameState(code);
+
+  timers[code] = setInterval(() => {
+    const currentLobby = lobbies[code];
+    if (!currentLobby || currentLobby.phase !== "playing" || currentLobby.turnStage !== "listening") {
+      clearTimer(code);
+      return;
+    }
+
+    currentLobby.timeLeft -= 1;
+    io.to(code).emit("timer", {
+      timeLeft: currentLobby.timeLeft,
+      stage: currentLobby.turnStage,
+      listenTime: currentLobby.settings.listenTime
+    });
+
+    if (currentLobby.timeLeft <= 0) {
+      advanceTurn(code);
+    }
+  }, 1000);
+}
+
+function startVotingTimer(code) {
+  const lobby = lobbies[code];
+  if (!lobby || lobby.phase !== "voting" || lobby.settings.votingTime <= 0) return;
+
+  clearTimer(code);
+  lobby.voteTimeLeft = lobby.settings.votingTime;
+  io.to(code).emit("voteTimer", { timeLeft: lobby.voteTimeLeft });
+
+  timers[code] = setInterval(() => {
+    const currentLobby = lobbies[code];
+    if (!currentLobby || currentLobby.phase !== "voting") {
+      clearTimer(code);
+      return;
+    }
+
+    currentLobby.voteTimeLeft -= 1;
+    io.to(code).emit("voteTimer", { timeLeft: currentLobby.voteTimeLeft });
+
+    if (currentLobby.voteTimeLeft <= 0) {
+      finishVote(code);
+    }
+  }, 1000);
+}
+
+function startTurn(code) {
+  const lobby = lobbies[code];
+  if (!lobby || lobby.phase !== "playing") return;
+
+  const playerId = lobby.order[lobby.currentTurnIndex];
+  const player = lobby.players.find((item) => item.id === playerId);
+
+  if (!player) {
+    advanceTurn(code);
+    return;
   }
 
-  .card {
-    padding: 20px;
-    border-radius: 22px;
   clearTimer(code);
   lobby.submittedThisTurn = false;
   lobby.turnStage = "waiting";
@@ -589,23 +269,54 @@ function advanceTurn(code) {
     }
 
     lobby.round += 1;
-lobby.currentTurnIndex = 0;
-const activeOrder = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
-lobby.order = rotateOrder(activeOrder, 1);
-io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
-
-  
-main
+    lobby.currentTurnIndex = 0;
+    const activeOrder = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
+    lobby.order = rotateOrder(activeOrder, 1);
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 
-  .two-col,
-  .rules {
-    grid-template-columns: 1fr;
+  startTurn(code);
+}
+
+function startVoting(code, candidates = null, voteRound = 1) {
+  const lobby = lobbies[code];
+  if (!lobby) return;
+
+  clearTimer(code);
+  lobby.phase = "voting";
+  lobby.votes = {};
+  lobby.voteRound = voteRound;
+  lobby.voteCandidates = candidates || lobby.players.map((player) => player.id);
+  lobby.voteTimeLeft = lobby.settings.votingTime;
+
+  io.to(code).emit("votingStarted", {
+    players: lobby.players,
+    votes: lobby.settings.anonymousVoting ? {} : publicVotes(lobby),
+    anonymous: lobby.settings.anonymousVoting,
+    voteRound: lobby.voteRound,
+    candidates: lobby.voteCandidates,
+    votingTime: lobby.settings.votingTime
+  });
+  emitGameState(code);
+  startVotingTimer(code);
+}
+
+function finishVote(code) {
+  const lobby = lobbies[code];
+  if (!lobby || lobby.phase !== "voting") return;
+
+  clearTimer(code);
+  const voteTotals = publicVotes(lobby);
+  const sorted = Object.entries(voteTotals).sort((a, b) => b[1] - a[1]);
+  const topVotes = sorted[0]?.[1] || 0;
+  const suspected = sorted.filter(([, count]) => count === topVotes).map(([id]) => id);
+
+  if (lobby.settings.runoffOnTie && lobby.voteRound === 1 && suspected.length > 1 && topVotes > 0) {
+    io.to(code).emit("runoffStarted", { candidates: suspected });
+    startVoting(code, suspected, 2);
+    return;
   }
 
-  .section-header {
-    display: grid;
   finishGame(code, suspected, voteTotals);
 }
 
@@ -905,69 +616,36 @@ function isSupportedTrackUrl(url) {
   }
 }
 
-select {
-  width: 100%;
-  padding: 13px 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  outline: none;
-  background: rgba(0, 0, 0, 0.36);
-  color: var(--text);
+function pickTheme() {
+  const themes = [
+    "ру андер ск",
+    "англ андер ск",
+    "ру реп новая школа",
+    "олдскул хип хоп",
+    "бразил фонк тайп",
+    "дрилл",
+    "мемфис фонк тайп",
+    "ру хайперпоп",
+    "англ хайперпоп",
+    "дрейн",
+    "классика рока 90-х",
+    "ремиксы",
+    "кринж",
+    "хит прошлого лета",
+    "чилловый приятный тречок",
+    "едм электронщина",
+    "мемы/музыка из мемов",
+    "ностальгия",
+    "дотерский трек",
+    "молодой исполнитель >18",
+    "хиты 2021",
+    "легендарные треки",
+    "трепахолик",
+  ];
+
+  return themes[Math.floor(Math.random() * themes.length)];
 }
 
-select:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.settings-panel {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 18px 0;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.035);
-  text-align: left;
-}
-
-.settings-title {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.settings-title strong {
-  font-size: 1rem;
-}
-
-.settings-title span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.vote-timer {
-  display: grid;
-  width: 76px;
-  height: 76px;
-  margin: 0 auto 14px;
-  place-items: center;
-  border: 1px solid rgba(229, 9, 20, 0.72);
-  border-radius: 999px;
-  background: rgba(229, 9, 20, 0.13);
-  color: #ffffff;
-  font-size: 1.8rem;
-  font-weight: 900;
-  box-shadow: 0 0 26px rgba(229, 9, 20, 0.18);
-}
-
-@media (max-width: 560px) {
-  .settings-panel {
-    grid-template-columns: 1fr;
-  }
-}
+server.listen(process.env.PORT || 3000, () => {
+  console.log("Music Spy server running");
+});
