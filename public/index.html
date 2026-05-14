@@ -44,97 +44,112 @@
       <p id="menuError" class="status error"></p>
     </section>
 
-    <section id="lobby" class="screen card hidden">
-      <div class="section-header">
+    <section id="lobby" class="screen card lobby-card hidden">
+      <div class="section-header lobby-header">
         <div>
           <p class="eyebrow">лобби</p>
           <h2>Комната <button id="copyCode" class="code-pill" onclick="copyRoomCode()">-----</button></h2>
+          <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
         </div>
         <span id="hostBadge" class="badge">ожидание</span>
       </div>
 
-      <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
-      <div class="invite-tools">
-        <button id="copyInvite" class="secondary" onclick="copyInviteLink()">Скопировать ссылку-приглашение</button>
-        <div class="qr-wrap">
-          <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
-        </div>
+      <div class="lobby-grid">
+        <aside class="lobby-column lobby-invite">
+          <div class="panel-title">
+            <strong>Приглашение</strong>
+            <span>ссылка и QR</span>
+          </div>
+          <div class="invite-tools">
+            <button id="copyInvite" class="secondary" onclick="copyInviteLink()">Скопировать ссылку-приглашение</button>
+            <div class="qr-wrap">
+              <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
+            </div>
+          </div>
+        </aside>
+
+        <section class="lobby-column lobby-players">
+          <div class="panel-title">
+            <strong>Игроки</strong>
+            <span id="readySummary">Готовы: 0/0</span>
+          </div>
+          <div id="players" class="players-list"></div>
+          <div class="lobby-actions">
+            <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
+            <div class="rename-row">
+              <input id="renameInput" maxlength="18" placeholder="Новый ник">
+              <button class="secondary" onclick="changeNickname()">Сменить ник</button>
+            </div>
+          </div>
+          <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
+          <p id="lobbyStatus" class="status"></p>
+        </section>
+
+        <aside class="lobby-column lobby-settings">
+          <div class="settings-panel">
+            <div class="settings-title">
+              <strong>Настройки игры</strong>
+              <span id="settingsHint">меняет хост</span>
+            </div>
+
+            <label>
+              <span>Раунды</span>
+              <select id="settingRounds" onchange="updateLobbySettings()">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Время трека</span>
+              <select id="settingListenTime" onchange="updateLobbySettings()">
+                <option value="15">15 секунд</option>
+                <option value="30" selected>30 секунд</option>
+                <option value="45">45 секунд</option>
+                <option value="60">60 секунд</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Шпионы</span>
+              <select id="settingSpyMode" onchange="updateLobbySettings()">
+                <option value="auto" selected>Авто по игрокам</option>
+                <option value="1">1 шпион</option>
+                <option value="2">2 шпиона</option>
+                <option value="3">3 шпиона</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Голосование</span>
+              <select id="settingAnonymousVoting" onchange="updateLobbySettings()">
+                <option value="false" selected>Открытое</option>
+                <option value="true">Анонимное</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Таймер голосования</span>
+              <select id="settingVotingTime" onchange="updateLobbySettings()">
+                <option value="0">Без таймера</option>
+                <option value="30">30 секунд</option>
+                <option value="60" selected>60 секунд</option>
+                <option value="90">90 секунд</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Ничья</span>
+              <select id="settingRunoffOnTie" onchange="updateLobbySettings()">
+                <option value="true" selected>Второй тур</option>
+                <option value="false">Без второго тура</option>
+              </select>
+            </label>
+          </div>
+        </aside>
       </div>
-      <div id="players" class="players-list"></div>
-      <div class="lobby-actions">
-        <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
-        <div class="rename-row">
-          <input id="renameInput" maxlength="18" placeholder="Новый ник">
-          <button class="secondary" onclick="changeNickname()">Сменить ник</button>
-        </div>
-        <p id="readySummary" class="status">Готовы: 0/0</p>
-      </div>
-
-      <div class="settings-panel">
-        <div class="settings-title">
-          <strong>Настройки игры</strong>
-          <span id="settingsHint">меняет хост</span>
-        </div>
-
-        <label>
-          <span>Раунды</span>
-          <select id="settingRounds" onchange="updateLobbySettings()">
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Время трека</span>
-          <select id="settingListenTime" onchange="updateLobbySettings()">
-            <option value="15">15 секунд</option>
-            <option value="30" selected>30 секунд</option>
-            <option value="45">45 секунд</option>
-            <option value="60">60 секунд</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Шпионы</span>
-          <select id="settingSpyMode" onchange="updateLobbySettings()">
-            <option value="auto" selected>Авто по игрокам</option>
-            <option value="1">1 шпион</option>
-            <option value="2">2 шпиона</option>
-            <option value="3">3 шпиона</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Голосование</span>
-          <select id="settingAnonymousVoting" onchange="updateLobbySettings()">
-            <option value="false" selected>Открытое</option>
-            <option value="true">Анонимное</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Таймер голосования</span>
-          <select id="settingVotingTime" onchange="updateLobbySettings()">
-            <option value="0">Без таймера</option>
-            <option value="30">30 секунд</option>
-            <option value="60" selected>60 секунд</option>
-            <option value="90">90 секунд</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Ничья</span>
-          <select id="settingRunoffOnTie" onchange="updateLobbySettings()">
-            <option value="true" selected>Второй тур</option>
-            <option value="false">Без второго тура</option>
-          </select>
-        </label>
-      </div>
-
-      <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
-      <p id="lobbyStatus" class="status"></p>
     </section>
 
     <section id="game" class="screen game-layout hidden">
