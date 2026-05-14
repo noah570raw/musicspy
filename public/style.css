@@ -310,8 +310,12 @@ button:disabled {
 }
 
 .invite-tools {
+  margin: 14px 0 8px;
+  display: grid;
+  gap: 12px;
+}
 
-  .lobby-actions {
+.lobby-actions {
   display: grid;
   gap: 10px;
   margin-bottom: 16px;
@@ -322,11 +326,7 @@ button:disabled {
   grid-template-columns: 1fr auto;
   gap: 10px;
 }
-  margin: 14px 0 8px;
-  display: grid;
-  gap: 12px;
-}
-
+  
 .qr-wrap {
   display: grid;
   place-items: center;

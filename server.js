@@ -140,6 +140,22 @@ function normalizeName(name) {
   return String(name || "").trim().slice(0, 18) || "Без имени";
 }
 
+function makeUniqueName(lobby, rawName, excludeId = null) {
+  const base = normalizeName(rawName);
+  const occupied = new Set(
+    lobby.players
+      .filter((player) => player.id !== excludeId)
+      .map((player) => player.name.toLowerCase())
+  );
+  if (!occupied.has(base.toLowerCase())) return base;
+
+  let index = 2;
+  while (occupied.has(`${base} (${index})`.toLowerCase())) {
+    index += 1;
+  }
+  return `${base} (${index})`;
+}
+
 function normalizeCode(code) {
   return String(code || "").trim().toUpperCase();
 }
@@ -253,8 +269,13 @@ function advanceTurn(code) {
     }
 
     lobby.round += 1;
-    lobby.currentTurnIndex = 0;
+lobby.currentTurnIndex = 0;
+const activeOrder = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
+lobby.order = rotateOrder(activeOrder, 1);
+io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
+
   
+main
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 
@@ -377,7 +398,7 @@ function createLobbyState(code, hostId, player) {
 io.on("connection", (socket) => {
   socket.on("createLobby", ({ name }, cb = () => {}) => {
     const code = generateCode();
-    const player = { id: socket.id, name: normalizeName(name) };
+    const player = { id: socket.id, name: normalizeName(name), ready: false };
 
     lobbies[code] = createLobbyState(code, socket.id, player);
 
@@ -396,7 +417,7 @@ io.on("connection", (socket) => {
     }
 
     socket.join(roomCode);
-    lobby.players.push({ id: socket.id, name: normalizeName(name) });
+    lobby.players.push({ id: socket.id, name: makeUniqueName(lobby, name), ready: false });
 
     cb({ success: true, code: roomCode, playerId: socket.id });
     emitLobbyUpdate(roomCode);
@@ -413,11 +434,36 @@ io.on("connection", (socket) => {
     emitLobbyUpdate(lobby.code);
   });
 
+  socket.on("setReady", ({ code, ready }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+    const player = lobby.players.find((item) => item.id === socket.id);
+    if (!player) return cb({ error: "Ты не в этой комнате" });
+    player.ready = Boolean(ready);
+    cb({ success: true, ready: player.ready });
+    emitLobbyUpdate(lobby.code);
+  });
+
+  socket.on("updateName", ({ code, name }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+    const player = lobby.players.find((item) => item.id === socket.id);
+    if (!player) return cb({ error: "Ты не в этой комнате" });
+    player.name = makeUniqueName(lobby, name, socket.id);
+    cb({ success: true, name: player.name });
+    emitLobbyUpdate(lobby.code);
+  });
+
   socket.on("startGame", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "Начать игру может только хост" });
     if (lobby.players.length < 3) return cb({ error: "Нужно минимум 3 игрока" });
+    if (lobby.players.some((player) => !player.ready)) {
+      return cb({ error: "Все игроки должны нажать «Готов»" });
+    }
 
     const spyCount = getSpyCount(lobby);
     const spies = shuffle(lobby.players.map((player) => player.id)).slice(0, spyCount);
