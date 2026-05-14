@@ -44,6 +44,12 @@ function shuffle(items) {
   return arr;
 }
 
+function rotateOrder(order, shift) {
+  if (!Array.isArray(order) || order.length === 0) return [];
+  const normalizedShift = ((shift % order.length) + order.length) % order.length;
+  return order.slice(normalizedShift).concat(order.slice(0, normalizedShift));
+}
+
 function clampNumber(value, allowed, fallback) {
   const number = Number(value);
   return allowed.includes(number) ? number : fallback;
@@ -248,7 +254,9 @@ function advanceTurn(code) {
 
     lobby.round += 1;
     lobby.currentTurnIndex = 0;
-    lobby.order = shuffle(lobby.players.map((player) => player.id));
+    const activeBaseOrder = lobby.baseOrder.filter((id) => lobby.players.some((player) => player.id === id));
+    lobby.baseOrder = activeBaseOrder;
+    lobby.order = rotateOrder(activeBaseOrder, lobby.round - 1);
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 
@@ -329,6 +337,7 @@ function resetLobbyToWaiting(lobby) {
   lobby.spies = [];
   lobby.spy = null;
   lobby.order = [];
+  lobby.baseOrder = [];
   lobby.currentTurnIndex = 0;
   lobby.theme = "";
   lobby.votes = {};
@@ -352,6 +361,7 @@ function createLobbyState(code, hostId, player) {
     spies: [],
     spy: null,
     order: [],
+    baseOrder: [],
     currentTurnIndex: 0,
     theme: "",
     votes: {},
@@ -420,7 +430,8 @@ io.on("connection", (socket) => {
     lobby.theme = pickTheme();
     lobby.spies = spies;
     lobby.spy = spies[0] || null;
-    lobby.order = shuffle(lobby.players.map((player) => player.id));
+    lobby.baseOrder = shuffle(lobby.players.map((player) => player.id));
+    lobby.order = rotateOrder(lobby.baseOrder, 0);
     lobby.currentTurnIndex = 0;
     lobby.votes = {};
     lobby.voteRound = 1;
@@ -512,8 +523,10 @@ io.on("connection", (socket) => {
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
       if (!wasInLobby) continue;
 
+      const disconnectedOrderIndex = lobby.order.indexOf(socket.id);
       lobby.players = lobby.players.filter((player) => player.id !== socket.id);
       lobby.order = lobby.order.filter((id) => id !== socket.id);
+      lobby.baseOrder = lobby.baseOrder.filter((id) => id !== socket.id);
       lobby.spies = lobby.spies.filter((id) => id !== socket.id);
       lobby.voteCandidates = lobby.voteCandidates.filter((id) => id !== socket.id);
       delete lobby.votes[socket.id];
@@ -536,6 +549,9 @@ io.on("connection", (socket) => {
         resetLobbyToWaiting(lobby);
         io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
       } else if (lobby.phase === "playing") {
+        if (disconnectedOrderIndex !== -1 && disconnectedOrderIndex < lobby.currentTurnIndex) {
+          lobby.currentTurnIndex = Math.max(0, lobby.currentTurnIndex - 1);
+        }
         if (lobby.currentTurnIndex >= lobby.order.length) {
           lobby.currentTurnIndex = 0;
         }
