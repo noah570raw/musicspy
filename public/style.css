@@ -309,6 +309,38 @@ button:disabled {
   margin: 18px 0;
 }
 
+.invite-tools {
+  margin: 14px 0 8px;
+  display: grid;
+  gap: 12px;
+}
+
+.lobby-actions {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rename-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.qr-wrap {
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+#inviteQr {
+  width: min(220px, 100%);
+  border-radius: 12px;
+}
+
 .player-row,
 .order-row,
 .vote-row {

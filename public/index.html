@@ -54,7 +54,21 @@
       </div>
 
       <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
+      <div class="invite-tools">
+        <button id="copyInvite" class="secondary" onclick="copyInviteLink()">Скопировать ссылку-приглашение</button>
+        <div class="qr-wrap">
+          <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
+        </div>
+      </div>
       <div id="players" class="players-list"></div>
+      <div class="lobby-actions">
+        <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
+        <div class="rename-row">
+          <input id="renameInput" maxlength="18" placeholder="Новый ник">
+          <button class="secondary" onclick="changeNickname()">Сменить ник</button>
+        </div>
+        <p id="readySummary" class="status">Готовы: 0/0</p>
+      </div>
 
       <div class="settings-panel">
         <div class="settings-title">

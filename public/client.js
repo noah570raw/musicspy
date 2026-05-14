@@ -18,7 +18,8 @@ const state = {
   turnStage: "waiting",
   votedTarget: null,
   voteCandidates: [],
-  anonymousVoting: false
+  anonymousVoting: false,
+  ready: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -43,6 +44,13 @@ function getName() {
 
 function getCode() {
   return $("code").value.trim().toUpperCase();
+}
+
+function buildInviteLink(code = state.currentCode) {
+  if (!code) return "";
+  const url = new URL(window.location.href);
+  url.searchParams.set("room", code);
+  return url.toString();
 }
 
 function createLobby() {
@@ -93,6 +101,17 @@ async function copyRoomCode() {
   }
 }
 
+async function copyInviteLink() {
+  const link = buildInviteLink();
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    setStatus("lobbyStatus", "Ссылка-приглашение скопирована");
+  } catch {
+    setStatus("lobbyStatus", link);
+  }
+}
+
 function readSettingsFromForm() {
   const spyModeValue = $("settingSpyMode").value;
   return {
@@ -111,6 +130,27 @@ function updateLobbySettings() {
   socket.emit("updateSettings", { code: state.currentCode, settings: readSettingsFromForm() }, (res) => {
     if (res?.error) return setStatus("lobbyStatus", res.error, true);
     setStatus("lobbyStatus", "Настройки обновлены");
+  });
+}
+
+function toggleReady() {
+  if (!state.currentCode) return;
+  socket.emit("setReady", { code: state.currentCode, ready: !state.ready }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    state.ready = Boolean(res.ready);
+    setStatus("lobbyStatus", state.ready ? "Ты отметил готовность" : "Готовность снята");
+  });
+}
+
+function changeNickname() {
+  if (!state.currentCode) return;
+  const value = $("renameInput").value.trim();
+  if (!value) return setStatus("lobbyStatus", "Введи новый ник", true);
+  socket.emit("updateName", { code: state.currentCode, name: value }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    $("name").value = res.name || value;
+    $("renameInput").value = "";
+    setStatus("lobbyStatus", `Ник обновлен: ${res.name || value}`);
   });
 }
 
@@ -162,16 +202,35 @@ function renderLobby(lobby) {
   state.currentCode = lobby.code || state.currentCode;
 
   $("copyCode").textContent = state.currentCode || "-----";
+  const inviteLink = buildInviteLink();
+  const qr = $("inviteQr");
+  if (inviteLink) {
+    qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(inviteLink)}`;
+    qr.classList.remove("hidden");
+  } else {
+    qr.removeAttribute("src");
+    qr.classList.add("hidden");
+  }
   const isHost = lobby.host === socket.id;
+  const me = state.players.find((player) => player.id === socket.id);
+  state.ready = Boolean(me?.ready);
+  const readyCount = state.players.filter((player) => player.ready).length;
   $("hostBadge").textContent = isHost ? "ты хост" : "хост: " + (state.players.find((p) => p.id === lobby.host)?.name || "...");
-  $("startBtn").disabled = !isHost || state.players.length < 3;
-  $("startBtn").textContent = state.players.length < 3 ? "Ждем минимум 3 игроков" : "Запустить игру";
+  $("startBtn").disabled = !isHost || state.players.length < 3 || readyCount !== state.players.length;
+  $("startBtn").textContent = state.players.length < 3
+    ? "Ждем минимум 3 игроков"
+    : readyCount !== state.players.length
+      ? "Ждем готовность всех игроков"
+      : "Запустить игру";
+  $("readyBtn").textContent = state.ready ? "Не готов" : "Я готов";
+  $("readySummary").textContent = `Готовы: ${readyCount}/${state.players.length}`;
   applySettingsToForm(state.settings, isHost);
 
   $("players").innerHTML = state.players.map((player, index) => `
     <div class="player-row">
       <span class="avatar">${index + 1}</span>
       <strong>${escapeHtml(player.name)}</strong>
+      ${player.ready ? "<em>готов</em>" : "<em>не готов</em>"}
       ${player.id === lobby.host ? "<em>host</em>" : ""}
       ${player.id === socket.id ? "<em>ты</em>" : ""}
     </div>
@@ -263,8 +322,19 @@ function updateVoteTimer(timeLeft) {
 
 function clearPlayer() {
   const embed = $("embed");
+  const activeIframes = embed.querySelectorAll("iframe");
+  activeIframes.forEach((frame) => {
+    frame.src = "about:blank";
+  });
   embed.className = "embed empty";
   embed.innerHTML = "<span>Ждем трек от текущего игрока</span>";
+  ["tickSound", "startSound", "revealSound"].forEach((id) => {
+    const media = $(id);
+    if (media && typeof media.pause === "function") {
+      media.pause();
+      media.currentTime = 0;
+    }
+  });
 }
 
 function loadTrack(track) {
@@ -363,6 +433,14 @@ socket.on("lobbyUpdate", (lobby) => {
   if (lobby.phase === "lobby" && state.phase !== "menu") showScreen("lobby");
 });
 
+window.addEventListener("DOMContentLoaded", () => {
+  const presetCode = new URL(window.location.href).searchParams.get("room");
+  if (presetCode) {
+    $("code").value = presetCode.slice(0, 5).toUpperCase();
+    setStatus("menuError", "Код комнаты подставлен из ссылки. Введи ник и нажми «Войти по коду».");
+  }
+});
+
 socket.on("gameStarted", (data) => {
   state.role = data.role;
   state.theme = data.theme;
@@ -403,6 +481,7 @@ socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, 
   state.votedTarget = null;
   state.anonymousVoting = Boolean(anonymous);
   state.voteCandidates = candidates || [];
+  clearPlayer();
   showScreen("voting");
   renderVoteList(votes);
   updateVoteTimer(votingTime > 0 ? votingTime : null);
@@ -425,12 +504,14 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
+  clearPlayer();
   showScreen("results");
   updateVoteTimer(null);
   renderResults(data);
 });
 
 socket.on("gameCancelled", ({ reason }) => {
+  clearPlayer();
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
