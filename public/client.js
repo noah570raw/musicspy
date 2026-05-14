@@ -330,8 +330,8 @@ function renderVoteList(votes = {}) {
 function renderResults(data) {
   const suspectedNames = data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || "Игрок").join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
-  $("resultTitle").textContent = data.civiliansWin ? "Мирные вычислили шпиона" : "Шпион не спалился";
-  $("resultText").textContent = `Шпионы: ${spyNames}. Тема: «${data.theme}». Под подозрением: ${suspectedNames || "никто"}.`;
+  $("resultTitle").textContent = data.civiliansWin ? "Шпион паражняк" : "Шпион красавчик";
+  $("resultText").textContent = `Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || "никто"}.`;
   $("resultVotes").innerHTML = state.players.map((player) => `
     <div class="vote-row static">
       <span>${escapeHtml(player.name)}</span>
