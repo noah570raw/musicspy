@@ -45,6 +45,13 @@ function getCode() {
   return $("code").value.trim().toUpperCase();
 }
 
+function buildInviteLink(code = state.currentCode) {
+  if (!code) return "";
+  const url = new URL(window.location.href);
+  url.searchParams.set("room", code);
+  return url.toString();
+}
+
 function createLobby() {
   setStatus("menuError");
   socket.emit("createLobby", { name: getName() }, (res) => {
@@ -90,6 +97,17 @@ async function copyRoomCode() {
     setStatus("lobbyStatus", "Код скопирован");
   } catch {
     setStatus("lobbyStatus", `Код комнаты: ${state.currentCode}`);
+  }
+}
+
+async function copyInviteLink() {
+  const link = buildInviteLink();
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    setStatus("lobbyStatus", "Ссылка-приглашение скопирована");
+  } catch {
+    setStatus("lobbyStatus", link);
   }
 }
 
@@ -162,6 +180,15 @@ function renderLobby(lobby) {
   state.currentCode = lobby.code || state.currentCode;
 
   $("copyCode").textContent = state.currentCode || "-----";
+  const inviteLink = buildInviteLink();
+  const qr = $("inviteQr");
+  if (inviteLink) {
+    qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(inviteLink)}`;
+    qr.classList.remove("hidden");
+  } else {
+    qr.removeAttribute("src");
+    qr.classList.add("hidden");
+  }
   const isHost = lobby.host === socket.id;
   $("hostBadge").textContent = isHost ? "ты хост" : "хост: " + (state.players.find((p) => p.id === lobby.host)?.name || "...");
   $("startBtn").disabled = !isHost || state.players.length < 3;
@@ -372,6 +399,14 @@ socket.on("connect", () => {
 socket.on("lobbyUpdate", (lobby) => {
   renderLobby(lobby);
   if (lobby.phase === "lobby" && state.phase !== "menu") showScreen("lobby");
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  const presetCode = new URL(window.location.href).searchParams.get("room");
+  if (presetCode) {
+    $("code").value = presetCode.slice(0, 5).toUpperCase();
+    setStatus("menuError", "Код комнаты подставлен из ссылки. Введи ник и нажми «Войти по коду».");
+  }
 });
 
 socket.on("gameStarted", (data) => {
