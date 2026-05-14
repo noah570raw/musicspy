@@ -523,6 +523,7 @@ io.on("connection", (socket) => {
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
       if (!wasInLobby) continue;
 
+      const disconnectedOrderIndex = lobby.order.indexOf(socket.id);
       lobby.players = lobby.players.filter((player) => player.id !== socket.id);
       lobby.order = lobby.order.filter((id) => id !== socket.id);
       lobby.baseOrder = lobby.baseOrder.filter((id) => id !== socket.id);
@@ -548,6 +549,9 @@ io.on("connection", (socket) => {
         resetLobbyToWaiting(lobby);
         io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
       } else if (lobby.phase === "playing") {
+        if (disconnectedOrderIndex !== -1 && disconnectedOrderIndex < lobby.currentTurnIndex) {
+          lobby.currentTurnIndex = Math.max(0, lobby.currentTurnIndex - 1);
+        }
         if (lobby.currentTurnIndex >= lobby.order.length) {
           lobby.currentTurnIndex = 0;
         }
