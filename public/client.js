@@ -15,7 +15,9 @@ const state = {
   totalRounds: 3,
   timeLeft: null,
   turnStage: "waiting",
-  votedTarget: null
+  votedTarget: null,
+  settings: { spyCount: 1, listenTime: 30, totalRounds: 3 },
+  chat: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -66,6 +68,18 @@ function joinLobby() {
   });
 }
 
+function saveSettings() {
+  const payload = {
+    spyCount: Number($("spyCount").value),
+    listenTime: Number($("listenTime").value),
+    totalRounds: Number($("totalRounds").value)
+  };
+  socket.emit("updateSettings", { code: state.currentCode, settings: payload }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    setStatus("lobbyStatus", "Настройки сохранены");
+  });
+}
+
 function startGame() {
   setStatus("lobbyStatus", "Запускаем...");
   socket.emit("startGame", { code: state.currentCode }, (res) => {
@@ -96,7 +110,8 @@ function sendTrack() {
   socket.emit("playTrack", { code: state.currentCode, url }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     $("url").value = "";
-    setStatus("gameStatus", "Трек принят. Слушаем 30 секунд...");
+    const sec = state.settings.listenTime || 30;
+    setStatus("gameStatus", `Трек принят. Слушаем ${sec} секунд...`);
     state.turnStage = "listening";
     updateSendButton(true);
   });
@@ -120,6 +135,16 @@ function renderLobby(lobby) {
   const isHost = lobby.host === socket.id;
   $("hostBadge").textContent = isHost ? "ты хост" : "хост: " + (state.players.find((p) => p.id === lobby.host)?.name || "...");
   $("startBtn").disabled = !isHost || state.players.length < 3;
+  $("saveSettingsBtn").disabled = !isHost;
+  for (const id of ["spyCount","listenTime","totalRounds"]) { $(id).disabled = !isHost; }
+  state.chat = lobby.chat || state.chat;
+  renderChat();
+  if (lobby.settings) {
+    state.settings = lobby.settings;
+    $("spyCount").value = lobby.settings.spyCount;
+    $("listenTime").value = lobby.settings.listenTime;
+    $("totalRounds").value = lobby.settings.totalRounds;
+  }
   $("startBtn").textContent = state.players.length < 3 ? "Ждем минимум 3 игроков" : "Запустить игру";
 
   $("players").innerHTML = state.players.map((player, index) => `
@@ -138,6 +163,7 @@ function renderGameState(data) {
   state.currentPlayerId = data.currentPlayerId;
   state.round = data.round || state.round;
   state.totalRounds = data.totalRounds || state.totalRounds;
+  state.settings.listenTime = data.listenTime || state.settings.listenTime;
   state.turnStage = data.turnStage || state.turnStage;
   state.timeLeft = data.timeLeft ?? state.timeLeft;
 
@@ -257,6 +283,29 @@ function isSoundCloudUrl(url) {
   }
 }
 
+
+
+function sendChat() {
+  const input = $("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  socket.emit("sendChat", { code: state.currentCode, text }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    input.value = "";
+  });
+}
+
+function renderChat() {
+  const list = $("chatList");
+  if (!list) return;
+  list.innerHTML = state.chat.map((m) => `
+    <div class="vote-row static">
+      <span><strong>${escapeHtml(m.playerName)}:</strong> ${escapeHtml(m.text)}</span>
+    </div>
+  `).join("");
+  list.scrollTop = list.scrollHeight;
+}
+
 function renderVoteList(votes = {}) {
   const voteCounts = votes;
   $("voteList").innerHTML = state.players.map((player) => {
@@ -354,6 +403,12 @@ socket.on("voteUpdate", ({ votes, votedCount, total }) => {
 socket.on("gameEnd", (data) => {
   showScreen("results");
   renderResults(data);
+});
+
+socket.on("chatMessage", (msg) => {
+  state.chat.push(msg);
+  if (state.chat.length > 120) state.chat.shift();
+  renderChat();
 });
 
 socket.on("gameCancelled", ({ reason }) => {

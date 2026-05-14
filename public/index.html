@@ -57,6 +57,13 @@
       <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
       <div id="players" class="players-list"></div>
 
+      <div class="form-grid" id="lobbySettings">
+        <label><span>Шпионов</span><input id="spyCount" type="number" min="1" max="3" value="1"></label>
+        <label><span>Секунд на трек</span><input id="listenTime" type="number" min="10" max="90" value="30"></label>
+        <label><span>Раундов</span><input id="totalRounds" type="number" min="1" max="10" value="3"></label>
+      </div>
+      <button id="saveSettingsBtn" class="secondary" onclick="saveSettings()">Сохранить настройки</button>
+
       <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
       <p id="lobbyStatus" class="status"></p>
     </section>
@@ -98,6 +105,15 @@
         <div id="order" class="order-list"></div>
       </aside>
     </section>
+      <section class="card" style="margin-top:12px;">
+        <p class="eyebrow">чат</p>
+        <div id="chatList" class="vote-list" style="max-height:220px;overflow:auto;"></div>
+        <div class="track-form">
+          <input id="chatInput" maxlength="220" placeholder="Напиши сообщение">
+          <button class="secondary" onclick="sendChat()">Отправить</button>
+        </div>
+      </section>
+
 
     <section id="voting" class="screen card hidden">
       <p class="eyebrow">финальное голосование</p>
