@@ -9,7 +9,7 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 const lobbies = {};
-const TURN_TIME = 60;
+const LISTEN_TIME = 30;
 const TOTAL_ROUNDS = 3;
 const timers = {};
 
@@ -73,6 +73,9 @@ function emitGameState(code) {
     lastTrack: lobby.lastTrack,
     players: lobby.players,
     submittedThisTurn: lobby.submittedThisTurn,
+    turnStage: lobby.turnStage,
+    timeLeft: lobby.timeLeft,
+    listenTime: LISTEN_TIME,
     votes: publicVotes(lobby)
   });
 }
@@ -98,23 +101,33 @@ function clearTurnTimer(code) {
   delete timers[code];
 }
 
-function startTurnTimer(code) {
+function startListeningTimer(code) {
   const lobby = lobbies[code];
   if (!lobby || lobby.phase !== "playing") return;
 
   clearTurnTimer(code);
-  lobby.timeLeft = TURN_TIME;
-  io.to(code).emit("timer", { timeLeft: lobby.timeLeft });
+  lobby.turnStage = "listening";
+  lobby.timeLeft = LISTEN_TIME;
+  io.to(code).emit("timer", {
+    timeLeft: lobby.timeLeft,
+    stage: lobby.turnStage,
+    listenTime: LISTEN_TIME
+  });
+  emitGameState(code);
 
   timers[code] = setInterval(() => {
     const currentLobby = lobbies[code];
-    if (!currentLobby || currentLobby.phase !== "playing") {
+    if (!currentLobby || currentLobby.phase !== "playing" || currentLobby.turnStage !== "listening") {
       clearTurnTimer(code);
       return;
     }
 
     currentLobby.timeLeft -= 1;
-    io.to(code).emit("timer", { timeLeft: currentLobby.timeLeft });
+    io.to(code).emit("timer", {
+      timeLeft: currentLobby.timeLeft,
+      stage: currentLobby.turnStage,
+      listenTime: LISTEN_TIME
+    });
 
     if (currentLobby.timeLeft <= 0) {
       advanceTurn(code);
@@ -134,16 +147,24 @@ function startTurn(code) {
     return;
   }
 
+  clearTurnTimer(code);
   lobby.submittedThisTurn = false;
+  lobby.turnStage = "waiting";
+  lobby.timeLeft = null;
   io.to(code).emit("turn", {
     playerId,
     name: player.name,
     round: lobby.round,
     turnNumber: lobby.currentTurnIndex + 1,
-    turnsInRound: lobby.order.length
+    turnsInRound: lobby.order.length,
+    stage: lobby.turnStage
+  });
+  io.to(code).emit("timer", {
+    timeLeft: null,
+    stage: lobby.turnStage,
+    listenTime: LISTEN_TIME
   });
   emitGameState(code);
-  startTurnTimer(code);
 }
 
 function advanceTurn(code) {
@@ -217,7 +238,8 @@ function resetLobbyToWaiting(lobby) {
   lobby.votes = {};
   lobby.lastTrack = null;
   lobby.submittedThisTurn = false;
-  lobby.timeLeft = TURN_TIME;
+  lobby.timeLeft = null;
+  lobby.turnStage = "waiting";
 }
 
 io.on("connection", (socket) => {
@@ -239,7 +261,8 @@ io.on("connection", (socket) => {
       votes: {},
       lastTrack: null,
       submittedThisTurn: false,
-      timeLeft: TURN_TIME
+      timeLeft: null,
+      turnStage: "waiting"
     };
 
     socket.join(code);
@@ -279,6 +302,8 @@ io.on("connection", (socket) => {
     lobby.votes = {};
     lobby.lastTrack = null;
     lobby.submittedThisTurn = false;
+    lobby.turnStage = "waiting";
+    lobby.timeLeft = null;
 
     for (const player of lobby.players) {
       io.to(player.id).emit("gameStarted", {
@@ -316,8 +341,7 @@ io.on("connection", (socket) => {
 
     io.to(lobby.code).emit("newTrack", lobby.lastTrack);
     cb({ success: true });
-
-    setTimeout(() => advanceTurn(lobby.code), 1200);
+    startListeningTimer(lobby.code);
   });
 
   socket.on("vote", ({ code, target }, cb = () => {}) => {

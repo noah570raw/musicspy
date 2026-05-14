@@ -1,6 +1,6 @@
 const socket = io();
 
-const TURN_TIME = 60;
+const LISTEN_TIME = 30;
 const state = {
   currentCode: "",
   myId: "",
@@ -13,7 +13,8 @@ const state = {
   theme: "",
   round: 1,
   totalRounds: 3,
-  timeLeft: TURN_TIME,
+  timeLeft: null,
+  turnStage: "waiting",
   votedTarget: null
 };
 
@@ -95,8 +96,9 @@ function sendTrack() {
   socket.emit("playTrack", { code: state.currentCode, url }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     $("url").value = "";
-    setStatus("gameStatus", "Трек принят. Передаем ход дальше...");
-    updateSendButton();
+    setStatus("gameStatus", "Трек принят. Слушаем 30 секунд...");
+    state.turnStage = "listening";
+    updateSendButton(true);
   });
 }
 
@@ -136,13 +138,15 @@ function renderGameState(data) {
   state.currentPlayerId = data.currentPlayerId;
   state.round = data.round || state.round;
   state.totalRounds = data.totalRounds || state.totalRounds;
+  state.turnStage = data.turnStage || state.turnStage;
+  state.timeLeft = data.timeLeft ?? state.timeLeft;
 
   $("roundInfo").textContent = `Раунд ${state.round}/${state.totalRounds}`;
   $("roundBar").style.width = `${Math.min(100, (state.round / state.totalRounds) * 100)}%`;
   renderOrder();
   updateSendButton(data.submittedThisTurn);
 
-  if (data.lastTrack) loadTrack(data.lastTrack);
+  if (data.turnStage === "listening" && data.lastTrack) loadTrack(data.lastTrack);
 }
 
 function renderOrder() {
@@ -159,40 +163,53 @@ function renderOrder() {
   }).join("");
 }
 
-function updateTurn({ playerId, name, round, turnNumber, turnsInRound }) {
+function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) {
   state.currentPlayerId = playerId;
   state.round = round;
+  state.turnStage = stage || "waiting";
+  state.timeLeft = null;
   const isMine = playerId === socket.id;
   $("turn").innerHTML = `
     <span>${isMine ? "Твой ход" : "Сейчас ходит"}</span>
     <strong>${escapeHtml(name || "Игрок")}</strong>
     <small>ход ${turnNumber}/${turnsInRound}</small>
   `;
-  setStatus("gameStatus", isMine ? "Поставь трек, который подходит под твою цель." : "Слушай и запоминай подозрительные выборы.");
+  clearPlayer();
+  updateTimer({ timeLeft: null, stage: "waiting", listenTime: LISTEN_TIME });
+  setStatus("gameStatus", isMine ? "Очередь ждет тебя: вставь ссылку на трек." : "Ждем, пока игрок поставит трек. Таймер пока не идет.");
   renderOrder();
   updateSendButton(false);
 }
 
 function updateSendButton(submitted = false) {
   const isMine = state.currentPlayerId === socket.id;
-  $("sendBtn").disabled = !isMine || submitted;
-  $("url").disabled = !isMine || submitted;
-  $("sendBtn").textContent = submitted ? "Трек отправлен" : isMine ? "Отправить трек" : "Ждем ход";
+  const listening = state.turnStage === "listening";
+  $("sendBtn").disabled = !isMine || submitted || listening;
+  $("url").disabled = !isMine || submitted || listening;
+  $("sendBtn").textContent = submitted || listening ? "Трек играет" : isMine ? "Отправить трек" : "Ждем ход";
 }
 
-function updateTimer(timeLeft) {
+function updateTimer({ timeLeft, stage = "waiting", listenTime = LISTEN_TIME }) {
+  state.turnStage = stage;
   state.timeLeft = timeLeft;
-  $("timer").textContent = timeLeft;
+  const waiting = timeLeft === null || timeLeft === undefined;
+  $("timer").textContent = waiting ? "∞" : timeLeft;
   const circle = $("timerCircle");
   const circumference = 2 * Math.PI * 54;
   circle.style.strokeDasharray = circumference;
-  circle.style.strokeDashoffset = circumference * (1 - Math.max(0, timeLeft) / TURN_TIME);
-  circle.classList.toggle("danger", timeLeft <= 10);
+  circle.style.strokeDashoffset = waiting ? circumference : circumference * (1 - Math.max(0, timeLeft) / listenTime);
+  circle.classList.toggle("danger", !waiting && timeLeft <= 10);
 
-  if (timeLeft > 0 && timeLeft <= 5) {
+  if (!waiting && timeLeft > 0 && timeLeft <= 5) {
     $("tickSound").currentTime = 0;
     $("tickSound").play().catch(() => {});
   }
+}
+
+function clearPlayer() {
+  const embed = $("embed");
+  embed.className = "embed empty";
+  embed.innerHTML = "<span>Ждем трек от текущего игрока</span>";
 }
 
 function loadTrack(track) {
@@ -211,7 +228,7 @@ function loadTrack(track) {
   }
 
   if (track.playerName) {
-    setStatus("gameStatus", `${track.playerName} поставил трек`);
+    setStatus("gameStatus", `${track.playerName} поставил трек — слушаем 30 секунд`);
   }
 }
 
@@ -296,6 +313,8 @@ socket.on("gameStarted", (data) => {
   state.totalRounds = data.totalRounds;
   state.currentCode = data.code;
   state.votedTarget = null;
+  state.turnStage = "waiting";
+  state.timeLeft = null;
 
   $("roleTitle").textContent = data.role === "spy" ? "Ты шпион" : "Ты мирный";
   $("theme").textContent = data.role === "spy"
@@ -310,7 +329,7 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("turn", updateTurn);
-socket.on("timer", ({ timeLeft }) => updateTimer(timeLeft));
+socket.on("timer", updateTimer);
 socket.on("newTrack", loadTrack);
 socket.on("roundStarted", ({ round, order }) => {
   state.round = round;
