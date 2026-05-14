@@ -263,8 +263,19 @@ function updateVoteTimer(timeLeft) {
 
 function clearPlayer() {
   const embed = $("embed");
+  const activeIframes = embed.querySelectorAll("iframe");
+  activeIframes.forEach((frame) => {
+    frame.src = "about:blank";
+  });
   embed.className = "embed empty";
   embed.innerHTML = "<span>Ждем трек от текущего игрока</span>";
+  ["tickSound", "startSound", "revealSound"].forEach((id) => {
+    const media = $(id);
+    if (media && typeof media.pause === "function") {
+      media.pause();
+      media.currentTime = 0;
+    }
+  });
 }
 
 function loadTrack(track) {
@@ -403,6 +414,7 @@ socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, 
   state.votedTarget = null;
   state.anonymousVoting = Boolean(anonymous);
   state.voteCandidates = candidates || [];
+  clearPlayer();
   showScreen("voting");
   renderVoteList(votes);
   updateVoteTimer(votingTime > 0 ? votingTime : null);
@@ -425,12 +437,14 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
+  clearPlayer();
   showScreen("results");
   updateVoteTimer(null);
   renderResults(data);
 });
 
 socket.on("gameCancelled", ({ reason }) => {
+  clearPlayer();
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
