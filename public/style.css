@@ -326,11 +326,7 @@ button:disabled {
   grid-template-columns: 1fr auto;
   gap: 10px;
 }
-  margin: 14px 0 8px;
-  display: grid;
-  gap: 12px;
-}
-
+  
 .qr-wrap {
   display: grid;
   place-items: center;

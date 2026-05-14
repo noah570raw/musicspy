@@ -61,7 +61,7 @@ button {
   left: 7%;
   background: var(--accent);
 }
-
+codex/add-lobby-settings-for-customizable-game-rules-kb9lz9
 .orb-two {
   right: 9%;
   bottom: 10%;
@@ -555,6 +555,48 @@ button:disabled {
   .card {
     padding: 20px;
     border-radius: 22px;
+  clearTimer(code);
+  lobby.submittedThisTurn = false;
+  lobby.turnStage = "waiting";
+  lobby.timeLeft = null;
+  io.to(code).emit("turn", {
+    playerId,
+    name: player.name,
+    round: lobby.round,
+    turnNumber: lobby.currentTurnIndex + 1,
+    turnsInRound: lobby.order.length,
+    stage: lobby.turnStage
+  });
+  io.to(code).emit("timer", {
+    timeLeft: null,
+    stage: lobby.turnStage,
+    listenTime: lobby.settings.listenTime
+  });
+  emitGameState(code);
+}
+
+function advanceTurn(code) {
+  const lobby = lobbies[code];
+  if (!lobby || lobby.phase !== "playing") return;
+
+  clearTimer(code);
+  lobby.currentTurnIndex += 1;
+
+  if (lobby.currentTurnIndex >= lobby.order.length) {
+    if (lobby.round >= lobby.settings.rounds) {
+      startVoting(code);
+      return;
+    }
+
+    lobby.round += 1;
+lobby.currentTurnIndex = 0;
+const activeOrder = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
+lobby.order = rotateOrder(activeOrder, 1);
+io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
+
+  
+main
+    io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 
   .two-col,
@@ -564,6 +606,302 @@ button:disabled {
 
   .section-header {
     display: grid;
+  finishGame(code, suspected, voteTotals);
+}
+
+function finishGame(code, suspected = [], voteTotals = null) {
+  const lobby = lobbies[code];
+  if (!lobby) return;
+
+  const finalVotes = voteTotals || publicVotes(lobby);
+  const spyPlayers = lobby.players.filter((player) => lobby.spies.includes(player.id));
+  const civiliansWin = suspected.some((id) => lobby.spies.includes(id));
+
+  lobby.phase = "ended";
+  clearTimer(code);
+
+  io.to(code).emit("gameEnd", {
+    spies: lobby.spies,
+    spy: lobby.spies[0] || null,
+    spyNames: spyPlayers.map((player) => player.name),
+    spyName: spyPlayers.map((player) => player.name).join(", ") || "Шпион",
+    votes: finalVotes,
+    suspected,
+    civiliansWin,
+    theme: lobby.theme,
+    settings: lobby.settings
+  });
+  emitLobbyUpdate(code);
+}
+
+function resetLobbyToWaiting(lobby) {
+  lobby.started = false;
+  lobby.phase = "lobby";
+  lobby.round = 0;
+  lobby.spies = [];
+  lobby.spy = null;
+  lobby.order = [];
+  lobby.baseOrder = [];
+  lobby.currentTurnIndex = 0;
+  lobby.theme = "";
+  lobby.votes = {};
+  lobby.voteRound = 1;
+  lobby.voteCandidates = [];
+  lobby.voteTimeLeft = null;
+  lobby.lastTrack = null;
+  lobby.submittedThisTurn = false;
+  lobby.timeLeft = null;
+  lobby.turnStage = "waiting";
+}
+
+function createLobbyState(code, hostId, player) {
+  return {
+    code,
+    host: hostId,
+    players: [player],
+    started: false,
+    phase: "lobby",
+    round: 0,
+    spies: [],
+    spy: null,
+    order: [],
+    baseOrder: [],
+    currentTurnIndex: 0,
+    theme: "",
+    votes: {},
+    voteRound: 1,
+    voteCandidates: [],
+    voteTimeLeft: null,
+    lastTrack: null,
+    submittedThisTurn: false,
+    timeLeft: null,
+    turnStage: "waiting",
+    settings: { ...DEFAULT_SETTINGS }
+  };
+}
+
+io.on("connection", (socket) => {
+  socket.on("createLobby", ({ name }, cb = () => {}) => {
+    const code = generateCode();
+    const player = { id: socket.id, name: normalizeName(name), ready: false };
+
+    lobbies[code] = createLobbyState(code, socket.id, player);
+
+    socket.join(code);
+    cb({ code, playerId: socket.id });
+    emitLobbyUpdate(code);
+  });
+
+  socket.on("joinLobby", ({ code, name }, cb = () => {}) => {
+    const roomCode = normalizeCode(code);
+    const lobby = lobbies[roomCode];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.players.some((player) => player.id === socket.id)) {
+      return cb({ success: true, code: roomCode, playerId: socket.id });
+    }
+
+    socket.join(roomCode);
+    lobby.players.push({ id: socket.id, name: makeUniqueName(lobby, name), ready: false });
+
+    cb({ success: true, code: roomCode, playerId: socket.id });
+    emitLobbyUpdate(roomCode);
+  });
+
+  socket.on("updateSettings", ({ code, settings }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Настройки может менять только хост" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+
+    lobby.settings = normalizeSettings({ ...lobby.settings, ...settings });
+    cb({ success: true, settings: lobby.settings });
+    emitLobbyUpdate(lobby.code);
+  });
+
+  socket.on("setReady", ({ code, ready }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+    const player = lobby.players.find((item) => item.id === socket.id);
+    if (!player) return cb({ error: "Ты не в этой комнате" });
+    player.ready = Boolean(ready);
+    cb({ success: true, ready: player.ready });
+    emitLobbyUpdate(lobby.code);
+  });
+
+  socket.on("updateName", ({ code, name }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+    const player = lobby.players.find((item) => item.id === socket.id);
+    if (!player) return cb({ error: "Ты не в этой комнате" });
+    player.name = makeUniqueName(lobby, name, socket.id);
+    cb({ success: true, name: player.name });
+    emitLobbyUpdate(lobby.code);
+  });
+
+  socket.on("startGame", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Начать игру может только хост" });
+    if (lobby.players.length < 3) return cb({ error: "Нужно минимум 3 игрока" });
+    if (lobby.players.some((player) => !player.ready)) {
+      return cb({ error: "Все игроки должны нажать «Готов»" });
+    }
+
+    const spyCount = getSpyCount(lobby);
+    const spies = shuffle(lobby.players.map((player) => player.id)).slice(0, spyCount);
+
+    lobby.started = true;
+    lobby.phase = "playing";
+    lobby.round = 1;
+    lobby.theme = pickTheme();
+    lobby.spies = spies;
+    lobby.spy = spies[0] || null;
+    lobby.baseOrder = shuffle(lobby.players.map((player) => player.id));
+    lobby.order = rotateOrder(lobby.baseOrder, 0);
+    lobby.currentTurnIndex = 0;
+    lobby.votes = {};
+    lobby.voteRound = 1;
+    lobby.voteCandidates = [];
+    lobby.voteTimeLeft = null;
+    lobby.lastTrack = null;
+    lobby.submittedThisTurn = false;
+    lobby.turnStage = "waiting";
+    lobby.timeLeft = null;
+
+    for (const player of lobby.players) {
+      io.to(player.id).emit("gameStarted", {
+        code: lobby.code,
+        role: lobby.spies.includes(player.id) ? "spy" : "civilian",
+        theme: lobby.spies.includes(player.id) ? null : lobby.theme,
+        round: lobby.round,
+        totalRounds: lobby.settings.rounds,
+        order: lobby.order,
+        players: lobby.players,
+        spyCount: lobby.spies.length,
+        settings: lobby.settings
+      });
+    }
+
+    cb({ success: true });
+    emitLobbyUpdate(lobby.code);
+    startTurn(lobby.code);
+  });
+
+  socket.on("playTrack", ({ code, url }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    const trackUrl = String(url || "").trim();
+    if (!lobby || lobby.phase !== "playing") return cb({ error: "Сейчас нельзя отправить трек" });
+    if (lobby.order[lobby.currentTurnIndex] !== socket.id) return cb({ error: "Сейчас ход другого игрока" });
+    if (lobby.submittedThisTurn) return cb({ error: "Трек уже отправлен" });
+    if (!isSupportedTrackUrl(trackUrl)) return cb({ error: "Вставь ссылку YouTube или SoundCloud" });
+
+    const player = lobby.players.find((item) => item.id === socket.id);
+    lobby.submittedThisTurn = true;
+    lobby.lastTrack = {
+      url: trackUrl,
+      playerId: socket.id,
+      playerName: player?.name || "Игрок",
+      round: lobby.round
+    };
+
+    io.to(lobby.code).emit("newTrack", lobby.lastTrack);
+    cb({ success: true });
+    startListeningTimer(lobby.code);
+  });
+
+  socket.on("vote", ({ code, target }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby || lobby.phase !== "voting") return cb({ error: "Голосование еще не началось" });
+    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
+    if (!lobby.voteCandidates.includes(target)) return cb({ error: "Этот игрок не участвует в текущем голосовании" });
+    if (target === socket.id) return cb({ error: "Нельзя голосовать за себя" });
+
+    lobby.votes[socket.id] = target;
+    const voteTotals = publicVotes(lobby);
+    io.to(lobby.code).emit("voteUpdate", {
+      votes: lobby.settings.anonymousVoting ? {} : voteTotals,
+      votedCount: Object.keys(lobby.votes).length,
+      total: lobby.players.length,
+      anonymous: lobby.settings.anonymousVoting,
+      voteRound: lobby.voteRound
+    });
+    cb({ success: true });
+
+    if (Object.keys(lobby.votes).length >= lobby.players.length) {
+      finishVote(lobby.code);
+    }
+  });
+
+  socket.on("restartLobby", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Перезапустить может только хост" });
+
+    clearTimer(lobby.code);
+    resetLobbyToWaiting(lobby);
+    cb({ success: true });
+    emitLobbyUpdate(lobby.code);
+  });
+
+  socket.on("disconnect", () => {
+    for (const code of Object.keys(lobbies)) {
+      const lobby = lobbies[code];
+      const wasInLobby = lobby.players.some((player) => player.id === socket.id);
+      if (!wasInLobby) continue;
+
+      const disconnectedOrderIndex = lobby.order.indexOf(socket.id);
+      lobby.players = lobby.players.filter((player) => player.id !== socket.id);
+      lobby.order = lobby.order.filter((id) => id !== socket.id);
+      lobby.baseOrder = lobby.baseOrder.filter((id) => id !== socket.id);
+      lobby.spies = lobby.spies.filter((id) => id !== socket.id);
+      lobby.voteCandidates = lobby.voteCandidates.filter((id) => id !== socket.id);
+      delete lobby.votes[socket.id];
+      for (const [voter, target] of Object.entries(lobby.votes)) {
+        if (target === socket.id) delete lobby.votes[voter];
+      }
+
+      if (lobby.host === socket.id && lobby.players.length > 0) {
+        lobby.host = lobby.players[0].id;
+      }
+
+      if (lobby.players.length === 0) {
+        clearTimer(code);
+        delete lobbies[code];
+        continue;
+      }
+
+      if (lobby.phase === "playing" && lobby.players.length < 3) {
+        clearTimer(code);
+        resetLobbyToWaiting(lobby);
+        io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
+      } else if (lobby.phase === "playing") {
+        if (disconnectedOrderIndex !== -1 && disconnectedOrderIndex < lobby.currentTurnIndex) {
+          lobby.currentTurnIndex = Math.max(0, lobby.currentTurnIndex - 1);
+        }
+        if (lobby.currentTurnIndex >= lobby.order.length) {
+          lobby.currentTurnIndex = 0;
+        }
+        startTurn(code);
+      } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
+        finishVote(code);
+      }
+
+      emitLobbyUpdate(code);
+    }
+  });
+});
+
+function isSupportedTrackUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return /(^|\.)youtube\.com$/i.test(parsed.hostname)
+      || /(^|\.)youtu\.be$/i.test(parsed.hostname)
+      || /(^|\.)soundcloud\.com$/i.test(parsed.hostname);
+  } catch {
+    return false;
   }
 }
 
