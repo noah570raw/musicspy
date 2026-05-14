@@ -18,7 +18,8 @@ const state = {
   turnStage: "waiting",
   votedTarget: null,
   voteCandidates: [],
-  anonymousVoting: false
+  anonymousVoting: false,
+  ready: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -132,6 +133,27 @@ function updateLobbySettings() {
   });
 }
 
+function toggleReady() {
+  if (!state.currentCode) return;
+  socket.emit("setReady", { code: state.currentCode, ready: !state.ready }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    state.ready = Boolean(res.ready);
+    setStatus("lobbyStatus", state.ready ? "Ты отметил готовность" : "Готовность снята");
+  });
+}
+
+function changeNickname() {
+  if (!state.currentCode) return;
+  const value = $("renameInput").value.trim();
+  if (!value) return setStatus("lobbyStatus", "Введи новый ник", true);
+  socket.emit("updateName", { code: state.currentCode, name: value }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    $("name").value = res.name || value;
+    $("renameInput").value = "";
+    setStatus("lobbyStatus", `Ник обновлен: ${res.name || value}`);
+  });
+}
+
 function applySettingsToForm(settings = {}, isHost = false) {
   const spyValue = settings.spyMode === "manual" ? String(settings.spyCount || 1) : "auto";
   const fields = {
@@ -190,15 +212,25 @@ function renderLobby(lobby) {
     qr.classList.add("hidden");
   }
   const isHost = lobby.host === socket.id;
+  const me = state.players.find((player) => player.id === socket.id);
+  state.ready = Boolean(me?.ready);
+  const readyCount = state.players.filter((player) => player.ready).length;
   $("hostBadge").textContent = isHost ? "ты хост" : "хост: " + (state.players.find((p) => p.id === lobby.host)?.name || "...");
-  $("startBtn").disabled = !isHost || state.players.length < 3;
-  $("startBtn").textContent = state.players.length < 3 ? "Ждем минимум 3 игроков" : "Запустить игру";
+  $("startBtn").disabled = !isHost || state.players.length < 3 || readyCount !== state.players.length;
+  $("startBtn").textContent = state.players.length < 3
+    ? "Ждем минимум 3 игроков"
+    : readyCount !== state.players.length
+      ? "Ждем готовность всех игроков"
+      : "Запустить игру";
+  $("readyBtn").textContent = state.ready ? "Не готов" : "Я готов";
+  $("readySummary").textContent = `Готовы: ${readyCount}/${state.players.length}`;
   applySettingsToForm(state.settings, isHost);
 
   $("players").innerHTML = state.players.map((player, index) => `
     <div class="player-row">
       <span class="avatar">${index + 1}</span>
       <strong>${escapeHtml(player.name)}</strong>
+      ${player.ready ? "<em>готов</em>" : "<em>не готов</em>"}
       ${player.id === lobby.host ? "<em>host</em>" : ""}
       ${player.id === socket.id ? "<em>ты</em>" : ""}
     </div>
@@ -290,8 +322,19 @@ function updateVoteTimer(timeLeft) {
 
 function clearPlayer() {
   const embed = $("embed");
+  const activeIframes = embed.querySelectorAll("iframe");
+  activeIframes.forEach((frame) => {
+    frame.src = "about:blank";
+  });
   embed.className = "embed empty";
   embed.innerHTML = "<span>Ждем трек от текущего игрока</span>";
+  ["tickSound", "startSound", "revealSound"].forEach((id) => {
+    const media = $(id);
+    if (media && typeof media.pause === "function") {
+      media.pause();
+      media.currentTime = 0;
+    }
+  });
 }
 
 function loadTrack(track) {
