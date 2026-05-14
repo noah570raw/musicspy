@@ -1,39 +1,125 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Music Spy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="noise"></div>
+  <div class="orb orb-one"></div>
+  <div class="orb orb-two"></div>
 
-<div id="menu">
-  <h1>Music Spy</h1>
-  <input id="name" placeholder="nickname" />
-  <input id="code" placeholder="room code (optional)" />
-  <button onclick="createLobby()">Create Lobby</button>
-  <button onclick="joinLobby()">Join Lobby</button>
-</div>
+  <main class="app-shell">
+    <section id="menu" class="screen card hero-card">
+      <p class="eyebrow">музыкальная social deduction игра</p>
+      <h1>Music Spy</h1>
+      <p class="lead">Собери комнату, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга.</p>
 
-<div id="lobby" class="hidden">
-  <h2>Lobby</h2>
-  <p id="roomCode"></p>
-  <button onclick="startGame()">Start Game</button>
-  <div id="players"></div>
-</div>
+      <div class="form-grid">
+        <label>
+          <span>Никнейм</span>
+          <input id="name" maxlength="18" placeholder="например, beatkiller" autocomplete="nickname">
+        </label>
+        <label>
+          <span>Код комнаты</span>
+          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+        </label>
+      </div>
 
-<div id="game" class="hidden">
-  <h2 id="theme"></h2>
+      <div class="actions two-col">
+        <button class="primary" onclick="createLobby()">Создать лобби</button>
+        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+      </div>
 
-  <div id="youtube"></div>
+      <div class="rules">
+        <div><strong>3+</strong><span>игрока</span></div>
+        <div><strong>30с</strong><span>на трек</span></div>
+        <div><strong>3</strong><span>круга</span></div>
+      </div>
+      <p id="menuError" class="status error"></p>
+    </section>
 
-  <input id="url" placeholder="YouTube link" />
-  <button onclick="sendTrack()">Send Track</button>
+    <section id="lobby" class="screen card hidden">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">лобби</p>
+          <h2>Комната <button id="copyCode" class="code-pill" onclick="copyRoomCode()">-----</button></h2>
+        </div>
+        <span id="hostBadge" class="badge">ожидание</span>
+      </div>
 
-  <div id="turn"></div>
-</div>
+      <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
+      <div id="players" class="players-list"></div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="client.js"></script>
+      <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
+      <p id="lobbyStatus" class="status"></p>
+    </section>
 
+    <section id="game" class="screen game-layout hidden">
+      <aside class="card side-panel">
+        <p class="eyebrow">роль и тема</p>
+        <h2 id="roleTitle">...</h2>
+        <p id="theme" class="theme-text"></p>
+        <div class="round-meter">
+          <span id="roundInfo">Раунд 1/3</span>
+          <div><i id="roundBar"></i></div>
+        </div>
+        <div id="turn" class="turn-card">Ожидаем ход...</div>
+      </aside>
+
+      <section class="card player-card">
+        <div class="timer-ring">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="54"></circle>
+            <circle id="timerCircle" class="progress" cx="60" cy="60" r="54"></circle>
+          </svg>
+          <div><strong id="timer">∞</strong><span>сек</span></div>
+        </div>
+
+        <div id="embed" class="embed empty">
+          <span>Ждем трек от текущего игрока</span>
+        </div>
+
+        <div class="track-form">
+          <input id="url" placeholder="Вставь YouTube или SoundCloud ссылку">
+          <button id="sendBtn" class="primary" onclick="sendTrack()">Отправить трек</button>
+        </div>
+        <p id="gameStatus" class="status"></p>
+      </section>
+
+      <aside class="card side-panel">
+        <p class="eyebrow">очередь</p>
+        <div id="order" class="order-list"></div>
+      </aside>
+    </section>
+
+    <section id="voting" class="screen card hidden">
+      <p class="eyebrow">финальное голосование</p>
+      <h2>Кто шпион?</h2>
+      <p class="lead small">Выбери игрока, который хуже всех попадал в тему. Менять голос можно до конца голосования.</p>
+      <div id="voteList" class="vote-list"></div>
+      <p id="voteStatus" class="status"></p>
+    </section>
+
+    <section id="results" class="screen card hidden">
+      <p class="eyebrow">результаты</p>
+      <h2 id="resultTitle">Игра окончена</h2>
+      <p id="resultText" class="lead small"></p>
+      <div id="resultVotes" class="vote-list"></div>
+      <button id="restartBtn" class="primary hidden" onclick="restartLobby()">Вернуться в лобби</button>
+    </section>
+  </main>
+
+  <audio id="tickSound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgP//AAD//wAAgICAAP8A" type="audio/wav">
+  </audio>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
 </body>
 </html>
