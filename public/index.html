@@ -98,6 +98,15 @@
           <button id="sendBtn" class="primary" onclick="sendTrack()">Отправить трек</button>
         </div>
         <p id="gameStatus" class="status"></p>
+
+        <div class="chat-box">
+          <p class="eyebrow">чат</p>
+          <div id="chatList" class="vote-list" style="max-height:220px;overflow:auto;"></div>
+          <div class="track-form">
+            <input id="chatInput" maxlength="220" placeholder="Напиши сообщение">
+            <button class="secondary" onclick="sendChat()">Отправить</button>
+          </div>
+        </div>
       </section>
 
       <aside class="card side-panel">
@@ -105,15 +114,6 @@
         <div id="order" class="order-list"></div>
       </aside>
     </section>
-      <section class="card" style="margin-top:12px;">
-        <p class="eyebrow">чат</p>
-        <div id="chatList" class="vote-list" style="max-height:220px;overflow:auto;"></div>
-        <div class="track-form">
-          <input id="chatInput" maxlength="220" placeholder="Напиши сообщение">
-          <button class="secondary" onclick="sendChat()">Отправить</button>
-        </div>
-      </section>
-
 
     <section id="voting" class="screen card hidden">
       <p class="eyebrow">финальное голосование</p>
