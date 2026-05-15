@@ -35,10 +35,28 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
-const SPY_GROOVE_NOTES = [196, 233.08, 261.63, 311.13, 349.23, 311.13, 261.63, 233.08];
+const AMBIENT_PAD_NOTES = [130.81, 146.83, 174.61, 196, 220, 261.63, 293.66, 329.63];
+const AMBIENT_SHIMMER_NOTES = [523.25, 587.33, 659.25, 783.99, 880, 783.99, 659.25, 587.33];
 
 function getAudioContextConstructor() {
   return window.AudioContext || window.webkitAudioContext;
+}
+
+function createAmbientImpulse(context) {
+  const duration = 3.8;
+  const sampleRate = context.sampleRate;
+  const length = Math.floor(sampleRate * duration);
+  const impulse = context.createBuffer(2, length, sampleRate);
+
+  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+    const data = impulse.getChannelData(channel);
+    for (let i = 0; i < length; i += 1) {
+      const tail = 1 - i / length;
+      data[i] = (Math.random() * 2 - 1) * (tail ** 2.4) * 0.42;
+    }
+  }
+
+  return impulse;
 }
 
 function createAudioEngine() {
@@ -50,12 +68,41 @@ function createAudioEngine() {
   const master = context.createGain();
   const fxGain = context.createGain();
   const musicGain = context.createGain();
+  const fxFilter = context.createBiquadFilter();
+  const musicFilter = context.createBiquadFilter();
+  const reverb = context.createConvolver();
+  const reverbGain = context.createGain();
+  const delay = context.createDelay(1.2);
+  const delayFeedback = context.createGain();
+  const delayGain = context.createGain();
 
   master.gain.value = state.siteVolume / 100;
-  fxGain.gain.value = 0.32;
-  musicGain.gain.value = 0.16;
-  fxGain.connect(master);
-  musicGain.connect(master);
+  fxGain.gain.value = 0.24;
+  musicGain.gain.value = 0.13;
+  fxFilter.type = "lowpass";
+  fxFilter.frequency.value = 1700;
+  fxFilter.Q.value = 0.55;
+  musicFilter.type = "lowpass";
+  musicFilter.frequency.value = 1250;
+  musicFilter.Q.value = 0.4;
+  reverb.buffer = createAmbientImpulse(context);
+  reverbGain.gain.value = 0.34;
+  delay.delayTime.value = 0.46;
+  delayFeedback.gain.value = 0.22;
+  delayGain.gain.value = 0.26;
+
+  fxGain.connect(fxFilter);
+  fxFilter.connect(master);
+  fxFilter.connect(reverb);
+  musicGain.connect(musicFilter);
+  musicFilter.connect(master);
+  musicFilter.connect(delay);
+  delay.connect(delayFeedback);
+  delayFeedback.connect(delay);
+  delay.connect(delayGain);
+  delayGain.connect(reverb);
+  reverb.connect(reverbGain);
+  reverbGain.connect(master);
   master.connect(context.destination);
 
   state.audio = {
@@ -63,6 +110,10 @@ function createAudioEngine() {
     master,
     fxGain,
     musicGain,
+    fxFilter,
+    musicFilter,
+    reverbGain,
+    delay,
     musicTimer: null,
     step: 0,
     startedAt: 0
@@ -83,8 +134,8 @@ function setGainValue(gain, value, time = 0.025) {
 
 function syncAudioVolume() {
   if (!state.audio) return;
-  setGainValue(state.audio.master, state.siteVolume / 100);
-  setGainValue(state.audio.musicGain, state.musicEnabled ? 0.16 : 0);
+  setGainValue(state.audio.master, state.siteVolume / 100, 0.08);
+  setGainValue(state.audio.musicGain, state.musicEnabled ? 0.13 : 0, 0.18);
 }
 
 function unlockAudio({ startMusic = true } = {}) {
@@ -98,23 +149,36 @@ function unlockAudio({ startMusic = true } = {}) {
   return audio;
 }
 
-function playTone({ frequency = 440, duration = 0.12, type = "sine", destination, start = 0, gain = 0.16, slideTo = null }) {
+function playTone({
+  frequency = 440,
+  duration = 0.38,
+  type = "sine",
+  destination,
+  start = 0,
+  gain = 0.08,
+  slideTo = null,
+  attack = 0.08,
+  release = 0.42,
+  detune = 0
+}) {
   const audio = unlockAudio({ startMusic: false });
   if (!audio) return;
 
   const now = audio.context.currentTime + start;
+  const end = now + Math.max(duration, attack + 0.02);
   const oscillator = audio.context.createOscillator();
   const envelope = audio.context.createGain();
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(frequency, now);
-  if (slideTo) oscillator.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+  oscillator.detune.setValueAtTime(detune, now);
+  if (slideTo) oscillator.frequency.exponentialRampToValueAtTime(slideTo, end);
   envelope.gain.setValueAtTime(0.0001, now);
-  envelope.gain.exponentialRampToValueAtTime(gain, now + 0.018);
-  envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  envelope.gain.exponentialRampToValueAtTime(gain, now + attack);
+  envelope.gain.setTargetAtTime(0.0001, end, release / 3);
   oscillator.connect(envelope);
   envelope.connect(destination || audio.fxGain);
   oscillator.start(now);
-  oscillator.stop(now + duration + 0.03);
+  oscillator.stop(end + release + 0.05);
 }
 
 function playButtonSound(button) {
@@ -137,61 +201,66 @@ function playSoundCue(name) {
   if (!audio || state.siteVolume === 0) return;
 
   const cues = {
-    click: () => playTone({ frequency: 520, duration: 0.07, type: "triangle", gain: 0.08, slideTo: 740 }),
+    click: () => playTone({ frequency: 329.63, duration: 0.18, gain: 0.035, slideTo: 392, attack: 0.035, release: 0.24 }),
     confirm: () => {
-      playTone({ frequency: 330, duration: 0.09, type: "sine", gain: 0.1 });
-      playTone({ frequency: 660, duration: 0.13, type: "triangle", start: 0.055, gain: 0.11 });
+      playTone({ frequency: 261.63, duration: 0.34, gain: 0.046, attack: 0.06, release: 0.38 });
+      playTone({ frequency: 392, duration: 0.42, start: 0.08, gain: 0.038, attack: 0.08, release: 0.46, detune: -4 });
+      playTone({ frequency: 523.25, duration: 0.48, start: 0.18, gain: 0.026, attack: 0.12, release: 0.55, detune: 5 });
     },
-    danger: () => playTone({ frequency: 220, duration: 0.18, type: "sawtooth", gain: 0.08, slideTo: 110 }),
+    danger: () => {
+      playTone({ frequency: 146.83, duration: 0.7, gain: 0.045, slideTo: 110, attack: 0.12, release: 0.65, detune: -6 });
+      playTone({ frequency: 220, duration: 0.56, start: 0.09, gain: 0.026, slideTo: 174.61, attack: 0.15, release: 0.68 });
+    },
     reaction: () => {
-      playTone({ frequency: 880, duration: 0.05, type: "square", gain: 0.055 });
-      playTone({ frequency: 1174.66, duration: 0.06, type: "triangle", start: 0.035, gain: 0.06 });
+      playTone({ frequency: 659.25, duration: 0.24, gain: 0.026, attack: 0.045, release: 0.32, detune: -5 });
+      playTone({ frequency: 880, duration: 0.34, start: 0.12, gain: 0.02, attack: 0.08, release: 0.42, detune: 7 });
     },
     vote: () => {
-      playTone({ frequency: 261.63, duration: 0.08, type: "triangle", gain: 0.08 });
-      playTone({ frequency: 392, duration: 0.11, type: "triangle", start: 0.06, gain: 0.08 });
+      playTone({ frequency: 196, duration: 0.32, gain: 0.038, attack: 0.08, release: 0.4 });
+      playTone({ frequency: 293.66, duration: 0.4, start: 0.1, gain: 0.032, attack: 0.1, release: 0.44 });
     },
     screen: () => {
-      playTone({ frequency: 146.83, duration: 0.22, type: "sine", gain: 0.08, slideTo: 293.66 });
-      playTone({ frequency: 587.33, duration: 0.18, type: "triangle", start: 0.08, gain: 0.055 });
+      playTone({ frequency: 164.81, duration: 0.65, gain: 0.034, slideTo: 246.94, attack: 0.16, release: 0.7 });
+      playTone({ frequency: 493.88, duration: 0.6, start: 0.18, gain: 0.022, attack: 0.2, release: 0.72, detune: 4 });
     },
     track: () => {
-      playTone({ frequency: 196, duration: 0.12, type: "sine", gain: 0.09 });
-      playTone({ frequency: 392, duration: 0.16, type: "triangle", start: 0.08, gain: 0.09 });
-      playTone({ frequency: 783.99, duration: 0.2, type: "triangle", start: 0.16, gain: 0.07 });
+      playTone({ frequency: 130.81, duration: 0.58, gain: 0.043, attack: 0.12, release: 0.7 });
+      playTone({ frequency: 261.63, duration: 0.72, start: 0.16, gain: 0.035, attack: 0.18, release: 0.78, detune: -3 });
+      playTone({ frequency: 523.25, duration: 0.86, start: 0.36, gain: 0.022, attack: 0.22, release: 0.86, detune: 6 });
     },
     reveal: () => {
-      playTone({ frequency: 174.61, duration: 0.32, type: "sawtooth", gain: 0.045, slideTo: 698.46 });
-      playTone({ frequency: 523.25, duration: 0.22, type: "triangle", start: 0.12, gain: 0.07 });
+      playTone({ frequency: 174.61, duration: 1.1, gain: 0.04, slideTo: 349.23, attack: 0.24, release: 1.05, detune: -5 });
+      playTone({ frequency: 440, duration: 0.9, start: 0.28, gain: 0.026, attack: 0.28, release: 0.95, detune: 5 });
+      playTone({ frequency: 659.25, duration: 1.0, start: 0.52, gain: 0.02, attack: 0.34, release: 1.1 });
     }
   };
 
   cues[name]?.();
 }
 
-function scheduleSpyGroove() {
+function scheduleAmbientMusic() {
   const audio = state.audio;
   if (!audio || !state.musicEnabled || state.siteVolume === 0) return;
 
-  const baseTime = audio.context.currentTime + 0.02;
-  for (let i = 0; i < 4; i += 1) {
-    const index = (audio.step + i) % SPY_GROOVE_NOTES.length;
-    const note = SPY_GROOVE_NOTES[index];
-    playTone({ frequency: note / 2, duration: 0.26, type: "sine", destination: audio.musicGain, start: i * 0.32, gain: 0.07 });
-    if (i % 2 === 0) {
-      playTone({ frequency: note * 2, duration: 0.18, type: "triangle", destination: audio.musicGain, start: i * 0.32 + 0.08, gain: 0.035 });
-    }
-  }
-  audio.step = (audio.step + 4) % SPY_GROOVE_NOTES.length;
-  audio.startedAt = baseTime;
+  const rootIndex = audio.step % AMBIENT_PAD_NOTES.length;
+  const root = AMBIENT_PAD_NOTES[rootIndex];
+  const fifth = AMBIENT_PAD_NOTES[(rootIndex + 3) % AMBIENT_PAD_NOTES.length];
+  const shimmer = AMBIENT_SHIMMER_NOTES[(audio.step * 2) % AMBIENT_SHIMMER_NOTES.length];
+
+  playTone({ frequency: root, duration: 3.7, destination: audio.musicGain, gain: 0.038, attack: 0.85, release: 1.4, detune: -4 });
+  playTone({ frequency: fifth, duration: 3.3, destination: audio.musicGain, start: 0.45, gain: 0.03, attack: 0.95, release: 1.35, detune: 4 });
+  playTone({ frequency: shimmer, duration: 1.45, destination: audio.musicGain, start: 1.2, gain: 0.012, attack: 0.35, release: 1.1, detune: audio.step % 2 === 0 ? 7 : -7 });
+
+  audio.step = (audio.step + 1) % AMBIENT_PAD_NOTES.length;
+  audio.startedAt = audio.context.currentTime;
 }
 
 function startBackgroundMusic() {
   const audio = createAudioEngine();
   if (!audio || audio.musicTimer || !state.musicEnabled) return;
   syncAudioVolume();
-  scheduleSpyGroove();
-  audio.musicTimer = window.setInterval(scheduleSpyGroove, 1280);
+  scheduleAmbientMusic();
+  audio.musicTimer = window.setInterval(scheduleAmbientMusic, 3600);
 }
 
 function stopBackgroundMusic() {
