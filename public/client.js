@@ -32,6 +32,7 @@ const GAME_MODE_PRESETS = {
 };
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
 const UI_CUE_FADE_SECONDS = 0.045;
+const CHAT_MESSAGE_VISIBLE_MS = 9000;
 const state = {
   currentCode: "",
   myId: "",
@@ -61,6 +62,7 @@ const state = {
   currentTrackId: null,
   trackHistory: [],
   chatMessages: [],
+  chatExpireTimer: null,
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
   audio: null,
@@ -2292,11 +2294,22 @@ function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
   const list = Array.isArray(messages) ? messages : [];
+  const now = Date.now();
+  const visibleMessages = list
+    .map((message) => ({
+      ...message,
+      age: Math.max(0, now - (Number(message.createdAt) || now))
+    }))
+    .filter((message) => message.age < CHAT_MESSAGE_VISIBLE_MS);
+
   state.chatMessages = list;
-  const markup = list.map((message) => {
+  if (state.chatExpireTimer) clearTimeout(state.chatExpireTimer);
+  state.chatExpireTimer = null;
+
+  const markup = visibleMessages.map((message) => {
     const isMine = message.playerId === socket.id;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""}">
+      <div class="chat-message ${isMine ? "mine" : ""}" style="--chat-age-ms: ${Math.round(message.age)}ms;">
         <div class="chat-message-meta">
           <strong>${escapeHtml(message.playerName || t("Игрок"))}</strong>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
@@ -2307,16 +2320,18 @@ function renderChat(messages = state.chatMessages) {
   }).join("");
 
   for (const box of boxes) {
-    if (!list.length) {
+    if (!visibleMessages.length) {
       box.classList.add("empty");
       box.textContent = t("Пока сообщений нет");
       continue;
     }
     box.classList.remove("empty");
     box.innerHTML = markup;
-    requestAnimationFrame(() => {
-      box.scrollTop = box.scrollHeight;
-    });
+  }
+
+  if (visibleMessages.length) {
+    const nextExpiry = Math.min(...visibleMessages.map((message) => CHAT_MESSAGE_VISIBLE_MS - message.age));
+    state.chatExpireTimer = setTimeout(() => renderChat(), Math.max(0, nextExpiry) + 50);
   }
 }
 
