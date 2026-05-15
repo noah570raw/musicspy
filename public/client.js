@@ -68,6 +68,7 @@ const state = {
   voteCounts: {},
   anonymousVoting: false,
   spyGuessActive: false,
+  pendingSpyGuess: null,
   reactionCounts: {},
   selectedReaction: null,
   currentTrackId: null,
@@ -184,12 +185,18 @@ const EN_TRANSLATIONS = {
   "Продолжить": "Resume",
   "−15 сек": "−15 sec",
   "+15 сек": "+15 sec",
+  "+1 раунд": "+1 round",
+  "−1 раунд": "−1 round",
   "пауза": "paused",
   "слушаем": "listening",
   "Пропустить ход": "Skip turn",
   "К голосованию": "Start voting",
   "Пересоздать лобби": "Recreate lobby",
   "Кикнуть игрока": "Kick a player",
+  "Передать ход или кикнуть": "Pass turn or kick",
+  "Отправить свои догадки": "Submit your guesses",
+  "Шпион угадал": "Spy guessed",
+  "Шпион не угадал": "Spy missed",
   "Игроки": "Players",
   "передать": "pass turn",
   "сек": "sec",
@@ -1190,6 +1197,14 @@ function applySiteVolume() {
       args: []
     }), "*");
   }
+
+  if (trackFrame?.contentWindow && trackFrame.src.includes("w.soundcloud.com") && window.SC?.Widget) {
+    try {
+      window.SC.Widget(trackFrame).setVolume(state.siteVolume);
+    } catch {
+      // SoundCloud widget may not be ready immediately after iframe creation.
+    }
+  }
 }
 
 function restoreSiteVolume() {
@@ -1421,7 +1436,7 @@ function saveProfile() {
     if (res?.error) return setAuthStatus(res.error, true);
     state.pendingAvatar = undefined;
     applyProfile(res.profile);
-    setAuthStatus("Профиль обновлен. Ник на сайте обновлен из профиля");
+    setAuthStatus();
   });
 }
 
@@ -1478,6 +1493,7 @@ function restartLobby() {
       const statusId = state.phase === "game" ? "gameStatus" : "voteStatus";
       return setStatus(statusId, res.error, true);
     }
+    closeTransientOverlays();
     showScreen("lobby");
   });
 }
@@ -1510,10 +1526,44 @@ function hostAdjustTimer(delta) {
   });
 }
 
+function hostAdjustRounds(delta) {
+  socket.emit("hostAdjustRounds", { code: state.currentCode, delta }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    state.totalRounds = res.rounds || state.totalRounds;
+    setStatus("gameStatus", `Раундов в игре: ${state.totalRounds}`);
+  });
+}
+
+function openHostPlayersModal() {
+  renderHostControls();
+  const modal = $("hostPlayersModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeHostPlayersModal() {
+  const modal = $("hostPlayersModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function closeSpyReviewModal() {
+  const modal = $("spyReviewModal");
+  if (modal) modal.classList.add("hidden");
+  setStatus("spyReviewStatus");
+}
+
+function closeTransientOverlays() {
+  hideCinematicOverlay();
+  closeHostPlayersModal();
+  closeSpyReviewModal();
+  const authModal = $("authModal");
+  if (authModal) authModal.classList.add("hidden");
+}
+
 function hostSetTurn(playerId) {
   socket.emit("hostSetTurn", { code: state.currentCode, playerId }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     setStatus("gameStatus", "Ход передан игроку");
+    closeHostPlayersModal();
   });
 }
 
@@ -1521,6 +1571,29 @@ function hostKickPlayer(playerId) {
   socket.emit("hostKickPlayer", { code: state.currentCode, playerId }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     setStatus("gameStatus", "Игрок удален из комнаты");
+    closeHostPlayersModal();
+  });
+}
+
+function submitSpyGuess() {
+  const input = $("spyGuessInput");
+  const button = $("spyGuessSubmitBtn");
+  const guess = input?.value.trim() || "";
+  if (!guess) return setStatus("spyGuessStatus", "Введи версию темы", true);
+  if (button) button.disabled = true;
+  socket.emit("submitSpyGuess", { code: state.currentCode, guess }, (res) => {
+    if (button) button.disabled = false;
+    if (res?.error) return setStatus("spyGuessStatus", res.error, true);
+    if (button) button.disabled = true;
+    if (input) input.disabled = true;
+    setStatus("spyGuessStatus", "Версия отправлена хосту. Ждем решения.");
+  });
+}
+
+function resolveSpyGuess(correct) {
+  socket.emit("hostResolveSpyGuess", { code: state.currentCode, correct }, (res) => {
+    if (res?.error) return setStatus("spyReviewStatus", res.error, true);
+    closeSpyReviewModal();
   });
 }
 
@@ -1791,8 +1864,11 @@ function renderGameState(data) {
   state.voteCandidates = data.voteCandidates || state.voteCandidates;
   state.reactionCounts = data.reactionCounts || state.reactionCounts;
   state.trackHistory = data.trackHistory || state.trackHistory;
-  if (data.lastTrack?.id && data.lastTrack.id !== state.currentTrackId) {
-    state.currentTrackId = data.lastTrack.id;
+  state.pendingSpyGuess = data.pendingSpyGuess || state.pendingSpyGuess;
+  const shouldLoadLastTrack = ["listening", "paused"].includes(data.turnStage)
+    && data.lastTrack
+    && data.lastTrack.id !== state.currentTrackId;
+  if (shouldLoadLastTrack) {
     state.selectedReaction = null;
   }
 
@@ -1804,7 +1880,7 @@ function renderGameState(data) {
   renderTrackHistory();
   updateSendButton(data.submittedThisTurn);
 
-  if (["listening", "paused"].includes(data.turnStage) && data.lastTrack) loadTrack(data.lastTrack);
+  if (shouldLoadLastTrack) loadTrack(data.lastTrack);
 }
 
 function renderOrder() {
@@ -1827,12 +1903,12 @@ function renderHostControls() {
   const nowPlaying = $("hostNowPlaying");
   const timerState = $("hostTimerState");
   const pauseBtn = $("hostPauseBtn");
-  if (!controls || !kickList) return;
+  if (!controls) return;
 
   const isHost = state.hostId === socket.id;
   controls.classList.toggle("hidden", !isHost);
   if (!isHost) {
-    kickList.innerHTML = "";
+    if (kickList) kickList.innerHTML = "";
     return;
   }
 
@@ -1851,7 +1927,7 @@ function renderHostControls() {
     pauseBtn.disabled = !["listening", "paused"].includes(state.turnStage);
   }
 
-  kickList.innerHTML = state.players.map((player) => {
+  if (kickList) kickList.innerHTML = state.players.map((player) => {
     const isMe = player.id === socket.id;
     const isCurrent = player.id === state.currentPlayerId;
     return `
@@ -1871,8 +1947,9 @@ function renderReactions() {
   const summary = $("reactionSummary");
   if (!buttons || !summary) return;
 
+  const isOwnTrack = state.currentPlayerId === socket.id && ["listening", "paused"].includes(state.turnStage);
   buttons.innerHTML = ALLOWED_REACTIONS.map((reaction) => `
-    <button class="reaction-btn ${state.selectedReaction === reaction ? "selected" : ""}" onclick="sendReaction('${escapeAttribute(reaction)}')">
+    <button class="reaction-btn ${state.selectedReaction === reaction ? "selected" : ""}" ${isOwnTrack ? "disabled" : ""} onclick="sendReaction('${escapeAttribute(reaction)}')">
       <span>${reaction}</span>
       <strong>${state.reactionCounts[reaction] || 0}</strong>
     </button>
@@ -1881,7 +1958,7 @@ function renderReactions() {
   const activeCounts = ALLOWED_REACTIONS
     .filter((reaction) => state.reactionCounts[reaction])
     .map((reaction) => `${reaction} ${state.reactionCounts[reaction]}`);
-  summary.textContent = activeCounts.length ? activeCounts.join(" · ") : t("Пока реакций нет");
+  summary.textContent = isOwnTrack ? t("На свой трек реакции ставить нельзя") : (activeCounts.length ? activeCounts.join(" · ") : t("Пока реакций нет"));
 }
 
 function formatReactions(reactions = {}) {
@@ -1989,6 +2066,11 @@ function clearPlayer() {
 
 function loadTrack(track) {
   const url = typeof track === "string" ? track : track.url;
+  const incomingTrackId = typeof track === "string" ? state.currentTrackId : (track.id || state.currentTrackId);
+  if (incomingTrackId && incomingTrackId === state.currentTrackId && $("trackFrame")) {
+    applySiteVolume();
+    return;
+  }
   if (typeof track !== "string") {
     const nextTrackId = track.id || state.currentTrackId;
     if (nextTrackId !== state.currentTrackId) {
@@ -2007,7 +2089,11 @@ function loadTrack(track) {
     const origin = encodeURIComponent(window.location.origin);
     embed.innerHTML = `<iframe id="trackFrame" src="https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&enablejsapi=1&origin=${origin}" title="YouTube player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   } else if (soundCloud) {
-    embed.innerHTML = `<iframe id="trackFrame" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&visual=true" title="SoundCloud player" allow="autoplay"></iframe>`;
+    embed.innerHTML = `<iframe id="trackFrame" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&visual=true&show_teaser=false" title="SoundCloud player" allow="autoplay"></iframe>`;
+    if (window.SC?.Widget) {
+      const widget = window.SC.Widget($("trackFrame"));
+      widget.bind(window.SC.Widget.Events.READY, () => applySiteVolume());
+    }
   } else {
     embed.innerHTML = `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${t("Открыть трек")}</a>`;
   }
@@ -2156,7 +2242,11 @@ socket.on("connect", () => {
 
 socket.on("lobbyUpdate", (lobby) => {
   renderLobby(lobby);
-  if (lobby.phase === "lobby" && state.phase !== "menu") showScreen("lobby");
+  if (lobby.phase === "lobby" && state.phase !== "menu") {
+    closeTransientOverlays();
+    clearPlayer();
+    showScreen("lobby");
+  }
 });
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -2267,6 +2357,7 @@ socket.on("voteUpdate", ({ votes, votedCount, total, anonymous }) => {
 socket.on("spyGuessStarted", ({ spies, spyNames, votes, trackHistory, timeLeft }) => {
   playSoundCue("danger");
   state.spyGuessActive = true;
+  state.pendingSpyGuess = null;
   state.voteCounts = votes || state.voteCounts;
   state.trackHistory = trackHistory || state.trackHistory;
   const isSpy = spies?.includes(socket.id);
@@ -2277,6 +2368,9 @@ socket.on("spyGuessStarted", ({ spies, spyNames, votes, trackHistory, timeLeft }
     ? t("Мирные тебя нашли. Напиши точную тему, чтобы вырвать победу в последнюю секунду.")
     : t(`Мирные нашли шпиона: ${names}. Ждем, сможет ли он назвать тему.`);
   $("spyGuessInput").value = "";
+  $("spyGuessInput").disabled = false;
+  const submitBtn = $("spyGuessSubmitBtn");
+  if (submitBtn) submitBtn.disabled = false;
   setStatus("spyGuessStatus", isSpy ? `Последний шанс: угадай тему (${timeLeft || 60}с)` : `Ждем версию шпиона (${timeLeft || 60}с)`);
   renderTrackHistory("spyGuessTrackHistory", state.trackHistory);
 });
@@ -2293,12 +2387,33 @@ socket.on("runoffStarted", () => {
 
 socket.on("gameEnd", (data) => {
   state.spyGuessActive = false;
+  state.pendingSpyGuess = null;
+  closeSpyReviewModal();
   clearPlayer();
   updateVoteTimer(null);
   showSpyRevealCountdown(data, () => {
     showScreen("results");
     renderResults(data);
   });
+});
+
+socket.on("stopTrack", () => {
+  clearPlayer();
+});
+
+socket.on("spyGuessPending", ({ guess }) => {
+  state.pendingSpyGuess = guess || null;
+  setStatus("spyGuessStatus", guess ? `Версия шпиона «${guess.text}» отправлена хосту` : "Ждем решение хоста");
+});
+
+socket.on("spyGuessSubmitted", ({ guess }) => {
+  state.pendingSpyGuess = guess || null;
+  const text = $("spyReviewText");
+  if (text) text.textContent = `${guess?.playerName || "Шпион"}: «${guess?.text || "—"}»`;
+  setStatus("spyReviewStatus");
+  const modal = $("spyReviewModal");
+  if (modal) modal.classList.remove("hidden");
+  playSoundCue("danger");
 });
 
 socket.on("hostAction", ({ message }) => {
@@ -2315,7 +2430,7 @@ socket.on("kicked", ({ reason }) => {
 
 socket.on("gameCancelled", ({ reason }) => {
   clearPlayer();
-  hideCinematicOverlay();
+  closeTransientOverlays();
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });

@@ -56,6 +56,29 @@
     </div>
   </div>
 
+
+  <div id="hostPlayersModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="hostPlayersTitle">
+    <div class="auth-modal-card host-players-card">
+      <p class="eyebrow">пульт хоста</p>
+      <h2 id="hostPlayersTitle">Игроки</h2>
+      <p class="auth-modal-text">Выбери игрока и действие: передать ход или кикнуть из комнаты.</p>
+      <div id="hostKickList" class="kick-list host-modal-list"></div>
+      <button class="secondary" type="button" onclick="closeHostPlayersModal()">Закрыть</button>
+    </div>
+  </div>
+
+  <div id="spyReviewModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="spyReviewTitle">
+    <div class="auth-modal-card host-players-card">
+      <p class="eyebrow">финальное решение</p>
+      <h2 id="spyReviewTitle">Версия шпиона</h2>
+      <p id="spyReviewText" class="auth-modal-text">Шпион отправил догадку.</p>
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="resolveSpyGuess(true)">Шпион угадал</button>
+        <button class="danger" type="button" onclick="resolveSpyGuess(false)">Шпион не угадал</button>
+      </div>
+      <p id="spyReviewStatus" class="status"></p>
+    </div>
+  </div>
   <div class="account-corner" aria-label="Аккаунт игрока">
     <div id="guestAccountNotice" class="guest-account-notice hidden">Вы играете как гость</div>
     <div id="profileView" class="profile-view hidden">
@@ -289,10 +312,11 @@
             <button id="hostPauseBtn" class="secondary" onclick="hostTogglePause()">Пауза</button>
             <button class="secondary" onclick="hostAdjustTimer(-15)">−15 сек</button>
             <button class="secondary" onclick="hostAdjustTimer(15)">+15 сек</button>
+            <button class="secondary" onclick="hostAdjustRounds(1)">+1 раунд</button>
+            <button class="secondary" onclick="hostAdjustRounds(-1)">−1 раунд</button>
+            <button class="secondary" onclick="openHostPlayersModal()">Игроки</button>
             <button class="danger" onclick="restartLobby()">Пересоздать лобби</button>
           </div>
-          <p class="host-control-title">Игроки</p>
-          <div id="hostKickList" class="kick-list"></div>
         </div>
       </aside>
 
@@ -361,7 +385,7 @@
       <p id="spyGuessText" class="lead small">Мирные нашли шпиона. Теперь шпион может спасти игру, если назовет точную тему.</p>
       <div id="spyGuessForm" class="spy-guess-form hidden">
         <input id="spyGuessInput" maxlength="80" placeholder="Введи тему как можно точнее">
-        <button class="primary" type="button" onclick="submitSpyGuess()">Угадать тему</button>
+        <button id="spyGuessSubmitBtn" class="primary" type="button" onclick="submitSpyGuess()">Отправить свои догадки</button>
       </div>
       <p id="spyGuessStatus" class="status"></p>
       <div class="track-history-panel voting-history">
@@ -397,6 +421,7 @@
     </section>
   </main>
 
+  <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="client.js"></script>
 </body>

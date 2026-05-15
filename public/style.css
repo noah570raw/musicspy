@@ -1770,3 +1770,110 @@ html[lang="ru"] .language-switcher span:first-child {
     grid-template-columns: 1fr;
   }
 }
+
+.host-players-modal {
+  z-index: 18;
+}
+
+.host-players-card {
+  width: min(100%, 560px);
+}
+
+.host-modal-list {
+  max-height: min(420px, 54vh);
+  margin: 18px 0;
+  padding-right: 4px;
+}
+
+@media (min-width: 921px) {
+  body[data-screen="game"] .app-shell {
+    width: min(1400px, calc(100% - 24px));
+    min-height: 100dvh;
+    padding: 10px 0;
+  }
+
+  body[data-screen="game"] .game-layout {
+    grid-template-columns: minmax(190px, 0.7fr) minmax(420px, 1.55fr) minmax(210px, 0.72fr);
+    gap: 12px;
+  }
+
+  body[data-screen="game"] .card {
+    padding: clamp(14px, 1.45vw, 20px);
+    border-radius: 22px;
+  }
+
+  body[data-screen="game"] .side-panel,
+  body[data-screen="game"] .player-card {
+    min-height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+
+  body[data-screen="game"] .side-panel {
+    overflow: hidden;
+  }
+
+  body[data-screen="game"] .track-history {
+    max-height: 24vh;
+  }
+
+  body[data-screen="game"] .order-list {
+    max-height: 30vh;
+    overflow: auto;
+  }
+
+  body[data-screen="game"] .timer-ring {
+    width: clamp(92px, 12vh, 114px);
+    height: clamp(92px, 12vh, 114px);
+  }
+
+  body[data-screen="game"] .embed,
+  body[data-screen="game"] .embed iframe {
+    min-height: clamp(190px, 34vh, 275px);
+  }
+
+  body[data-screen="game"] .host-controls {
+    position: fixed;
+    left: max(12px, calc((100vw - 1400px) / 2 + 12px));
+    top: 50%;
+    z-index: 5;
+    width: min(240px, 18vw);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    margin-top: 0;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(14, 14, 14, 0.88);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(18px);
+    transform: translateY(-50%);
+  }
+
+  body[data-screen="game"] .host-controls .panel-title {
+    margin-bottom: 2px;
+  }
+
+  body[data-screen="game"] .host-status-grid {
+    gap: 6px;
+  }
+
+  body[data-screen="game"] .host-status-grid div {
+    padding: 8px;
+  }
+
+  body[data-screen="game"] .host-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  body[data-screen="game"] .host-action-grid button {
+    min-height: 36px;
+    padding: 8px 9px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+  }
+
+  body[data-screen="game"] .host-action-grid .danger {
+    grid-column: 1 / -1;
+  }
+}
