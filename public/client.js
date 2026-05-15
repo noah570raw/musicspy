@@ -58,6 +58,7 @@ const state = {
   phase: "menu",
   role: "",
   theme: "",
+  spyIds: [],
   round: 1,
   totalRounds: 3,
   timeLeft: null,
@@ -107,6 +108,7 @@ const EN_TRANSLATIONS = {
   "Назад": "Back",
   "Аккаунт игрока": "Player account",
   "Вы играете как гость": "You are playing as a guest",
+  "Шпион": "Spy",
   "Гость": "Guest",
   "без аккаунта": "no account",
   "Профиль": "Profile",
@@ -1017,6 +1019,14 @@ function restoreMusicPreference() {
   syncAudioVolume();
 }
 
+function applyRoleTheme(role = "") {
+  if (["spy", "civilian"].includes(role)) {
+    document.body.dataset.role = role;
+    return;
+  }
+  delete document.body.dataset.role;
+}
+
 function showScreen(id) {
   if (id === "lobby" && state.phase !== "lobby") {
     state.inviteSecretsVisible = false;
@@ -1028,6 +1038,7 @@ function showScreen(id) {
   const previousPhase = state.phase;
   state.phase = id;
   document.body.dataset.screen = id;
+  if (["menu", "lobby"].includes(id)) applyRoleTheme();
   updateInviteSecretsVisibility();
   if (previousPhase !== id) playSoundCue("screen");
 }
@@ -1085,8 +1096,14 @@ function showRoleReveal(data) {
   clearCinematicTimers();
   const isSpy = data.role === "spy";
   const spyCount = data.spyCount || 1;
+  const visibleSpyNames = isSpy
+    ? (data.players || [])
+      .filter((player) => (data.spyIds || []).includes(player.id))
+      .map((player) => player.name)
+      .join(", ")
+    : "";
   const meta = isSpy
-    ? `<span>${t("Тема скрыта")}</span><strong>${spyCount} ${spyCount === 1 ? t("1 шпион").replace("1 ", "") : t("Шпионы")}</strong>`
+    ? `<span>${t("Тема скрыта")}</span><strong>${escapeHtml(visibleSpyNames || `${spyCount} ${spyCount === 1 ? t("1 шпион").replace("1 ", "") : t("Шпионы")}`)}</strong>`
     : `<span>${t("Тема игры")}</span><strong>«${escapeHtml(data.theme)}»</strong>`;
 
   setCinematicOverlay({
@@ -1321,8 +1338,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
 function authenticateWithStoredToken() {
   const token = getStoredAuthToken();
   if (!token) {
-    applyProfile({ user: null, guest: true });
-    showAuthModal("choice");
+    continueAsGuest({ silent: true });
     return;
   }
   socket.emit("auth:session", { token }, (res) => {
@@ -1332,8 +1348,7 @@ function authenticateWithStoredToken() {
       setAuthStatus("С возвращением!");
     } else {
       clearStoredAuthToken();
-      applyProfile({ user: null, guest: true });
-      showAuthModal("choice");
+      continueAsGuest({ silent: true });
     }
   });
 }
@@ -1368,11 +1383,11 @@ function registerAccount() {
   });
 }
 
-function continueAsGuest() {
+function continueAsGuest({ silent = false } = {}) {
   clearStoredAuthToken();
   socket.emit("auth:guest", { name: getName() }, (res) => {
     applyProfile(res?.profile || { user: null, guest: true });
-    hideAuthModal();
+    if (!silent) hideAuthModal();
     setAuthStatus();
   });
 }
@@ -1381,7 +1396,7 @@ function logoutAccount() {
   clearStoredAuthToken();
   socket.emit("auth:logout", () => {
     applyProfile({ user: null, guest: true });
-    showAuthModal("choice");
+    hideAuthModal();
     setAuthStatus("Ты вышел из аккаунта");
   });
 }
@@ -1668,6 +1683,9 @@ function resetRoomState() {
   state.players = [];
   state.order = [];
   state.hostId = null;
+  state.role = "";
+  state.theme = "";
+  state.spyIds = [];
   state.ready = false;
   state.trackHistory = [];
   state.reactionCounts = {};
@@ -1865,6 +1883,7 @@ function renderGameState(data) {
   state.reactionCounts = data.reactionCounts || state.reactionCounts;
   state.trackHistory = data.trackHistory || state.trackHistory;
   state.pendingSpyGuess = data.pendingSpyGuess || state.pendingSpyGuess;
+  if (Array.isArray(data.spyIds)) state.spyIds = data.spyIds;
   const shouldLoadLastTrack = ["listening", "paused"].includes(data.turnStage)
     && data.lastTrack
     && data.lastTrack.id !== state.currentTrackId;
@@ -1883,6 +1902,16 @@ function renderGameState(data) {
   if (shouldLoadLastTrack) loadTrack(data.lastTrack);
 }
 
+function canSeeSpyMarkers() {
+  return state.role === "spy" && Array.isArray(state.spyIds) && state.spyIds.length > 0;
+}
+
+function playerNameMarkup(player, fallback = "Игрок") {
+  const name = escapeHtml(player?.name || t(fallback));
+  const isVisibleSpy = canSeeSpyMarkers() && state.spyIds.includes(player?.id);
+  return `<strong class="${isVisibleSpy ? "spy-visible-name" : ""}">${name}</strong>${isVisibleSpy ? `<small class="spy-visible-badge">${t("Шпион")}</small>` : ""}`;
+}
+
 function renderOrder() {
   const playersById = new Map(state.players.map((player) => [player.id, player]));
   $("order").innerHTML = state.order.map((id, index) => {
@@ -1891,7 +1920,7 @@ function renderOrder() {
     return `
       <div class="order-row ${active ? "active" : ""}">
         <span>${index + 1}</span>
-        <strong>${escapeHtml(player?.name || t("Игрок"))}</strong>
+        ${playerNameMarkup(player)}
       </div>
     `;
   }).join("");
@@ -1994,9 +2023,10 @@ function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) 
   state.turnStage = stage || "waiting";
   state.timeLeft = null;
   const isMine = playerId === socket.id;
+  const currentPlayer = state.players.find((player) => player.id === playerId) || { id: playerId, name };
   $("turn").innerHTML = `
     <span>${isMine ? t("Твой ход") : t("Сейчас ходит")}</span>
-    <strong>${escapeHtml(name || t("Игрок"))}</strong>
+    ${playerNameMarkup(currentPlayer)}
     <small>${t(`ход ${turnNumber}/${turnsInRound}`)}</small>
   `;
   clearPlayer();
@@ -2270,6 +2300,7 @@ window.addEventListener("DOMContentLoaded", () => {
 socket.on("gameStarted", (data) => {
   state.role = data.role;
   state.theme = data.theme;
+  state.spyIds = data.spyIds || [];
   state.hostId = data.host || state.hostId;
   state.players = data.players;
   state.order = data.order;
@@ -2285,6 +2316,7 @@ socket.on("gameStarted", (data) => {
   state.turnStage = "waiting";
   state.timeLeft = null;
   syncAudioVolume({ fadeTime: 0.32 });
+  applyRoleTheme(data.role);
 
   $("roleTitle").textContent = data.role === "spy" ? t("Ты шпион") : t("Ты мирный");
   $("theme").textContent = data.role === "spy"
