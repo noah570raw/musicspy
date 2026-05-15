@@ -2204,6 +2204,8 @@ body:not([data-screen="menu"]) .account-corner {
 
 .chat-messages {
   display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
   justify-items: start;
   gap: 8px;
   max-height: min(220px, 28vh);
