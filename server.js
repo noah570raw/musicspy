@@ -36,6 +36,8 @@ const DECOY_GUESS_SECONDS = 3;
 const HOST_TIMER_STEP_SECONDS = 15;
 const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
+const MAX_CHAT_MESSAGES = 60;
+const MAX_CHAT_MESSAGE_LENGTH = 240;
 
 const lobbies = {};
 const timers = {};
@@ -555,7 +557,8 @@ function emitGameState(code) {
     votes: lobby.settings.anonymousVoting && lobby.phase === "voting" ? {} : publicVotes(lobby),
     reactionCounts: countReactions(lobby.currentTrackReactions),
     trackHistory: lobby.trackHistory || [],
-    pendingSpyGuess: lobby.pendingSpyGuess || null
+    pendingSpyGuess: lobby.pendingSpyGuess || null,
+    chatMessages: lobby.chatMessages || []
   });
 }
 
@@ -994,6 +997,7 @@ function createLobbyState(code, hostId, player) {
     spyGuessOptions: [],
     spyGuessMode: null,
     spyGuessTargetId: null,
+    chatMessages: [],
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
@@ -1187,6 +1191,7 @@ io.on("connection", (socket) => {
     lobby.turnStage = "waiting";
     lobby.timeLeft = null;
     lobby.pausedTurnStage = null;
+    lobby.chatMessages = [];
 
     for (const player of lobby.players) {
       io.to(player.id).emit("gameStarted", {
@@ -1201,7 +1206,8 @@ io.on("connection", (socket) => {
         spyCount: lobby.spies.length,
         spyIds: lobby.spies.includes(player.id) ? lobby.spies : [],
         settings: lobby.settings,
-        trackHistory: lobby.trackHistory
+        trackHistory: lobby.trackHistory,
+        chatMessages: lobby.chatMessages
       });
     }
 
@@ -1347,6 +1353,31 @@ io.on("connection", (socket) => {
     }
 
     emitLobbyUpdate(lobby.code);
+  });
+
+
+  socket.on("chat:send", ({ code, text }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (!lobby.started || !["playing", "voting", "spyGuess"].includes(lobby.phase)) {
+      return cb({ error: "Чат доступен только во время игры" });
+    }
+    const player = lobby.players.find((item) => item.id === socket.id);
+    if (!player) return cb({ error: "Ты не в этой комнате" });
+
+    const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+    if (!messageText) return cb({ error: "Напиши сообщение" });
+
+    const message = {
+      id: `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+      playerId: socket.id,
+      playerName: player.name,
+      text: messageText,
+      createdAt: Date.now()
+    };
+    lobby.chatMessages = [...(lobby.chatMessages || []), message].slice(-MAX_CHAT_MESSAGES);
+    io.to(lobby.code).emit("chat:update", { messages: lobby.chatMessages });
+    cb({ success: true, message });
   });
 
   socket.on("playTrack", ({ code, url }, cb = () => {}) => {
