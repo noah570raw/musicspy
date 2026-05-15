@@ -26,6 +26,7 @@ const state = {
   turnStage: "waiting",
   votedTarget: null,
   voteCandidates: [],
+  voteCounts: {},
   anonymousVoting: false,
   reactionCounts: {},
   selectedReaction: null,
@@ -42,10 +43,352 @@ const state = {
   profile: null,
   authGuest: true,
   pendingAvatar: undefined,
-  authFormMode: "choice"
+  authFormMode: "choice",
+  lang: "ru"
 };
 
 const $ = (id) => document.getElementById(id);
+
+const LANGUAGE_KEY = "musicspy_language";
+const EN_TRANSLATIONS = {
+  "секретное досье": "secret dossier",
+  "Понял, играем": "Got it, let's play",
+  "аккаунт": "account",
+  "Как продолжим?": "How should we continue?",
+  "Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.": "Sign up, log in to an existing account, or continue as a guest.",
+  "Зарегистрироваться": "Sign up",
+  "Войти": "Log in",
+  "Продолжить как гость": "Continue as guest",
+  "логин": "username",
+  "пароль": "password",
+  "Логин: от 3 символов, латиница, цифры, _ или -. Пароль: от 6 символов.": "Username: 3+ characters, Latin letters, digits, _ or -. Password: 6+ characters.",
+  "Создать аккаунт": "Create account",
+  "Назад": "Back",
+  "Аккаунт игрока": "Player account",
+  "Вы играете как гость": "You are playing as a guest",
+  "Гость": "Guest",
+  "без аккаунта": "no account",
+  "Профиль": "Profile",
+  "Выйти": "Log out",
+  "Имя в профиле": "Profile name",
+  "Сохранить профиль": "Save profile",
+  "Убрать аватар": "Remove avatar",
+  "Громкость сайта": "Site volume",
+  "Звук": "Sound",
+  "Включить или выключить музыкальное сопровождение": "Turn background music on or off",
+  "Громкость звуков и музыки": "Sound and music volume",
+  "Шпион помузыкальски": "A music-flavored spy game",
+  "Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга": "Gather a room, get a secret theme, and play tracks to expose the spy in 3 rounds",
+  "Никнейм": "Nickname",
+  "например, мотя": "e.g. motya",
+  "Код комнаты": "Room code",
+  "если подключаешься": "if you are joining",
+  "Создать лобби": "Create lobby",
+  "Войти по коду": "Join by code",
+  "игрока": "players",
+  "на трек": "per track",
+  "круга": "rounds",
+  "лобби": "lobby",
+  "Комната": "Room",
+  "Показать код комнаты и QR": "Show room code and QR",
+  "Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.": "At least 3 players are required. When everyone joins, the host starts the game.",
+  "ожидание": "waiting",
+  "Приглашение": "Invite",
+  "ссылка и QR": "link and QR",
+  "Скопировать ссылку-приглашение": "Copy invite link",
+  "QR для входа в комнату": "QR to join the room",
+  "Игроки": "Players",
+  "Готовы: 0/0": "Ready: 0/0",
+  "Я готов": "I'm ready",
+  "Новый ник": "New nickname",
+  "Сменить ник": "Change nickname",
+  "Выйти из лобби": "Leave lobby",
+  "Запустить игру": "Start game",
+  "Настройки игры": "Game settings",
+  "меняет хост": "host controls",
+  "Раунды": "Rounds",
+  "сколько кругов сыграет каждый": "how many turns each player gets",
+  "Время трека": "Track time",
+  "15 секунд": "15 seconds",
+  "30 секунд": "30 seconds",
+  "30с": "30s",
+  "45 секунд": "45 seconds",
+  "60 секунд": "60 seconds",
+  "пауза на прослушивание": "listening window",
+  "Шпионы": "Spies",
+  "Авто по игрокам": "Auto by player count",
+  "1 шпион": "1 spy",
+  "2 шпиона": "2 spies",
+  "3 шпиона": "3 spies",
+  "авто добавляет шпионов в больших компаниях": "auto adds spies for larger groups",
+  "Голосование": "Voting",
+  "Открытое": "Open",
+  "Анонимное": "Anonymous",
+  "виден ли счет во время выбора": "whether vote counts are visible while choosing",
+  "Таймер голосования": "Voting timer",
+  "Без таймера": "No timer",
+  "90 секунд": "90 seconds",
+  "давление для финального решения": "pressure for the final call",
+  "Ничья": "Tie",
+  "Второй тур": "Runoff",
+  "Без второго тура": "No runoff",
+  "переголосование между лидерами": "revote between leaders",
+  "роль и тема": "role and theme",
+  "Раунд 1/3": "Round 1/3",
+  "Ожидаем ход...": "Waiting for a turn...",
+  "Пульт хоста": "Host controls",
+  "управление игрой": "game management",
+  "Пропустить ход": "Skip turn",
+  "К голосованию": "Start voting",
+  "Пересоздать лобби": "Recreate lobby",
+  "Кикнуть игрока": "Kick a player",
+  "сек": "sec",
+  "Ждем трек от текущего игрока": "Waiting for the current player's track",
+  "Реакции на трек": "Track reactions",
+  "Пока реакций нет": "No reactions yet",
+  "Вставь YouTube или SoundCloud ссылку": "Paste a YouTube or SoundCloud link",
+  "Отправить трек": "Send track",
+  "очередь": "queue",
+  "История треков": "Track history",
+  "по раундам": "by rounds",
+  "Пока треков нет": "No tracks yet",
+  "финальное голосование": "final vote",
+  "Кто шпион?": "Who is the spy?",
+  "Выбери игрока, который хуже всех попадал в тему. Менять голос можно до конца голосования.": "Choose the player who matched the theme the worst. You can change your vote until voting ends.",
+  "вспомни, кто что ставил": "remember who played what",
+  "результаты": "results",
+  "Игра окончена": "Game over",
+  "итоги реакций": "reaction totals",
+  "Вернуться в лобби": "Back to lobby",
+  "Музыкальное сопровождение включено": "Background music is on",
+  "Музыкальное сопровождение выключено": "Background music is off",
+  "Без имени": "Nameless",
+  "Ник аккаунта меняется в профиле": "Account nickname is changed in the profile",
+  "Ник меняется в профиле": "Nickname changes in profile",
+  "Ник из профиля": "Profile nickname",
+  "Регистрация": "Sign up",
+  "Вход в аккаунт": "Log in",
+  "Создай аккаунт, чтобы сайт узнавал тебя на этом устройстве.": "Create an account so the site recognizes you on this device.",
+  "Войди, если уже регистрировался раньше.": "Log in if you have registered before.",
+  "гость без регистрации": "guest without registration",
+  "С возвращением!": "Welcome back!",
+  "Вход выполнен": "Logged in",
+  "Аккаунт создан": "Account created",
+  "Ок, играем без регистрации": "OK, playing without registration",
+  "Ты вышел из аккаунта": "You logged out",
+  "Выбери картинку": "Choose an image",
+  "Файл слишком большой. Выбери картинку до 1 МБ": "File is too large. Choose an image up to 1 MB",
+  "Аватар не удалось сжать до 64 КБ": "Could not compress avatar to 64 KB",
+  "Предпросмотр готов. Нажми «Сохранить профиль»": "Preview ready. Click “Save profile”",
+  "Аватар будет удален после сохранения": "Avatar will be removed after saving",
+  "Профиль обновлен. Ник на сайте обновлен из профиля": "Profile updated. Site nickname now comes from your profile",
+  "Введи код комнаты": "Enter a room code",
+  "Запускаем...": "Starting...",
+  "Ход пропущен": "Turn skipped",
+  "Запускаем голосование...": "Starting the vote...",
+  "Игрок удален из комнаты": "Player removed from the room",
+  "Сначала покажи код комнаты кнопкой с глазом": "Show the room code with the eye button first",
+  "Код скопирован": "Code copied",
+  "Не удалось скопировать код автоматически": "Could not copy the code automatically",
+  "Ссылка-приглашение скопирована": "Invite link copied",
+  "Скрыть код комнаты и QR": "Hide room code and QR",
+  "Выходим из лобби...": "Leaving lobby...",
+  "Ты вышел из лобби": "You left the lobby",
+  "Настройки обновлены": "Settings updated",
+  "Ты отметил готовность": "You marked yourself ready",
+  "Готовность снята": "Ready status removed",
+  "Ник аккаунта меняется только в профиле": "Account nickname can only be changed in the profile",
+  "Введи новый ник": "Enter a new nickname",
+  "ты можешь менять": "you can edit",
+  "Голос учтен": "Vote counted",
+  "ты хост": "you are host",
+  "Ждем минимум 3 игроков": "Waiting for at least 3 players",
+  "Ждем готовность всех игроков": "Waiting for every player to be ready",
+  "Не готов": "Not ready",
+  "готов": "ready",
+  "не готов": "not ready",
+  "ты": "you",
+  "Игрок": "Player",
+  "хост": "host",
+  "ходит": "turn",
+  "кик": "kick",
+  "без реакций": "no reactions",
+  "Твой ход": "Your turn",
+  "Сейчас ходит": "Now playing",
+  "Очередь ждет тебя: вставь ссылку на трек.": "The queue is waiting for you: paste a track link.",
+  "Ждем, пока игрок поставит трек. Таймер пока не идет.": "Waiting for the player to submit a track. Timer has not started yet.",
+  "Трек играет": "Track is playing",
+  "Ждем ход": "Waiting for turn",
+  "Открыть трек": "Open track",
+  "Здесь появится YouTube/SoundCloud плеер": "The YouTube/SoundCloud player will appear here",
+  "Шпион паражняк": "The spy got exposed",
+  "Шпион красавчик": "The spy nailed it",
+  "никто": "nobody",
+  "Код комнаты подставлен из ссылки. Введи ник и нажми «Войти по коду».": "Room code was filled from the link. Enter a nickname and click “Join by code”.",
+  "Ты шпион": "You are the spy",
+  "Ты мирный": "You are a civilian",
+  "Ничья! Голосуем во втором туре только между кандидатами.": "Tie! Runoff vote only between the candidates.",
+  "Анонимное голосование: счет голосов откроется только в конце.": "Anonymous voting: vote counts will be revealed at the end.",
+  "Второй тур начался": "Runoff started",
+  "Голосование началось": "Voting started",
+  "Ничья — запускаем второй тур": "Tie — starting a runoff",
+  "Тебя удалили из комнаты": "You were removed from the room",
+  "игра началась": "game started",
+  "Тема скрыта": "Theme hidden",
+  "Тема игры": "Game theme",
+  "Слушай чужие треки, лови вайб темы и не выдавай себя. Тема тебе не показывается.": "Listen to other tracks, catch the theme's vibe, and don't expose yourself. You won't see the theme.",
+  "Это твоя секретная тема. Ставь треки так, чтобы свои поняли, а шпион запутался.": "This is your secret theme. Play tracks so civilians understand and the spy gets confused.",
+  "Запомнил": "Got it",
+  "голоса приняты": "votes received",
+  "Шпионом был...": "The spy was...",
+  "Сейчас вскроем досье. Не моргай.": "Opening the dossier now. Don't blink.",
+  "не найден": "not found",
+  "Мирные вычислили!": "Civilians figured it out!",
+  "Шпион ускользнул!": "The spy slipped away!",
+  "Красиво зачервили подозреваемых.": "Great read on the suspects.",
+  "Подозрения ушли не туда, шпион забирает победу.": "Suspicion went the wrong way, so the spy takes the win.",
+  "Показать результаты": "Show results",
+  "Переключатель языка": "Language switcher",
+  "Сессия не найдена": "Session not found",
+  "Логин должен быть от 3 символов: латиница, цифры, _ или -": "Username must be at least 3 characters: Latin letters, digits, _ or -",
+  "Пароль должен быть от 6 до 72 символов": "Password must be 6 to 72 characters",
+  "Такой логин уже занят": "This username is already taken",
+  "Неверный логин или пароль": "Invalid username or password",
+  "Войди в аккаунт, чтобы менять профиль": "Log in to edit your profile",
+  "Не удалось обновить профиль": "Could not update profile",
+  "Комната не найдена": "Room not found",
+  "Игра уже началась": "The game has already started",
+  "Ты не в этой комнате": "You are not in this room",
+  "Во время игры выйти можно только закрыв вкладку": "During the game you can leave only by closing the tab",
+  "Настройки может менять только хост": "Only the host can change settings",
+  "Начать игру может только хост": "Only the host can start the game",
+  "Нужно минимум 3 игрока": "At least 3 players are required",
+  "Все игроки должны нажать «Готов»": "All players must click “Ready”",
+  "Только хост может пропустить ход": "Only the host can skip a turn",
+  "Сейчас нет активного хода": "There is no active turn right now",
+  "Только хост может запустить голосование": "Only the host can start voting",
+  "Голосование можно запустить только во время игры": "Voting can only be started during the game",
+  "Хост досрочно запустил голосование": "The host started voting early",
+  "Кикать игроков может только хост": "Only the host can kick players",
+  "Хост не может кикнуть себя": "The host cannot kick themselves",
+  "Игрок не найден": "Player not found",
+  "Хост удалил тебя из комнаты": "The host removed you from the room",
+  "Игрок кикнут — нужно минимум 3 участника": "A player was kicked — at least 3 participants are required",
+  "Сейчас нельзя отправить трек": "You cannot send a track right now",
+  "Сейчас ход другого игрока": "It is another player's turn",
+  "Трек уже отправлен": "Track already sent",
+  "Вставь ссылку YouTube или SoundCloud": "Paste a YouTube or SoundCloud link",
+  "Сейчас нельзя голосовать": "You cannot vote right now",
+  "Нельзя голосовать за себя": "You cannot vote for yourself",
+  "Игрок вышел — нужно минимум 3 участника": "A player left — at least 3 participants are required",
+  "Поддерживаются только PNG, JPG, WEBP или GIF": "Only PNG, JPG, WEBP, or GIF are supported",
+  "Аватарка слишком большая. Максимум 64 КБ после сжатия": "Avatar is too large. Maximum is 64 KB after compression"
+};
+
+function currentLanguage() {
+  return state.lang || "ru";
+}
+
+function translateText(value) {
+  const text = String(value ?? "");
+  if (currentLanguage() === "ru" || !text) return text;
+  if (EN_TRANSLATIONS[text]) return EN_TRANSLATIONS[text];
+  return text
+    .replace(/Раунд (\d+)\/(\d+)/g, "Round $1/$2")
+    .replace(/Раунд (\d+), ход (\?|\d+)/g, "Round $1, turn $2")
+    .replace(/ход (\d+)\/(\d+)/g, "turn $1/$2")
+    .replace(/Готовы: (\d+)\/(\d+)/g, "Ready: $1/$2")
+    .replace(/хост: (.+)/g, "host: $1")
+    .replace(/Проголосовало (\d+)\/(\d+)/g, "Voted $1/$2")
+    .replace(/Начался раунд (\d+)/g, "Round $1 started")
+    .replace(/Ник обновлен: (.+)/g, "Nickname updated: $1")
+    .replace(/Трек принят\. Слушаем (\d+) секунд\.\.\./g, "Track accepted. Listening for $1 seconds...")
+    .replace(/(.+) поставил трек — слушаем (\d+) секунд/g, "$1 submitted a track — listening for $2 seconds")
+    .replace(/Шпионы: (.+)\. Тема: «(.+)»\. Зачервили: (.+)\./g, "Spies: $1. Theme: “$2”. Suspected: $3.")
+    .replace(/Твоя задача — понять тему по чужим трекам и не выдать себя\. Шпионов в игре: (\d+)\./g, "Your goal is to figure out the theme from other tracks and avoid exposing yourself. Spies in the game: $1.")
+    .replace(/Тема: «(.+)»/g, "Theme: “$1”")
+    .replace(/Код комнаты (.+)/g, "Room code $1")
+    .replace(/Хост пропустил ход: (.+)/g, "Host skipped turn: $1")
+    .replace(/Шпион(ы?)$/g, "Spy$1");
+}
+
+function t(value) {
+  return translateText(value);
+}
+
+function setLanguage(lang) {
+  state.lang = lang === "en" ? "en" : "ru";
+  document.documentElement.lang = state.lang;
+  try {
+    window.localStorage.setItem(LANGUAGE_KEY, state.lang);
+  } catch {
+    // Ignore storage errors.
+  }
+  const toggle = $("languageToggle");
+  if (toggle) {
+    toggle.setAttribute("aria-pressed", String(state.lang === "en"));
+    toggle.title = state.lang === "en" ? "Переключить на русский" : "Switch to English";
+  }
+  localizeStaticDom();
+  updateMusicToggle();
+  syncNameInput();
+  updateLobbyRenameControls();
+  if (state.lobby) renderLobby(state.lobby);
+  if (state.phase === "game") {
+    renderOrder();
+    renderHostControls();
+    renderReactions();
+    renderTrackHistory();
+    updateSendButton();
+  }
+  if (state.phase === "voting") {
+    renderVoteList(state.voteCounts);
+    renderTrackHistory("voteTrackHistory", state.trackHistory);
+  }
+}
+
+function toggleLanguage() {
+  setLanguage(currentLanguage() === "en" ? "ru" : "en");
+}
+
+function restoreLanguagePreference() {
+  let lang = "ru";
+  try {
+    lang = window.localStorage.getItem(LANGUAGE_KEY) || "ru";
+  } catch {
+    lang = "ru";
+  }
+  setLanguage(lang);
+}
+
+function localizeStaticDom(root = document.body) {
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      if (["SCRIPT", "STYLE"].includes(node.parentElement?.tagName)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((node) => {
+    const raw = node.nodeValue;
+    const trimmed = raw.trim();
+    const translated = currentLanguage() === "en" ? EN_TRANSLATIONS[trimmed] : Object.keys(EN_TRANSLATIONS).find((key) => EN_TRANSLATIONS[key] === trimmed);
+    if (translated) node.nodeValue = raw.replace(trimmed, translated);
+  });
+
+  for (const el of root.querySelectorAll("[placeholder], [title], [aria-label], [alt]")) {
+    for (const attr of ["placeholder", "title", "aria-label", "alt"]) {
+      const value = el.getAttribute(attr);
+      if (!value) continue;
+      const translated = currentLanguage() === "en" ? EN_TRANSLATIONS[value] : Object.keys(EN_TRANSLATIONS).find((key) => EN_TRANSLATIONS[key] === value);
+      if (translated) el.setAttribute(attr, translated);
+    }
+  }
+}
+
 
 const AMBIENT_CHORDS = [
   [110, 164.81, 220, 329.63],
@@ -533,7 +876,7 @@ function updateMusicToggle() {
   if (!toggle) return;
   toggle.textContent = state.musicEnabled ? "🎧" : "🔇";
   toggle.setAttribute("aria-pressed", String(state.musicEnabled));
-  toggle.title = state.musicEnabled ? "Музыкальное сопровождение включено" : "Музыкальное сопровождение выключено";
+  toggle.title = state.musicEnabled ? t("Музыкальное сопровождение включено") : t("Музыкальное сопровождение выключено");
 }
 
 function toggleMusic() {
@@ -585,7 +928,7 @@ function showScreen(id) {
 function setStatus(id, message = "", isError = false) {
   const el = $(id);
   if (!el) return;
-  el.textContent = message;
+  el.textContent = t(message);
   el.classList.toggle("error", isError);
 }
 
@@ -603,12 +946,12 @@ function setCinematicOverlay({ eyebrow = "секретное досье", title 
   if (!overlay) return null;
 
   overlay.className = `cinematic-overlay ${mode ? `cinematic-${mode}` : ""}`;
-  $("cinematicEyebrow").textContent = eyebrow;
-  $("cinematicTitle").textContent = title;
-  $("cinematicText").textContent = text;
+  $("cinematicEyebrow").textContent = t(eyebrow);
+  $("cinematicTitle").textContent = t(title);
+  $("cinematicText").textContent = t(text);
   $("cinematicMeta").innerHTML = meta;
   const close = $("cinematicClose");
-  close.textContent = closeLabel;
+  close.textContent = t(closeLabel);
   close.classList.toggle("hidden", !closable);
   state.cinematicOnClose = typeof onClose === "function" ? onClose : null;
   overlay.classList.remove("hidden");
@@ -636,18 +979,18 @@ function showRoleReveal(data) {
   const isSpy = data.role === "spy";
   const spyCount = data.spyCount || 1;
   const meta = isSpy
-    ? `<span>Тема скрыта</span><strong>${spyCount} ${spyCount === 1 ? "шпион" : "шпионов"}</strong>`
-    : `<span>Тема игры</span><strong>«${escapeHtml(data.theme)}»</strong>`;
+    ? `<span>${t("Тема скрыта")}</span><strong>${spyCount} ${spyCount === 1 ? t("1 шпион").replace("1 ", "") : t("Шпионы")}</strong>`
+    : `<span>${t("Тема игры")}</span><strong>«${escapeHtml(data.theme)}»</strong>`;
 
   setCinematicOverlay({
-    eyebrow: "игра началась",
-    title: isSpy ? "Ты шпион" : "Ты мирный",
+    eyebrow: t("игра началась"),
+    title: isSpy ? t("Ты шпион") : t("Ты мирный"),
     text: isSpy
-      ? "Слушай чужие треки, лови вайб темы и не выдавай себя. Тема тебе не показывается."
-      : "Это твоя секретная тема. Ставь треки так, чтобы свои поняли, а шпион запутался.",
+      ? t("Слушай чужие треки, лови вайб темы и не выдавай себя. Тема тебе не показывается.")
+      : t("Это твоя секретная тема. Ставь треки так, чтобы свои поняли, а шпион запутался."),
     meta,
     mode: isSpy ? "spy" : "civilian",
-    closeLabel: "Запомнил"
+    closeLabel: t("Запомнил")
   });
 
   playSoundCue(isSpy ? "danger" : "reveal");
@@ -660,9 +1003,9 @@ function showSpyRevealCountdown(data, onDone) {
   let count = 3;
 
   setCinematicOverlay({
-    eyebrow: "голоса приняты",
-    title: "Шпионом был...",
-    text: "Сейчас вскроем досье. Не моргай.",
+    eyebrow: t("голоса приняты"),
+    title: t("Шпионом был..."),
+    text: t("Сейчас вскроем досье. Не моргай."),
     meta: `<strong class="countdown-number">${count}</strong>`,
     mode: "countdown",
     closable: false
@@ -679,11 +1022,11 @@ function showSpyRevealCountdown(data, onDone) {
       return;
     }
 
-    meta.innerHTML = `<span>Шпион${data.spyNames?.length > 1 ? "ы" : ""}</span><strong>${escapeHtml(spyNames || "не найден")}</strong><small>Тема: «${escapeHtml(data.theme || "?")}»</small>`;
-    $("cinematicTitle").textContent = data.civiliansWin ? "Мирные вычислили!" : "Шпион ускользнул!";
-    $("cinematicText").textContent = data.civiliansWin ? "Красиво зачервили подозреваемых." : "Подозрения ушли не туда, шпион забирает победу.";
+    meta.innerHTML = `<span>${t(data.spyNames?.length > 1 ? "Шпионы" : "Шпионы").replace(/s$/, data.spyNames?.length > 1 ? "s" : "")}</span><strong>${escapeHtml(spyNames || t("не найден"))}</strong><small>${t(`Тема: «${escapeHtml(data.theme || "?")}»`)}</small>`;
+    $("cinematicTitle").textContent = data.civiliansWin ? t("Мирные вычислили!") : t("Шпион ускользнул!");
+    $("cinematicText").textContent = data.civiliansWin ? t("Красиво зачервили подозреваемых.") : t("Подозрения ушли не туда, шпион забирает победу.");
     const close = $("cinematicClose");
-    close.textContent = "Показать результаты";
+    close.textContent = t("Показать результаты");
     close.classList.remove("hidden");
     state.cinematicOnClose = onDone;
     playSoundCue(data.civiliansWin ? "confirm" : "danger");
@@ -760,7 +1103,7 @@ function restoreSiteVolume() {
 
 function getName() {
   if (state.profile?.displayName) return state.profile.displayName;
-  return $("name").value.trim() || "Без имени";
+  return $("name").value.trim() || t("Без имени");
 }
 
 function syncNameInput() {
@@ -769,7 +1112,7 @@ function syncNameInput() {
   if (state.profile?.displayName) {
     nameInput.value = state.profile.displayName;
     nameInput.disabled = true;
-    nameInput.title = "Ник аккаунта меняется в профиле";
+    nameInput.title = t("Ник аккаунта меняется в профиле");
   } else {
     nameInput.disabled = false;
     nameInput.title = "";
@@ -779,12 +1122,14 @@ function syncNameInput() {
 function updateLobbyRenameControls() {
   const input = $("renameInput");
   const button = $("renameBtn");
+  const row = input?.closest(".rename-row");
   if (!input || !button) return;
   const canRenameInLobby = state.authGuest;
+  row?.classList.toggle("hidden", !canRenameInLobby);
   input.disabled = !canRenameInLobby;
   button.disabled = !canRenameInLobby;
-  input.placeholder = canRenameInLobby ? "Новый ник" : "Ник меняется в профиле";
-  button.textContent = canRenameInLobby ? "Сменить ник" : "Ник из профиля";
+  input.placeholder = canRenameInLobby ? t("Новый ник") : t("Ник меняется в профиле");
+  button.textContent = canRenameInLobby ? t("Сменить ник") : t("Ник из профиля");
 }
 
 function getStoredAuthToken() {
@@ -821,11 +1166,11 @@ function selectAuthMode(mode) {
   $("authChoiceView").classList.toggle("hidden", !isChoice);
   $("authFormView").classList.toggle("hidden", isChoice);
   $("authRegisterHint").classList.toggle("hidden", !isRegister);
-  $("authModalTitle").textContent = isChoice ? "Как продолжим?" : (isRegister ? "Регистрация" : "Вход в аккаунт");
+  $("authModalTitle").textContent = isChoice ? t("Как продолжим?") : (isRegister ? t("Регистрация") : t("Вход в аккаунт"));
   $("authModalText").textContent = isChoice
-    ? "Зарегистрируйся, войди в существующий аккаунт или продолжи как гость."
-    : (isRegister ? "Создай аккаунт, чтобы сайт узнавал тебя на этом устройстве." : "Войди, если уже регистрировался раньше.");
-  $("authSubmitBtn").textContent = isRegister ? "Создать аккаунт" : "Войти";
+    ? t("Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.")
+    : (isRegister ? t("Создай аккаунт, чтобы сайт узнавал тебя на этом устройстве.") : t("Войди, если уже регистрировался раньше."));
+  $("authSubmitBtn").textContent = isRegister ? t("Создать аккаунт") : t("Войти");
   setAuthStatus();
   if (!isChoice) $("authLogin").focus();
 }
@@ -839,13 +1184,13 @@ function applyProfile(profileData = { user: null, guest: true }) {
   state.profile = profileData.user || null;
   state.authGuest = Boolean(profileData.guest);
   const user = state.profile;
-  const displayName = user?.displayName || $("name").value.trim() || "Гость";
+  const displayName = user?.displayName || $("name").value.trim() || t("Гость");
   $("guestAccountNotice").classList.toggle("hidden", Boolean(user));
   $("profileView").classList.toggle("hidden", !user);
   $("profileEditor").classList.add("hidden");
   $("logoutBtn").classList.toggle("hidden", !user);
   $("profileName").textContent = displayName;
-  $("profileLogin").textContent = user ? `@${user.username}` : "гость без регистрации";
+  $("profileLogin").textContent = user ? `@${user.username}` : t("гость без регистрации");
   $("profileDisplayName").value = displayName;
   $("profileAvatar").innerHTML = user?.avatar
     ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
@@ -1214,7 +1559,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
     el.disabled = !isHost;
   }
 
-  $("settingsHint").textContent = isHost ? "ты можешь менять" : "меняет хост";
+  $("settingsHint").textContent = isHost ? t("ты можешь менять") : t("меняет хост");
 }
 
 function sendTrack() {
@@ -1260,16 +1605,16 @@ function renderLobby(lobby) {
   const me = state.players.find((player) => player.id === socket.id);
   state.ready = Boolean(me?.ready);
   const readyCount = state.players.filter((player) => player.ready).length;
-  $("hostBadge").textContent = isHost ? "ты хост" : "хост: " + (state.players.find((p) => p.id === lobby.host)?.name || "...");
+  $("hostBadge").textContent = isHost ? t("ты хост") : `${t("хост")}: ${state.players.find((p) => p.id === lobby.host)?.name || "..."}`;
   $("startBtn").disabled = !isHost || state.players.length < 3 || readyCount !== state.players.length;
   $("startBtn").textContent = state.players.length < 3
-    ? "Ждем минимум 3 игроков"
+    ? t("Ждем минимум 3 игроков")
     : readyCount !== state.players.length
-      ? "Ждем готовность всех игроков"
-      : "Запустить игру";
-  $("readyBtn").textContent = state.ready ? "Не готов" : "Я готов";
+      ? t("Ждем готовность всех игроков")
+      : t("Запустить игру");
+  $("readyBtn").textContent = state.ready ? t("Не готов") : t("Я готов");
   $("readyBtn").classList.toggle("ready", state.ready);
-  $("readySummary").textContent = `Готовы: ${readyCount}/${state.players.length}`;
+  $("readySummary").textContent = t(`Готовы: ${readyCount}/${state.players.length}`);
   applySettingsToForm(state.settings, isHost);
   updateLobbyRenameControls();
 
@@ -1277,9 +1622,9 @@ function renderLobby(lobby) {
     <div class="player-row">
       ${playerAvatarMarkup(player, index + 1)}
       <strong>${escapeHtml(player.name)}</strong>
-      ${player.ready ? "<em>готов</em>" : "<em>не готов</em>"}
+      ${player.ready ? `<em>${t("готов")}</em>` : `<em>${t("не готов")}</em>`}
       ${player.id === lobby.host ? "<em>host</em>" : ""}
-      ${player.id === socket.id ? "<em>ты</em>" : ""}
+      ${player.id === socket.id ? `<em>${t("ты")}</em>` : ""}
     </div>
   `).join("");
 
@@ -1304,7 +1649,7 @@ function renderGameState(data) {
     state.selectedReaction = null;
   }
 
-  $("roundInfo").textContent = `Раунд ${state.round}/${state.totalRounds}`;
+  $("roundInfo").textContent = t(`Раунд ${state.round}/${state.totalRounds}`);
   $("roundBar").style.width = `${Math.min(100, (state.round / state.totalRounds) * 100)}%`;
   renderOrder();
   renderHostControls();
@@ -1323,7 +1668,7 @@ function renderOrder() {
     return `
       <div class="order-row ${active ? "active" : ""}">
         <span>${index + 1}</span>
-        <strong>${escapeHtml(player?.name || "Игрок")}</strong>
+        <strong>${escapeHtml(player?.name || t("Игрок"))}</strong>
       </div>
     `;
   }).join("");
@@ -1346,8 +1691,8 @@ function renderHostControls() {
     const isCurrent = player.id === state.currentPlayerId;
     return `
       <button class="kick-row" ${isMe ? "disabled" : ""} onclick="hostKickPlayer('${escapeAttribute(player.id)}')">
-        <span>${escapeHtml(player.name)} ${isMe ? "(ты)" : ""}</span>
-        <strong>${isMe ? "хост" : isCurrent ? "ходит" : "кик"}</strong>
+        <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
+        <strong>${isMe ? t("хост") : isCurrent ? t("ходит") : t("кик")}</strong>
       </button>
     `;
   }).join("");
@@ -1368,14 +1713,14 @@ function renderReactions() {
   const activeCounts = ALLOWED_REACTIONS
     .filter((reaction) => state.reactionCounts[reaction])
     .map((reaction) => `${reaction} ${state.reactionCounts[reaction]}`);
-  summary.textContent = activeCounts.length ? activeCounts.join(" · ") : "Пока реакций нет";
+  summary.textContent = activeCounts.length ? activeCounts.join(" · ") : t("Пока реакций нет");
 }
 
 function formatReactions(reactions = {}) {
   const activeCounts = ALLOWED_REACTIONS
     .filter((reaction) => reactions[reaction])
     .map((reaction) => `${reaction} ${reactions[reaction]}`);
-  return activeCounts.length ? activeCounts.join(" · ") : "без реакций";
+  return activeCounts.length ? activeCounts.join(" · ") : t("без реакций");
 }
 
 function renderTrackHistory(targetId = "trackHistory", history = state.trackHistory) {
@@ -1384,15 +1729,15 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
 
   if (!history?.length) {
     el.classList.add("empty");
-    el.textContent = "Пока треков нет";
+    el.textContent = t("Пока треков нет");
     return;
   }
 
   el.classList.remove("empty");
   el.innerHTML = history.map((track) => `
     <div class="history-row">
-      <span>Раунд ${track.round}, ход ${track.turnNumber || "?"}</span>
-      <strong>${escapeHtml(track.playerName || "Игрок")}</strong>
+      <span>${t(`Раунд ${track.round}, ход ${track.turnNumber || "?"}`)}</span>
+      <strong>${escapeHtml(track.playerName || t("Игрок"))}</strong>
       <small>${formatReactions(track.reactions)}</small>
     </div>
   `).join("");
@@ -1405,9 +1750,9 @@ function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) 
   state.timeLeft = null;
   const isMine = playerId === socket.id;
   $("turn").innerHTML = `
-    <span>${isMine ? "Твой ход" : "Сейчас ходит"}</span>
-    <strong>${escapeHtml(name || "Игрок")}</strong>
-    <small>ход ${turnNumber}/${turnsInRound}</small>
+    <span>${isMine ? t("Твой ход") : t("Сейчас ходит")}</span>
+    <strong>${escapeHtml(name || t("Игрок"))}</strong>
+    <small>${t(`ход ${turnNumber}/${turnsInRound}`)}</small>
   `;
   clearPlayer();
   state.reactionCounts = {};
@@ -1425,7 +1770,7 @@ function updateSendButton(submitted = false) {
   const listening = state.turnStage === "listening";
   $("sendBtn").disabled = !isMine || submitted || listening;
   $("url").disabled = !isMine || submitted || listening;
-  $("sendBtn").textContent = submitted || listening ? "Трек играет" : isMine ? "Отправить трек" : "Ждем ход";
+  $("sendBtn").textContent = submitted || listening ? t("Трек играет") : isMine ? t("Отправить трек") : t("Ждем ход");
 }
 
 function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_TIME }) {
@@ -1461,7 +1806,7 @@ function clearPlayer() {
     frame.src = "about:blank";
   });
   embed.className = "embed empty";
-  embed.innerHTML = "<span>Ждем трек от текущего игрока</span>";
+  embed.innerHTML = `<span>${t("Ждем трек от текущего игрока")}</span>`;
   ["tickSound", "startSound", "revealSound"].forEach((id) => {
     const media = $(id);
     if (media && typeof media.pause === "function") {
@@ -1494,7 +1839,7 @@ function loadTrack(track) {
   } else if (soundCloud) {
     embed.innerHTML = `<iframe id="trackFrame" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&visual=true" title="SoundCloud player" allow="autoplay"></iframe>`;
   } else {
-    embed.innerHTML = `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">Открыть трек</a>`;
+    embed.innerHTML = `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${t("Открыть трек")}</a>`;
   }
 
   if (typeof track !== "string") {
@@ -1535,14 +1880,15 @@ function isSoundCloudUrl(url) {
 }
 
 function renderVoteList(votes = {}) {
-  const voteCounts = votes;
+  state.voteCounts = votes || {};
+  const voteCounts = state.voteCounts;
   const candidates = state.voteCandidates.length ? state.voteCandidates : state.players.map((player) => player.id);
   $("voteList").innerHTML = state.players.filter((player) => candidates.includes(player.id)).map((player) => {
     const isMe = player.id === socket.id;
     const countMarkup = state.anonymousVoting ? "<strong>?</strong>" : `<strong>${voteCounts[player.id] || 0}</strong>`;
     return `
       <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
-        <span>${escapeHtml(player.name)} ${isMe ? "(ты)" : ""}</span>
+        <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
         ${countMarkup}
       </button>
     `;
@@ -1550,10 +1896,10 @@ function renderVoteList(votes = {}) {
 }
 
 function renderResults(data) {
-  const suspectedNames = data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || "Игрок").join(", ");
+  const suspectedNames = data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || t("Игрок")).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
-  $("resultTitle").textContent = data.civiliansWin ? "Шпион паражняк" : "Шпион красавчик";
-  $("resultText").textContent = `Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || "никто"}.`;
+  $("resultTitle").textContent = data.civiliansWin ? t("Шпион паражняк") : t("Шпион красавчик");
+  $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`);
   $("resultVotes").innerHTML = state.players.map((player) => `
     <div class="vote-row static">
       <span>${escapeHtml(player.name)}</span>
@@ -1589,6 +1935,7 @@ socket.on("lobbyUpdate", (lobby) => {
 });
 
 window.addEventListener("DOMContentLoaded", () => {
+  restoreLanguagePreference();
   restoreSiteVolume();
   renderReactions();
   document.addEventListener("click", (event) => {
@@ -1615,6 +1962,7 @@ socket.on("gameStarted", (data) => {
   state.settings = data.settings || state.settings;
   state.currentCode = data.code;
   state.votedTarget = null;
+  state.voteCounts = {};
   state.reactionCounts = {};
   state.selectedReaction = null;
   state.currentTrackId = null;
@@ -1623,12 +1971,12 @@ socket.on("gameStarted", (data) => {
   state.timeLeft = null;
   syncAudioVolume({ fadeTime: 0.32 });
 
-  $("roleTitle").textContent = data.role === "spy" ? "Ты шпион" : "Ты мирный";
+  $("roleTitle").textContent = data.role === "spy" ? t("Ты шпион") : t("Ты мирный");
   $("theme").textContent = data.role === "spy"
-    ? `Твоя задача — понять тему по чужим трекам и не выдать себя. Шпионов в игре: ${data.spyCount || 1}.`
-    : `Тема: «${data.theme}»`;
+    ? t(`Твоя задача — понять тему по чужим трекам и не выдать себя. Шпионов в игре: ${data.spyCount || 1}.`)
+    : t(`Тема: «${data.theme}»`);
   $("embed").className = "embed empty";
-  $("embed").innerHTML = "<span>Здесь появится YouTube/SoundCloud плеер</span>";
+  $("embed").innerHTML = `<span>${t("Здесь появится YouTube/SoundCloud плеер")}</span>`;
 
   showScreen("game");
   showRoleReveal(data);
@@ -1670,21 +2018,23 @@ socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, 
   state.votedTarget = null;
   state.anonymousVoting = Boolean(anonymous);
   state.voteCandidates = candidates || [];
+  state.voteCounts = votes || {};
   clearPlayer();
   showScreen("voting");
   renderVoteList(votes);
   renderTrackHistory("voteTrackHistory", state.trackHistory);
   updateVoteTimer(votingTime > 0 ? votingTime : null);
   $("voteDescription").textContent = voteRound > 1
-    ? "Ничья! Голосуем во втором туре только между кандидатами."
+    ? t("Ничья! Голосуем во втором туре только между кандидатами.")
     : anonymous
-      ? "Анонимное голосование: счет голосов откроется только в конце."
-      : "Выбери игрока, который хуже всех попадал в тему. Менять голос можно до конца голосования.";
+      ? t("Анонимное голосование: счет голосов откроется только в конце.")
+      : t("Выбери игрока, который хуже всех попадал в тему. Менять голос можно до конца голосования.");
   setStatus("voteStatus", voteRound > 1 ? "Второй тур начался" : "Голосование началось");
 });
 
 socket.on("voteUpdate", ({ votes, votedCount, total, anonymous }) => {
   state.anonymousVoting = Boolean(anonymous);
+  state.voteCounts = votes || {};
   renderVoteList(votes);
   setStatus("voteStatus", `Проголосовало ${votedCount}/${total}`);
 });
