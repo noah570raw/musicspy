@@ -60,7 +60,6 @@ body[data-screen="lobby"] {
 }
 
 body[data-screen="lobby"] .app-shell {
-  width: min(1760px, calc(100% - 24px));
   padding: clamp(8px, 1.4vh, 14px) 0;
 }
 
@@ -136,18 +135,10 @@ button {
 }
 
 .lobby-card {
-  display: grid;
-  width: min(100%, 1680px);
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(8px, 1vw, 12px);
-  align-items: stretch;
+  width: min(100%, 1080px);
   padding: clamp(10px, 1.25vw, 16px);
   border-radius: 24px;
   font-size: 0.92rem;
-}
-
-.lobby-card > .section-header {
-  grid-column: 1 / -1;
 }
 
 .screen {
@@ -425,24 +416,11 @@ button:disabled {
 }
 
 .lobby-grid {
-  display: contents;
-}
-
-.lobby-grid > .lobby-column,
-.lobby-page-actions,
-.lobby-page-chat {
-  min-width: 0;
-  min-height: clamp(430px, calc(100dvh - 172px), 620px);
-}
-
-.lobby-page-actions,
-.lobby-page-chat {
-  display: flex;
-}
-
-.lobby-page-actions .lobby-action-panel,
-.lobby-page-chat .game-chat-panel {
-  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(290px, 1.1fr) minmax(300px, 1fr);
+  gap: clamp(8px, 1vw, 11px);
+  align-items: stretch;
+  margin-top: clamp(8px, 1vh, 11px);
 }
 
 .lobby-column {
@@ -906,11 +884,12 @@ button:disabled {
 }
 
 @media (max-width: 1080px) {
-  .lobby-card {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .lobby-grid {
+    grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
   }
 
   .lobby-settings {
+    grid-column: 1 / -1;
     min-height: auto;
   }
 }
@@ -927,19 +906,6 @@ button:disabled {
   .side-panel,
   .player-card,
   .lobby-column {
-    min-height: auto;
-  }
-}
-
-
-@media (max-width: 920px) {
-  .lobby-card {
-    grid-template-columns: 1fr;
-  }
-
-  .lobby-grid > .lobby-column,
-  .lobby-page-actions,
-  .lobby-page-chat {
     min-height: auto;
   }
 }
@@ -2380,11 +2346,6 @@ body[data-screen="game"] .language-switcher {
   width: min(100%, 300px);
 }
 
-body[data-screen="lobby"] .page-chat-column,
-body[data-screen="lobby"] .page-action-column {
-  width: 100%;
-}
-
 .page-chat-column .game-chat-panel,
 .page-action-column .lobby-action-panel {
   width: 100%;
@@ -2405,16 +2366,26 @@ body[data-screen="lobby"] .page-action-column {
 
 @media (min-width: 1580px) {
   #lobby {
-    position: static;
+    position: relative;
   }
 
   .lobby-page-chat,
   .lobby-page-actions {
-    position: static;
-    z-index: auto;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 3;
     display: flex;
-    width: 100%;
-    min-height: clamp(430px, calc(100dvh - 172px), 620px);
+    width: min(300px, calc((100vw - 1080px) / 2 - 28px));
+    min-height: 0;
+  }
+
+  .lobby-page-chat {
+    right: calc(100% + 14px);
+  }
+
+  .lobby-page-actions {
+    left: calc(100% + 14px);
   }
 
   .lobby-page-chat .game-chat-panel {
@@ -2475,8 +2446,8 @@ body[data-screen="lobby"] .page-action-column {
 }
 
 @media (max-width: 1579px) {
-  body:not([data-screen="lobby"]) .page-chat-column,
-  body:not([data-screen="lobby"]) .page-action-column {
+  .page-chat-column,
+  .page-action-column {
     margin-top: 12px;
   }
 }
