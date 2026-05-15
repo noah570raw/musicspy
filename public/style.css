@@ -2254,20 +2254,15 @@ body[data-screen="game"] .language-switcher {
 }
 
 .chat-messages {
+  --chat-visible-duration: 9000ms;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: flex-start;
   gap: 8px;
   min-height: 0;
   max-height: min(220px, 28vh);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.chat-messages:not(.empty)::before {
-  content: "";
-  margin-top: auto;
+  overflow: hidden;
 }
 
 .chat-messages.empty {
@@ -2287,6 +2282,26 @@ body[data-screen="game"] .language-switcher {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.045);
+  animation: chat-float-away var(--chat-visible-duration) ease-out both;
+  animation-delay: calc(var(--chat-age-ms, 0ms) * -1);
+}
+
+@keyframes chat-float-away {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+
+  10%,
+  68% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-46px) scale(0.98);
+  }
 }
 
 .chat-message.mine {
