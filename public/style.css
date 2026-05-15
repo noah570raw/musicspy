@@ -2315,28 +2315,34 @@ body:not([data-screen="menu"]) .account-corner {
 
 @media (min-width: 1724px) {
   body[data-screen="lobby"] .lobby-chat {
+    --detached-chat-top: clamp(88px, 12vh, 132px);
     position: fixed;
-    left: 0;
-    top: 50%;
-    width: calc((100vw - 1180px) / 2 - var(--detached-chat-gap));
-    max-height: calc(100dvh - 24px);
+    left: 18px;
+    top: var(--detached-chat-top);
+    width: calc((100vw - 1180px) / 2 - 30px);
+    max-height: calc(100dvh - var(--detached-chat-top) - 18px);
     margin-top: 0;
-    transform: translateY(-50%);
+    transform: none;
+  }
+
+  body[data-screen="lobby"] .lobby-chat .game-chat-panel {
+    height: calc(100dvh - var(--detached-chat-top) - 18px);
   }
 }
 
 @media (min-width: 1864px) {
   body[data-screen="game"] .game-chat {
+    --detached-chat-top: clamp(88px, 12vh, 132px);
     position: fixed;
-    left: 0;
-    top: 10px;
-    width: calc((100vw - 1400px) / 2 - var(--detached-chat-gap));
-    max-height: calc(100dvh - 20px);
+    left: 18px;
+    top: var(--detached-chat-top);
+    width: calc((100vw - 1400px) / 2 - 30px);
+    max-height: calc(100dvh - var(--detached-chat-top) - 18px);
     transform: none;
   }
 
   body[data-screen="game"] .game-chat .game-chat-panel {
-    height: calc(100dvh - 20px);
+    height: calc(100dvh - var(--detached-chat-top) - 18px);
   }
 }
 
