@@ -274,6 +274,36 @@ function emitLobbyUpdate(code) {
   io.to(code).emit("lobbyUpdate", publicLobby(lobby));
 }
 
+function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
+  const code = lobby.code;
+
+  if (leaveRoom) socket.leave(code);
+  removePlayerFromLobby(lobby, socket.id);
+
+  if (lobby.host === socket.id && lobby.players.length > 0) {
+    lobby.host = lobby.players[0].id;
+  }
+
+  if (lobby.players.length === 0) {
+    clearTimer(code);
+    delete lobbies[code];
+    return { deleted: true };
+  }
+
+  if (lobby.phase === "playing" && lobby.players.length < 3) {
+    clearTimer(code);
+    resetLobbyToWaiting(lobby);
+    io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
+  } else if (lobby.phase === "playing") {
+    startTurn(code);
+  } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
+    finishVote(code);
+  }
+
+  emitLobbyUpdate(code);
+  return { deleted: false };
+}
+
 function emitGameState(code) {
   const lobby = lobbies[code];
   if (!lobby) return;
@@ -672,6 +702,16 @@ io.on("connection", (socket) => {
     emitLobbyUpdate(roomCode);
   });
 
+  socket.on("leaveLobby", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
+    if (lobby.started) return cb({ error: "Во время игры выйти можно только закрыв вкладку" });
+
+    handlePlayerDeparture(lobby, socket);
+    cb({ success: true });
+  });
+
   socket.on("updateSettings", ({ code, settings }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
@@ -926,29 +966,7 @@ io.on("connection", (socket) => {
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
       if (!wasInLobby) continue;
 
-      removePlayerFromLobby(lobby, socket.id);
-
-      if (lobby.host === socket.id && lobby.players.length > 0) {
-        lobby.host = lobby.players[0].id;
-      }
-
-      if (lobby.players.length === 0) {
-        clearTimer(code);
-        delete lobbies[code];
-        continue;
-      }
-
-      if (lobby.phase === "playing" && lobby.players.length < 3) {
-        clearTimer(code);
-        resetLobbyToWaiting(lobby);
-        io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
-      } else if (lobby.phase === "playing") {
-        startTurn(code);
-      } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
-        finishVote(code);
-      }
-
-      emitLobbyUpdate(code);
+      handlePlayerDeparture(lobby, socket, { leaveRoom: false });
     }
   });
 });
@@ -1005,6 +1023,7 @@ module.exports = {
   countReactions,
   getActiveTurnOrder,
   removePlayerFromLobby,
+  handlePlayerDeparture,
   normalizeAvatar,
   normalizeUsername,
   hashPassword,

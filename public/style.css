@@ -327,22 +327,24 @@ button:disabled {
 }
 
 .secret-value {
-  transition: filter 0.2s ease, opacity 0.2s ease, text-shadow 0.2s ease;
+  transition: filter 0.2s ease, opacity 0.2s ease, text-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .secret-blurred {
-  filter: blur(9px);
   opacity: 0.72;
   user-select: none;
 }
 
 .code-pill.secret-blurred {
-  color: transparent;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.86);
+  border-style: dashed;
+  color: rgba(255, 255, 255, 0.68);
+  letter-spacing: 0.18em;
+  text-shadow: none;
 }
 
 .qr-wrap.secret-blurred {
   filter: blur(12px);
+  pointer-events: none;
 }
 
 .badge {
@@ -411,7 +413,10 @@ button:disabled {
   overflow: auto;
 }
 
-.lobby-players #startBtn {
+.lobby-bottom-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 10px;
   margin-top: auto;
 }
 
@@ -777,6 +782,12 @@ select {
   outline: none;
   background: rgba(0, 0, 0, 0.36);
   color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.setting-control select {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(8, 8, 12, 0.82);
 }
 
 select:disabled {
@@ -785,13 +796,41 @@ select:disabled {
 }
 
 .settings-panel {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(8px, 1.3vh, 12px);
-  padding: 0;
-  border: 0;
-  background: transparent;
+  gap: clamp(10px, 1.4vh, 14px);
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(229, 9, 20, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   text-align: left;
+}
+
+.setting-control {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 17px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.setting-control-wide {
+  grid-column: 1 / -1;
+}
+
+.setting-control span {
+  margin: 0;
+}
+
+.setting-control small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .settings-title {
@@ -800,6 +839,7 @@ select:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 2px;
 }
 
 .settings-title strong {
@@ -829,8 +869,13 @@ select:disabled {
 }
 
 @media (max-width: 560px) {
-  .settings-panel {
+  .settings-panel,
+  .lobby-bottom-actions {
     grid-template-columns: 1fr;
+  }
+
+  .setting-control-wide {
+    grid-column: auto;
   }
 }
 

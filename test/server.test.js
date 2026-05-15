@@ -107,3 +107,27 @@ test("normalizeAvatar accepts small image data urls and rejects oversized avatar
   assert.throws(() => normalizeAvatar("https://example.com/avatar.png"), /Поддерживаются/);
   assert.throws(() => normalizeAvatar(oversized), /слишком большая/);
 });
+
+test("handlePlayerDeparture lets a waiting lobby member leave and reassigns host", () => {
+  const { handlePlayerDeparture } = require("../server");
+  const leftRooms = [];
+  const lobby = {
+    code: "ROOM1",
+    host: "host",
+    phase: "lobby",
+    players: [{ id: "host" }, { id: "guest" }],
+    order: [],
+    baseOrder: [],
+    spies: [],
+    voteCandidates: [],
+    votes: {},
+    currentTurnIndex: 0
+  };
+
+  const result = handlePlayerDeparture(lobby, { id: "host", leave: (room) => leftRooms.push(room) });
+
+  assert.deepEqual(leftRooms, ["ROOM1"]);
+  assert.equal(result.deleted, false);
+  assert.equal(lobby.host, "guest");
+  assert.deepEqual(lobby.players, [{ id: "guest" }]);
+});
