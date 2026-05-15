@@ -461,8 +461,10 @@ button:disabled {
 }
 
 .lobby-players .players-list {
+  flex: 1;
   min-height: 0;
-  max-height: clamp(112px, 18vh, 148px);
+  max-height: none;
+  align-content: start;
   overflow: auto;
 }
 
