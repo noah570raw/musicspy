@@ -2245,7 +2245,6 @@ function renderChat(messages = state.chatMessages) {
     }
     box.classList.remove("empty");
     box.innerHTML = markup;
-    box.scrollTop = box.scrollHeight;
   }
 }
 
@@ -2274,9 +2273,17 @@ function sendChatMessage() {
   const { input } = activeChatElements();
   const text = input?.value.trim() || "";
   if (!text) return setChatStatus("Напиши сообщение", true);
+
+  for (const chatInput of document.querySelectorAll("[data-chat-input]")) chatInput.value = "";
+  input?.focus({ preventScroll: true });
+
   socket.emit("chat:send", { code: state.currentCode, text }, (res) => {
-    if (res?.error) return setChatStatus(res.error, true);
-    for (const chatInput of document.querySelectorAll("[data-chat-input]")) chatInput.value = "";
+    if (res?.error) {
+      if (input && !input.value) input.value = text;
+      input?.focus({ preventScroll: true });
+      return setChatStatus(res.error, true);
+    }
+    input?.focus({ preventScroll: true });
     setChatStatus("Сообщение отправлено");
   });
 }

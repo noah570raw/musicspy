@@ -2203,14 +2203,13 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 .chat-messages {
-  display: grid;
-  align-content: start;
-  grid-auto-rows: max-content;
-  justify-items: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
   gap: 8px;
   max-height: min(220px, 28vh);
-  overflow: auto;
-  padding-right: 2px;
+  overflow: hidden;
 }
 
 .chat-messages.empty {
@@ -2220,7 +2219,8 @@ body:not([data-screen="menu"]) .account-corner {
 
 .chat-message {
   display: grid;
-  justify-self: start;
+  flex: 0 0 auto;
+  align-self: flex-start;
   width: fit-content;
   min-width: min(160px, 100%);
   max-width: 92%;
@@ -2232,7 +2232,7 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 .chat-message.mine {
-  justify-self: end;
+  align-self: flex-end;
   border-color: rgba(var(--accent-rgb), 0.48);
   background: rgba(var(--accent-rgb), 0.12);
 }
@@ -2271,7 +2271,8 @@ body:not([data-screen="menu"]) .account-corner {
 
 .chat-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 4fr) minmax(44px, 1fr);
+  align-items: center;
   gap: 8px;
 }
 
@@ -2280,6 +2281,23 @@ body:not([data-screen="menu"]) .account-corner {
   min-height: 40px;
   padding: 9px 11px;
   border-radius: 13px;
+}
+
+.chat-send-button {
+  justify-self: end;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.chat-send-button span {
+  transform: translateX(1px);
+  font-size: 1rem;
 }
 
 .game-chat-panel .status {
@@ -2293,11 +2311,6 @@ body:not([data-screen="menu"]) .account-corner {
   }
 }
 
-@media (max-width: 560px) {
-  .chat-form {
-    grid-template-columns: 1fr;
-  }
-}
 
 .page-chat-column {
   width: min(100%, 300px);
