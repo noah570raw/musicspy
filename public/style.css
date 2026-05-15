@@ -1875,7 +1875,7 @@ html[lang="ru"] .language-switcher span:first-child {
 
 @media (min-width: 921px) {
   body[data-screen="game"] .app-shell {
-    width: min(1080px, calc(100% - 24px));
+    width: min(1400px, calc(100% - 24px));
     min-height: 100dvh;
     padding: 10px 0;
   }
@@ -2254,13 +2254,11 @@ body[data-screen="game"] .language-switcher {
 }
 
 .chat-messages {
-  --chat-visible-duration: 9000ms;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: flex-start;
   gap: 8px;
-  min-height: 0;
   max-height: min(220px, 28vh);
   overflow: hidden;
 }
@@ -2282,26 +2280,6 @@ body[data-screen="game"] .language-switcher {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.045);
-  animation: chat-float-away var(--chat-visible-duration) ease-out both;
-  animation-delay: calc(var(--chat-age-ms, 0ms) * -1);
-}
-
-@keyframes chat-float-away {
-  0% {
-    opacity: 0;
-    transform: translateY(14px) scale(0.98);
-  }
-
-  10%,
-  68% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(-46px) scale(0.98);
-  }
 }
 
 .chat-message.mine {
@@ -2409,14 +2387,12 @@ body[data-screen="game"] .language-switcher {
 }
 
 @media (min-width: 1580px) {
-  #lobby,
-  #game {
+  #lobby {
     position: relative;
   }
 
   .lobby-page-chat,
-  .lobby-page-actions,
-  .game-page-chat {
+  .lobby-page-actions {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -2426,8 +2402,7 @@ body[data-screen="game"] .language-switcher {
     min-height: 0;
   }
 
-  .lobby-page-chat,
-  .game-page-chat {
+  .lobby-page-chat {
     right: calc(100% + 14px);
   }
 
@@ -2435,15 +2410,13 @@ body[data-screen="game"] .language-switcher {
     left: calc(100% + 14px);
   }
 
-  .lobby-page-chat .game-chat-panel,
-  .game-page-chat .game-chat-panel {
+  .lobby-page-chat .game-chat-panel {
     height: 100%;
     max-height: none;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
 
-  .lobby-page-chat .chat-messages,
-  .game-page-chat .chat-messages {
+  .lobby-page-chat .chat-messages {
     min-height: 0;
     max-height: none;
   }
@@ -2478,6 +2451,34 @@ body[data-screen="game"] .language-switcher {
   }
 }
 
+@media (min-width: 1880px) {
+  #game {
+    position: relative;
+  }
+
+  .game-page-chat {
+    position: absolute;
+    top: 0;
+    right: calc(100% + 14px);
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    width: min(300px, calc((100vw - 1400px) / 2 - 28px));
+    min-height: 0;
+  }
+
+  .game-page-chat .game-chat-panel {
+    height: 100%;
+    max-height: none;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .game-page-chat .chat-messages {
+    min-height: 0;
+    max-height: none;
+  }
+}
+
 @media (max-width: 1579px) {
   .page-chat-column,
   .page-action-column {
@@ -2485,3 +2486,8 @@ body[data-screen="game"] .language-switcher {
   }
 }
 
+@media (min-width: 1580px) and (max-width: 1879px) {
+  .game-page-chat {
+    margin-top: 12px;
+  }
+}
