@@ -1815,6 +1815,10 @@ function sendReaction(reaction) {
 
 async function copyRoomCode() {
   if (!state.currentCode) return;
+  if (!state.inviteSecretsVisible) {
+    setStatus("lobbyStatus", "Сначала покажи код комнаты кнопкой с глазом", true);
+    return;
+  }
   try {
     await navigator.clipboard.writeText(state.currentCode);
     setStatus("lobbyStatus", "Код скопирован");
@@ -1843,8 +1847,7 @@ function updateInviteSecretsVisibility() {
   if (copyCode) {
     copyCode.textContent = isVisible ? (state.currentCode || "-----") : "•••••";
     copyCode.classList.toggle("secret-blurred", !isVisible);
-    copyCode.setAttribute("aria-label", isVisible ? `Код комнаты ${state.currentCode || ""}` : "Код комнаты скрыт, нажми чтобы скопировать");
-    copyCode.title = isVisible ? "Скопировать код комнаты" : "Скопировать скрытый код комнаты";
+    copyCode.setAttribute("aria-label", isVisible ? `Код комнаты ${state.currentCode || ""}` : "Код комнаты скрыт");
   }
 
   if (qrWrap) {
