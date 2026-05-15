@@ -4,6 +4,7 @@ const DEFAULT_LISTEN_TIME = 30;
 const state = {
   currentCode: "",
   myId: "",
+  hostId: "",
   lobby: null,
   settings: {},
   players: [],
@@ -86,8 +87,32 @@ function startGame() {
 
 function restartLobby() {
   socket.emit("restartLobby", { code: state.currentCode }, (res) => {
-    if (res?.error) return setStatus("voteStatus", res.error, true);
+    if (res?.error) {
+      const statusId = state.phase === "game" ? "gameStatus" : "voteStatus";
+      return setStatus(statusId, res.error, true);
+    }
     showScreen("lobby");
+  });
+}
+
+function hostSkipTurn() {
+  socket.emit("hostSkipTurn", { code: state.currentCode }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    setStatus("gameStatus", "Ход пропущен");
+  });
+}
+
+function hostStartVoting() {
+  socket.emit("hostStartVoting", { code: state.currentCode }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    setStatus("gameStatus", "Запускаем голосование...");
+  });
+}
+
+function hostKickPlayer(playerId) {
+  socket.emit("hostKickPlayer", { code: state.currentCode, playerId }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    setStatus("gameStatus", "Игрок удален из комнаты");
   });
 }
 
@@ -200,6 +225,7 @@ function renderLobby(lobby) {
   state.players = lobby.players || [];
   state.settings = lobby.settings || state.settings;
   state.currentCode = lobby.code || state.currentCode;
+  state.hostId = lobby.host || state.hostId;
 
   $("copyCode").textContent = state.currentCode || "-----";
   const inviteLink = buildInviteLink();
@@ -235,11 +261,14 @@ function renderLobby(lobby) {
       ${player.id === socket.id ? "<em>ты</em>" : ""}
     </div>
   `).join("");
+
+  if (state.phase === "game") renderHostControls();
 }
 
 function renderGameState(data) {
   state.players = data.players || state.players;
   state.order = data.order || state.order;
+  state.hostId = data.host || state.hostId;
   state.settings = data.settings || state.settings;
   state.currentPlayerId = data.currentPlayerId;
   state.round = data.round || state.round;
@@ -251,6 +280,7 @@ function renderGameState(data) {
   $("roundInfo").textContent = `Раунд ${state.round}/${state.totalRounds}`;
   $("roundBar").style.width = `${Math.min(100, (state.round / state.totalRounds) * 100)}%`;
   renderOrder();
+  renderHostControls();
   updateSendButton(data.submittedThisTurn);
 
   if (data.turnStage === "listening" && data.lastTrack) loadTrack(data.lastTrack);
@@ -270,6 +300,30 @@ function renderOrder() {
   }).join("");
 }
 
+function renderHostControls() {
+  const controls = $("hostControls");
+  const kickList = $("hostKickList");
+  if (!controls || !kickList) return;
+
+  const isHost = state.hostId === socket.id;
+  controls.classList.toggle("hidden", !isHost);
+  if (!isHost) {
+    kickList.innerHTML = "";
+    return;
+  }
+
+  kickList.innerHTML = state.players.map((player) => {
+    const isMe = player.id === socket.id;
+    const isCurrent = player.id === state.currentPlayerId;
+    return `
+      <button class="kick-row" ${isMe ? "disabled" : ""} onclick="hostKickPlayer('${escapeAttribute(player.id)}')">
+        <span>${escapeHtml(player.name)} ${isMe ? "(ты)" : ""}</span>
+        <strong>${isMe ? "хост" : isCurrent ? "ходит" : "кик"}</strong>
+      </button>
+    `;
+  }).join("");
+}
+
 function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) {
   state.currentPlayerId = playerId;
   state.round = round;
@@ -285,6 +339,7 @@ function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) 
   updateTimer({ timeLeft: null, stage: "waiting", listenTime: state.settings.listenTime || DEFAULT_LISTEN_TIME });
   setStatus("gameStatus", isMine ? "Очередь ждет тебя: вставь ссылку на трек." : "Ждем, пока игрок поставит трек. Таймер пока не идет.");
   renderOrder();
+  renderHostControls();
   updateSendButton(false);
 }
 
@@ -444,6 +499,7 @@ window.addEventListener("DOMContentLoaded", () => {
 socket.on("gameStarted", (data) => {
   state.role = data.role;
   state.theme = data.theme;
+  state.hostId = data.host || state.hostId;
   state.players = data.players;
   state.order = data.order;
   state.totalRounds = data.totalRounds;
@@ -462,6 +518,7 @@ socket.on("gameStarted", (data) => {
 
   showScreen("game");
   renderOrder();
+  renderHostControls();
 });
 
 socket.on("gameState", renderGameState);
@@ -474,6 +531,7 @@ socket.on("roundStarted", ({ round, order }) => {
   state.order = order;
   setStatus("gameStatus", `Начался раунд ${round}`);
   renderOrder();
+  renderHostControls();
 });
 
 socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, votingTime }) => {
@@ -508,6 +566,20 @@ socket.on("gameEnd", (data) => {
   showScreen("results");
   updateVoteTimer(null);
   renderResults(data);
+});
+
+socket.on("hostAction", ({ message }) => {
+  if (message) setStatus("gameStatus", message);
+});
+
+socket.on("kicked", ({ reason }) => {
+  state.currentCode = "";
+  state.lobby = null;
+  state.players = [];
+  state.order = [];
+  clearPlayer();
+  showScreen("menu");
+  setStatus("menuError", reason || "Тебя удалили из комнаты", true);
 });
 
 socket.on("gameCancelled", ({ reason }) => {

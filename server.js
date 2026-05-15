@@ -80,6 +80,34 @@ function getActiveTurnOrder(lobby) {
   return lobby.baseOrder.filter((id) => activePlayerIds.has(id));
 }
 
+
+function removePlayerFromLobby(lobby, playerId) {
+  const removedOrderIndex = lobby.order.indexOf(playerId);
+
+  lobby.players = lobby.players.filter((player) => player.id !== playerId);
+  lobby.order = lobby.order.filter((id) => id !== playerId);
+  lobby.baseOrder = lobby.baseOrder.filter((id) => id !== playerId);
+  lobby.spies = lobby.spies.filter((id) => id !== playerId);
+  lobby.voteCandidates = lobby.voteCandidates.filter((id) => id !== playerId);
+  delete lobby.votes[playerId];
+
+  for (const [voter, target] of Object.entries(lobby.votes)) {
+    if (target === playerId) delete lobby.votes[voter];
+  }
+
+  if (removedOrderIndex !== -1 && removedOrderIndex < lobby.currentTurnIndex) {
+    lobby.currentTurnIndex = Math.max(0, lobby.currentTurnIndex - 1);
+  }
+
+  if (lobby.currentTurnIndex >= lobby.order.length) {
+    lobby.currentTurnIndex = 0;
+  }
+
+  return removedOrderIndex;
+}
+
+
+
 function publicLobby(lobby) {
   return {
     code: lobby.code,
@@ -108,6 +136,7 @@ function emitGameState(code) {
   io.to(code).emit("gameState", {
     code,
     phase: lobby.phase,
+    host: lobby.host,
     round: lobby.round,
     totalRounds: lobby.settings.rounds,
     order: lobby.order,
@@ -484,6 +513,7 @@ io.on("connection", (socket) => {
     for (const player of lobby.players) {
       io.to(player.id).emit("gameStarted", {
         code: lobby.code,
+        host: lobby.host,
         role: lobby.spies.includes(player.id) ? "spy" : "civilian",
         theme: lobby.spies.includes(player.id) ? null : lobby.theme,
         round: lobby.round,
@@ -498,6 +528,79 @@ io.on("connection", (socket) => {
     cb({ success: true });
     emitLobbyUpdate(lobby.code);
     startTurn(lobby.code);
+  });
+
+
+  socket.on("hostSkipTurn", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост может пропустить ход" });
+    if (lobby.phase !== "playing") return cb({ error: "Сейчас нет активного хода" });
+
+    const skippedPlayerId = lobby.order[lobby.currentTurnIndex];
+    const skippedPlayer = lobby.players.find((player) => player.id === skippedPlayerId);
+    io.to(lobby.code).emit("hostAction", {
+      message: `Хост пропустил ход: ${skippedPlayer?.name || "игрок"}`
+    });
+    cb({ success: true });
+    advanceTurn(lobby.code);
+  });
+
+  socket.on("hostStartVoting", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост может запустить голосование" });
+    if (lobby.phase !== "playing") return cb({ error: "Голосование можно запустить только во время игры" });
+
+    io.to(lobby.code).emit("hostAction", { message: "Хост досрочно запустил голосование" });
+    cb({ success: true });
+    startVoting(lobby.code);
+  });
+
+  socket.on("hostKickPlayer", ({ code, playerId }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Кикать игроков может только хост" });
+    if (playerId === socket.id) return cb({ error: "Хост не может кикнуть себя" });
+
+    const kickedPlayer = lobby.players.find((player) => player.id === playerId);
+    if (!kickedPlayer) return cb({ error: "Игрок не найден" });
+
+    const wasCurrentTurn = lobby.phase === "playing" && lobby.order[lobby.currentTurnIndex] === playerId;
+    removePlayerFromLobby(lobby, playerId);
+
+    const kickedSocket = io.sockets.sockets.get(playerId);
+    if (kickedSocket) {
+      kickedSocket.leave(lobby.code);
+      kickedSocket.emit("kicked", { reason: "Хост удалил тебя из комнаты" });
+    }
+
+    io.to(lobby.code).emit("hostAction", { message: `Хост кикнул игрока ${kickedPlayer.name}` });
+    cb({ success: true });
+
+    if (lobby.phase === "playing" && lobby.players.length < 3) {
+      clearTimer(lobby.code);
+      resetLobbyToWaiting(lobby);
+      io.to(lobby.code).emit("gameCancelled", { reason: "Игрок кикнут — нужно минимум 3 участника" });
+    } else if (lobby.phase === "playing" && wasCurrentTurn) {
+      startTurn(lobby.code);
+    } else if (lobby.phase === "playing") {
+      emitGameState(lobby.code);
+    } else if (lobby.phase === "voting") {
+      io.to(lobby.code).emit("voteUpdate", {
+        votes: lobby.settings.anonymousVoting ? {} : publicVotes(lobby),
+        votedCount: Object.keys(lobby.votes).length,
+        total: lobby.players.length,
+        anonymous: lobby.settings.anonymousVoting,
+        voteRound: lobby.voteRound
+      });
+
+      if (Object.keys(lobby.votes).length >= lobby.players.length) {
+        finishVote(lobby.code);
+      }
+    }
+
+    emitLobbyUpdate(lobby.code);
   });
 
   socket.on("playTrack", ({ code, url }, cb = () => {}) => {
@@ -562,16 +665,7 @@ io.on("connection", (socket) => {
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
       if (!wasInLobby) continue;
 
-      const disconnectedOrderIndex = lobby.order.indexOf(socket.id);
-      lobby.players = lobby.players.filter((player) => player.id !== socket.id);
-      lobby.order = lobby.order.filter((id) => id !== socket.id);
-      lobby.baseOrder = lobby.baseOrder.filter((id) => id !== socket.id);
-      lobby.spies = lobby.spies.filter((id) => id !== socket.id);
-      lobby.voteCandidates = lobby.voteCandidates.filter((id) => id !== socket.id);
-      delete lobby.votes[socket.id];
-      for (const [voter, target] of Object.entries(lobby.votes)) {
-        if (target === socket.id) delete lobby.votes[voter];
-      }
+      removePlayerFromLobby(lobby, socket.id);
 
       if (lobby.host === socket.id && lobby.players.length > 0) {
         lobby.host = lobby.players[0].id;
@@ -588,12 +682,6 @@ io.on("connection", (socket) => {
         resetLobbyToWaiting(lobby);
         io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
       } else if (lobby.phase === "playing") {
-        if (disconnectedOrderIndex !== -1 && disconnectedOrderIndex < lobby.currentTurnIndex) {
-          lobby.currentTurnIndex = Math.max(0, lobby.currentTurnIndex - 1);
-        }
-        if (lobby.currentTurnIndex >= lobby.order.length) {
-          lobby.currentTurnIndex = 0;
-        }
         startTurn(code);
       } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
         finishVote(code);
@@ -652,5 +740,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  getActiveTurnOrder
+  getActiveTurnOrder,
+  removePlayerFromLobby
 };

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getActiveTurnOrder } = require("../server");
+const { getActiveTurnOrder, removePlayerFromLobby } = require("../server");
 
 test("getActiveTurnOrder keeps the first-round order for later rounds", () => {
   const lobby = {
@@ -27,4 +27,26 @@ test("getActiveTurnOrder removes disconnected players without reshuffling surviv
   };
 
   assert.deepEqual(getActiveTurnOrder(lobby), ["player-2", "player-1", "player-3"]);
+});
+test("removePlayerFromLobby clears a kicked player from game state", () => {
+  const lobby = {
+    players: [{ id: "host" }, { id: "kicked" }, { id: "next" }],
+    order: ["host", "kicked", "next"],
+    baseOrder: ["host", "kicked", "next"],
+    spies: ["kicked"],
+    voteCandidates: ["host", "kicked", "next"],
+    votes: { host: "kicked", kicked: "next" },
+    currentTurnIndex: 2
+  };
+
+  const removedIndex = removePlayerFromLobby(lobby, "kicked");
+
+  assert.equal(removedIndex, 1);
+  assert.deepEqual(lobby.players, [{ id: "host" }, { id: "next" }]);
+  assert.deepEqual(lobby.order, ["host", "next"]);
+  assert.deepEqual(lobby.baseOrder, ["host", "next"]);
+  assert.deepEqual(lobby.spies, []);
+  assert.deepEqual(lobby.voteCandidates, ["host", "next"]);
+  assert.deepEqual(lobby.votes, {});
+  assert.equal(lobby.currentTurnIndex, 1);
 });

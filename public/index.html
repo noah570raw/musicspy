@@ -187,6 +187,20 @@
       <aside class="card side-panel">
         <p class="eyebrow">очередь</p>
         <div id="order" class="order-list"></div>
+
+        <div id="hostControls" class="host-controls hidden">
+          <div class="panel-title">
+            <strong>Пульт хоста</strong>
+            <span>управление игрой</span>
+          </div>
+          <div class="host-action-grid">
+            <button class="secondary" onclick="hostSkipTurn()">Пропустить ход</button>
+            <button class="secondary" onclick="hostStartVoting()">К голосованию</button>
+            <button class="danger" onclick="restartLobby()">Пересоздать лобби</button>
+          </div>
+          <p class="host-control-title">Кикнуть игрока</p>
+          <div id="hostKickList" class="kick-list"></div>
+        </div>
       </aside>
     </section>
 
