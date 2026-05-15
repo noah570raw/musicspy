@@ -3,7 +3,7 @@ const socket = io();
 const DEFAULT_LISTEN_TIME = 30;
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 const DEFAULT_SITE_VOLUME = 70;
-const BACKGROUND_MUSIC_VOLUME = 0.11;
+const BACKGROUND_MUSIC_VOLUME = 0.12;
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
 const UI_CUE_FADE_SECONDS = 0.045;
 const state = {
@@ -47,6 +47,20 @@ const AMBIENT_CHORDS = [
   [87.31, 130.81, 196, 293.66]
 ];
 const AMBIENT_SHIMMER_NOTES = [440, 493.88, 554.37, 659.25, 739.99, 659.25, 554.37, 493.88];
+const AMBIENT_VIOLIN_PHRASES = [
+  [659.25, 739.99, 880, 830.61, 739.99],
+  [587.33, 659.25, 739.99, 659.25, 554.37],
+  [493.88, 554.37, 659.25, 739.99, 659.25],
+  [698.46, 783.99, 880, 987.77, 880],
+  [523.25, 659.25, 783.99, 739.99, 659.25],
+  [440, 554.37, 659.25, 622.25, 554.37]
+];
+const AMBIENT_SYNTH_ARPS = [
+  [329.63, 493.88, 659.25, 987.77],
+  [293.66, 440, 587.33, 880],
+  [369.99, 554.37, 739.99, 1108.73],
+  [277.18, 415.3, 622.25, 830.61]
+];
 
 function getAudioContextConstructor() {
   return window.AudioContext || window.webkitAudioContext;
@@ -93,13 +107,13 @@ function createAudioEngine() {
   fxFilter.frequency.value = 2300;
   fxFilter.Q.value = 0.55;
   musicFilter.type = "lowpass";
-  musicFilter.frequency.value = 880;
-  musicFilter.Q.value = 0.7;
+  musicFilter.frequency.value = 1180;
+  musicFilter.Q.value = 0.82;
   reverb.buffer = createAmbientImpulse(context);
-  reverbGain.gain.value = 0.42;
-  delay.delayTime.value = 0.58;
-  delayFeedback.gain.value = 0.28;
-  delayGain.gain.value = 0.22;
+  reverbGain.gain.value = 0.48;
+  delay.delayTime.value = 0.46;
+  delayFeedback.gain.value = 0.32;
+  delayGain.gain.value = 0.2;
 
   fxGain.connect(fxFilter);
   fxFilter.connect(master);
@@ -228,19 +242,23 @@ function playTone({
   oscillator.stop(end + release + 0.05);
 }
 
+function getButtonCueName(button) {
+  if (!button || button.disabled) return null;
+  if (button.dataset.sound) return button.dataset.sound;
+  if (button.id === "toggleInviteSecrets") return state.inviteSecretsVisible ? "inviteReveal" : "inviteHide";
+  if (button.id === "copyCode") return "copyCode";
+  if (button.id === "copyInvite") return "copyInvite";
+  if (button.id === "readyBtn") return state.ready ? "readyDown" : "readyUp";
+  if (button.classList.contains("danger")) return "danger";
+  if (button.classList.contains("primary")) return "confirm";
+  if (button.classList.contains("reaction-btn")) return "reaction";
+  if (button.classList.contains("vote-row")) return "vote";
+  return "click";
+}
+
 function playButtonSound(button) {
-  if (!button || button.disabled) return;
-  if (button.classList.contains("danger")) {
-    playSoundCue("danger");
-  } else if (button.classList.contains("primary")) {
-    playSoundCue("confirm");
-  } else if (button.classList.contains("reaction-btn")) {
-    playSoundCue("reaction");
-  } else if (button.classList.contains("vote-row")) {
-    playSoundCue("vote");
-  } else {
-    playSoundCue("click");
-  }
+  const cueName = getButtonCueName(button);
+  if (cueName) playSoundCue(cueName);
 }
 
 function playSoftChord(notes, { start = 0, duration = 1.35, gain = 0.026, attack = 0.22, release = 0.82, destination = null } = {}) {
@@ -287,6 +305,118 @@ function playFilteredNoise({ start = 0, duration = 0.42, gain = 0.018, attack = 
   envelope.connect(destination || audio.fxGain);
   source.start(now);
   source.stop(now + duration + release);
+}
+
+function playExpressiveTone({
+  frequency = 440,
+  duration = 1.4,
+  type = "sawtooth",
+  destination,
+  start = 0,
+  gain = 0.014,
+  attack = 0.18,
+  release = 0.62,
+  detune = 0,
+  vibratoDepth = 4.5,
+  vibratoRate = 5.8,
+  filterFrequency = 1650
+} = {}) {
+  const audio = unlockAudio({ startMusic: false });
+  if (!audio) return;
+
+  const now = audio.context.currentTime + start;
+  const end = now + Math.max(duration, attack + 0.04);
+  const oscillator = audio.context.createOscillator();
+  const vibrato = audio.context.createOscillator();
+  const vibratoGain = audio.context.createGain();
+  const toneFilter = audio.context.createBiquadFilter();
+  const envelope = audio.context.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  oscillator.detune.setValueAtTime(detune, now);
+  vibrato.type = "sine";
+  vibrato.frequency.setValueAtTime(vibratoRate, now);
+  vibratoGain.gain.setValueAtTime(vibratoDepth, now);
+  toneFilter.type = "bandpass";
+  toneFilter.frequency.setValueAtTime(filterFrequency, now);
+  toneFilter.Q.value = 1.15;
+  envelope.gain.setValueAtTime(0.0001, now);
+  envelope.gain.exponentialRampToValueAtTime(gain, now + attack);
+  envelope.gain.setTargetAtTime(0.0001, end, release / 3);
+
+  vibrato.connect(vibratoGain);
+  vibratoGain.connect(oscillator.frequency);
+  oscillator.connect(toneFilter);
+  toneFilter.connect(envelope);
+  envelope.connect(destination || audio.fxGain);
+  oscillator.start(now);
+  vibrato.start(now);
+  oscillator.stop(end + release + 0.08);
+  vibrato.stop(end + release + 0.08);
+}
+
+function playAmbientViolinPhrase(phrase, { start = 0, destination = null } = {}) {
+  phrase.forEach((note, index) => {
+    playExpressiveTone({
+      frequency: note,
+      duration: index === phrase.length - 1 ? 1.55 : 1.02,
+      destination,
+      start: start + index * 0.72,
+      gain: index === 2 ? 0.012 : 0.0095,
+      attack: 0.2,
+      release: 0.9,
+      detune: index % 2 === 0 ? -3 : 4,
+      vibratoDepth: 3.8 + index * 0.35,
+      vibratoRate: 5.2 + index * 0.15,
+      filterFrequency: 1400 + index * 95
+    });
+  });
+}
+
+function playAmbientSynthArp(notes, { start = 0, destination = null } = {}) {
+  notes.forEach((note, index) => {
+    playTone({
+      frequency: note,
+      slideTo: note * 1.005,
+      duration: 0.46,
+      type: index % 2 === 0 ? "triangle" : "sine",
+      destination,
+      start: start + index * 0.19,
+      gain: 0.0065,
+      attack: 0.035,
+      release: 0.42,
+      detune: index % 2 === 0 ? 7 : -7
+    });
+  });
+}
+
+function playAmbientBreakcoreFill({ start = 0, destination = null } = {}) {
+  const pattern = [
+    { t: 0, kind: "kick" },
+    { t: 0.16, kind: "hat" },
+    { t: 0.27, kind: "snare" },
+    { t: 0.39, kind: "hat" },
+    { t: 0.49, kind: "kick" },
+    { t: 0.58, kind: "ghost" },
+    { t: 0.68, kind: "snare" },
+    { t: 0.78, kind: "hat" },
+    { t: 0.88, kind: "kick" },
+    { t: 1.02, kind: "snare" }
+  ];
+
+  pattern.forEach(({ t, kind }) => {
+    if (kind === "kick") {
+      playTone({ frequency: 96, slideTo: 48, duration: 0.12, type: "sine", destination, start: start + t, gain: 0.009, attack: 0.004, release: 0.16 });
+    } else if (kind === "snare") {
+      playFilteredNoise({ start: start + t, duration: 0.105, gain: 0.0068, attack: 0.004, release: 0.11, frequency: 1800, type: "bandpass", destination });
+      playTone({ frequency: 210, slideTo: 170, duration: 0.08, type: "triangle", destination, start: start + t, gain: 0.0038, attack: 0.004, release: 0.11 });
+    } else if (kind === "ghost") {
+      playFilteredNoise({ start: start + t, duration: 0.07, gain: 0.0038, attack: 0.003, release: 0.08, frequency: 1450, type: "bandpass", destination });
+    } else {
+      playFilteredNoise({ start: start + t, duration: 0.045, gain: 0.0027, attack: 0.002, release: 0.05, frequency: 6800, type: "highpass", destination });
+    }
+  });
 }
 
 function playMetronomeTick() {
@@ -360,6 +490,36 @@ function playSoundCue(name) {
       playTone({ frequency: 246.94, slideTo: 369.99, duration: 0.28, type: "triangle", destination, gain: 0.028, attack: 0.018, release: 0.28 });
       playSoftChord([146.83, 220, 293.66, 440], { destination, duration: 0.58, gain: 0.016, attack: 0.04, release: 0.4 });
     },
+    copyCode: () => {
+      playTone({ frequency: 523.25, slideTo: 698.46, duration: 0.18, type: "triangle", destination, gain: 0.022, attack: 0.01, release: 0.2 });
+      playTone({ frequency: 1046.5, slideTo: 1318.51, duration: 0.16, type: "sine", destination, start: 0.05, gain: 0.012, attack: 0.012, release: 0.18 });
+    },
+    copyInvite: () => {
+      playSoftChord([220, 329.63, 493.88, 659.25], { destination, duration: 0.42, gain: 0.014, attack: 0.025, release: 0.28 });
+      playFilteredNoise({ start: 0.01, duration: 0.11, gain: 0.007, attack: 0.004, release: 0.1, frequency: 5100, destination });
+    },
+    inviteReveal: () => {
+      playTone({ frequency: 392, slideTo: 783.99, duration: 0.38, type: "triangle", destination, gain: 0.02, attack: 0.025, release: 0.32 });
+      playTone({ frequency: 987.77, duration: 0.42, type: "sine", destination, start: 0.1, gain: 0.010, attack: 0.04, release: 0.34, detune: 8 });
+      playFilteredNoise({ start: 0.04, duration: 0.18, gain: 0.006, attack: 0.018, release: 0.16, frequency: 6200, destination });
+    },
+    inviteHide: () => {
+      playTone({ frequency: 783.99, slideTo: 392, duration: 0.28, type: "triangle", destination, gain: 0.017, attack: 0.016, release: 0.28 });
+      playFilteredNoise({ start: 0.02, duration: 0.16, gain: 0.005, attack: 0.01, release: 0.14, frequency: 1800, type: "lowpass", destination });
+    },
+    readyUp: () => {
+      playSoftChord([261.63, 392, 523.25, 783.99], { destination, duration: 0.54, gain: 0.018, attack: 0.03, release: 0.34 });
+      playTone({ frequency: 659.25, slideTo: 987.77, duration: 0.26, type: "triangle", destination, start: 0.06, gain: 0.016, attack: 0.018, release: 0.24 });
+    },
+    readyDown: () => {
+      playTone({ frequency: 587.33, slideTo: 293.66, duration: 0.32, type: "triangle", destination, gain: 0.019, attack: 0.02, release: 0.3 });
+      playSoftChord([220, 277.18, 369.99], { destination, duration: 0.42, gain: 0.012, attack: 0.035, release: 0.34 });
+    },
+    nickname: () => {
+      playTone({ frequency: 329.63, slideTo: 493.88, duration: 0.16, type: "triangle", destination, gain: 0.017, attack: 0.009, release: 0.17 });
+      playTone({ frequency: 493.88, slideTo: 739.99, duration: 0.18, type: "triangle", destination, start: 0.055, gain: 0.015, attack: 0.01, release: 0.19 });
+      playTone({ frequency: 739.99, slideTo: 987.77, duration: 0.18, type: "sine", destination, start: 0.11, gain: 0.012, attack: 0.012, release: 0.22 });
+    },
     screen: () => {
       playSoftChord([164.81, 246.94, 369.99, 493.88], { destination, duration: 0.9, gain: 0.017, attack: 0.08, release: 0.62 });
       playFilteredNoise({ start: 0.05, duration: 0.38, gain: 0.007, attack: 0.03, release: 0.32, frequency: 1900, type: "lowpass", destination });
@@ -381,15 +541,29 @@ function scheduleAmbientMusic() {
   const audio = state.audio;
   if (!audio || !state.musicEnabled || state.siteVolume === 0) return;
 
-  const chord = AMBIENT_CHORDS[audio.step % AMBIENT_CHORDS.length];
-  const shimmer = AMBIENT_SHIMMER_NOTES[(audio.step + 1) % AMBIENT_SHIMMER_NOTES.length];
-  const breathFrequency = audio.step % 2 === 0 ? 720 : 540;
+  const step = audio.step;
+  const chord = AMBIENT_CHORDS[step % AMBIENT_CHORDS.length];
+  const shimmer = AMBIENT_SHIMMER_NOTES[(step + 1) % AMBIENT_SHIMMER_NOTES.length];
+  const violinPhrase = AMBIENT_VIOLIN_PHRASES[step % AMBIENT_VIOLIN_PHRASES.length];
+  const synthArp = AMBIENT_SYNTH_ARPS[step % AMBIENT_SYNTH_ARPS.length];
+  const breathFrequency = step % 2 === 0 ? 720 : 540;
 
-  playTone({ frequency: chord[0] / 2, duration: 6.3, type: "sine", destination: audio.musicGain, start: 0, gain: 0.026, attack: 1.8, release: 2.35, detune: -10 });
-  playSoftChord(chord, { destination: audio.musicGain, duration: 5.9, gain: 0.017, attack: 1.55, release: 2.15 });
-  playTone({ frequency: chord[2] * 0.995, duration: 5.4, type: "triangle", destination: audio.musicGain, start: 0.42, gain: 0.009, attack: 1.4, release: 2.05, detune: audio.step % 2 === 0 ? 6 : -6 });
-  playTone({ frequency: shimmer, duration: 2.7, type: "sine", destination: audio.musicGain, start: 2.15, gain: 0.0048, attack: 0.9, release: 1.65, detune: audio.step % 2 === 0 ? 8 : -8 });
+  playTone({ frequency: chord[0] / 2, duration: 6.3, type: "sine", destination: audio.musicGain, start: 0, gain: 0.024, attack: 1.8, release: 2.35, detune: -10 });
+  playSoftChord(chord, { destination: audio.musicGain, duration: 5.9, gain: 0.014, attack: 1.55, release: 2.15 });
+  playTone({ frequency: chord[2] * 0.995, duration: 5.4, type: "triangle", destination: audio.musicGain, start: 0.42, gain: 0.0075, attack: 1.4, release: 2.05, detune: step % 2 === 0 ? 6 : -6 });
+  playTone({ frequency: shimmer, duration: 2.7, type: "sine", destination: audio.musicGain, start: 2.15, gain: 0.0048, attack: 0.9, release: 1.65, detune: step % 2 === 0 ? 8 : -8 });
   playFilteredNoise({ start: 0.55, duration: 4.2, gain: 0.0032, attack: 0.7, release: 1.6, frequency: breathFrequency, type: "lowpass", destination: audio.musicGain });
+
+  if (step % 2 === 0) {
+    playAmbientViolinPhrase(violinPhrase, { start: 1.05, destination: audio.musicGain });
+  } else {
+    playAmbientSynthArp(synthArp, { start: 1.85, destination: audio.musicGain });
+    playAmbientViolinPhrase(violinPhrase.slice(1), { start: 3.0, destination: audio.musicGain });
+  }
+
+  if (step % 3 === 2 && !isTrackListening()) {
+    playAmbientBreakcoreFill({ start: 4.25, destination: audio.musicGain });
+  }
 
   audio.step = (audio.step + 1) % AMBIENT_CHORDS.length;
   audio.startedAt = audio.context.currentTime;
