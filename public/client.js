@@ -759,7 +759,32 @@ function restoreSiteVolume() {
 }
 
 function getName() {
+  if (state.profile?.displayName) return state.profile.displayName;
   return $("name").value.trim() || "Без имени";
+}
+
+function syncNameInput() {
+  const nameInput = $("name");
+  if (!nameInput) return;
+  if (state.profile?.displayName) {
+    nameInput.value = state.profile.displayName;
+    nameInput.disabled = true;
+    nameInput.title = "Ник аккаунта меняется в профиле";
+  } else {
+    nameInput.disabled = false;
+    nameInput.title = "";
+  }
+}
+
+function updateLobbyRenameControls() {
+  const input = $("renameInput");
+  const button = $("renameBtn");
+  if (!input || !button) return;
+  const canRenameInLobby = state.authGuest;
+  input.disabled = !canRenameInLobby;
+  button.disabled = !canRenameInLobby;
+  input.placeholder = canRenameInLobby ? "Новый ник" : "Ник меняется в профиле";
+  button.textContent = canRenameInLobby ? "Сменить ник" : "Ник из профиля";
 }
 
 function getStoredAuthToken() {
@@ -814,7 +839,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   state.profile = profileData.user || null;
   state.authGuest = Boolean(profileData.guest);
   const user = state.profile;
-  const displayName = user?.displayName || getName() || "Гость";
+  const displayName = user?.displayName || $("name").value.trim() || "Гость";
   $("guestAccountNotice").classList.toggle("hidden", Boolean(user));
   $("profileView").classList.toggle("hidden", !user);
   $("profileEditor").classList.add("hidden");
@@ -825,7 +850,8 @@ function applyProfile(profileData = { user: null, guest: true }) {
   $("profileAvatar").innerHTML = user?.avatar
     ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
     : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
-  if (user && !$("name").value.trim()) $("name").value = user.displayName;
+  syncNameInput();
+  updateLobbyRenameControls();
 }
 
 function authenticateWithStoredToken() {
@@ -940,13 +966,13 @@ function clearAvatar() {
 }
 
 function saveProfile() {
-  const payload = { displayName: $("profileDisplayName").value.trim() || getName() };
+  const payload = { displayName: $("profileDisplayName").value.trim() || state.profile?.displayName || getName() };
   if (state.pendingAvatar !== undefined) payload.avatar = state.pendingAvatar;
   socket.emit("profile:update", payload, (res) => {
     if (res?.error) return setAuthStatus(res.error, true);
     state.pendingAvatar = undefined;
     applyProfile(res.profile);
-    setAuthStatus("Профиль обновлен");
+    setAuthStatus("Профиль обновлен. Ник на сайте обновлен из профиля");
   });
 }
 
@@ -1156,6 +1182,10 @@ function toggleReady() {
 
 function changeNickname() {
   if (!state.currentCode) return;
+  if (!state.authGuest) {
+    updateLobbyRenameControls();
+    return setStatus("lobbyStatus", "Ник аккаунта меняется только в профиле", true);
+  }
   const value = $("renameInput").value.trim();
   if (!value) return setStatus("lobbyStatus", "Введи новый ник", true);
   socket.emit("updateName", { code: state.currentCode, name: value }, (res) => {
@@ -1241,6 +1271,7 @@ function renderLobby(lobby) {
   $("readyBtn").classList.toggle("ready", state.ready);
   $("readySummary").textContent = `Готовы: ${readyCount}/${state.players.length}`;
   applySettingsToForm(state.settings, isHost);
+  updateLobbyRenameControls();
 
   $("players").innerHTML = state.players.map((player, index) => `
     <div class="player-row">

@@ -121,6 +121,31 @@ test("normalizeAvatar accepts small image data urls and rejects oversized avatar
   assert.throws(() => normalizeAvatar(oversized), /слишком большая/);
 });
 
+test("playerFromSocket uses fixed account display name over submitted nickname", () => {
+  const { playerFromSocket } = require("../server");
+  const socket = {
+    id: "account-socket",
+    data: { user: { id: "user-1", username: "login", displayName: "Profile Nick", avatar: "" } }
+  };
+
+  const player = playerFromSocket(socket, "Lobby Nick");
+
+  assert.equal(player.name, "Profile Nick");
+  assert.equal(player.accountId, "user-1");
+  assert.equal(player.guest, false);
+});
+
+test("playerFromSocket keeps guest nickname editable", () => {
+  const { playerFromSocket } = require("../server");
+  const socket = { id: "guest-socket", data: { user: null } };
+
+  const player = playerFromSocket(socket, "Guest Nick");
+
+  assert.equal(player.name, "Guest Nick");
+  assert.equal(player.accountId, null);
+  assert.equal(player.guest, true);
+});
+
 test("handlePlayerDeparture lets a waiting lobby member leave and reassigns host", () => {
   const { handlePlayerDeparture } = require("../server");
   const leftRooms = [];

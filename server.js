@@ -144,7 +144,7 @@ function profileForSocket(socket) {
 
 function playerFromSocket(socket, rawName, lobby = null) {
   const user = socket.data.user;
-  const baseName = rawName || user?.displayName || user?.username || "Гость";
+  const baseName = user ? (user.displayName || user.username) : (rawName || "Гость");
   const name = lobby ? makeUniqueName(lobby, baseName) : normalizeName(baseName);
   return {
     id: socket.id,
@@ -161,7 +161,9 @@ function syncUserProfileInLobbies(user) {
     let changed = false;
     for (const player of lobby.players) {
       if (player.accountId === user.id) {
-        player.avatar = user.avatar || "";
+        const nextName = makeUniqueName(lobby, user.displayName || user.username, player.id);
+        if (player.name !== nextName) player.name = nextName;
+        if (player.avatar !== (user.avatar || "")) player.avatar = user.avatar || "";
         changed = true;
       }
     }
@@ -770,6 +772,9 @@ io.on("connection", (socket) => {
     if (lobby.started) return cb({ error: "Игра уже началась" });
     const player = lobby.players.find((item) => item.id === socket.id);
     if (!player) return cb({ error: "Ты не в этой комнате" });
+    if (!player.guest || socket.data.user) {
+      return cb({ error: "Ник аккаунта меняется только в профиле" });
+    }
     player.name = makeUniqueName(lobby, name, socket.id);
     cb({ success: true, name: player.name });
     emitLobbyUpdate(lobby.code);
@@ -1054,6 +1059,7 @@ module.exports = {
   getActiveTurnOrder,
   removePlayerFromLobby,
   handlePlayerDeparture,
+  playerFromSocket,
   normalizeAvatar,
   normalizeUsername,
   hashPassword,
