@@ -292,13 +292,57 @@ button:disabled {
   gap: 18px;
 }
 
+.room-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.secret-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .code-pill {
   width: auto;
   min-height: 0;
-  margin-left: 8px;
   padding: 10px 12px;
   color: var(--accent-2);
   letter-spacing: 0.08em;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1.12rem;
+  line-height: 1;
+}
+
+.secret-value {
+  transition: filter 0.2s ease, opacity 0.2s ease, text-shadow 0.2s ease;
+}
+
+.secret-blurred {
+  filter: blur(9px);
+  opacity: 0.72;
+  user-select: none;
+}
+
+.code-pill.secret-blurred {
+  color: transparent;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.86);
+}
+
+.qr-wrap.secret-blurred {
+  filter: blur(12px);
 }
 
 .badge {

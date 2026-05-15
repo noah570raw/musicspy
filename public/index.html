@@ -54,7 +54,13 @@
       <div class="section-header lobby-header">
         <div>
           <p class="eyebrow">лобби</p>
-          <h2>Комната <button id="copyCode" class="code-pill" onclick="copyRoomCode()">-----</button></h2>
+          <h2 class="room-title">
+            Комната
+            <span class="secret-row">
+              <button id="copyCode" class="code-pill secret-value" onclick="copyRoomCode()">-----</button>
+              <button id="toggleInviteSecrets" class="icon-button secret-toggle" onclick="toggleInviteSecrets()" aria-label="Показать код комнаты и QR" aria-pressed="false" title="Показать код комнаты и QR">👁️</button>
+            </span>
+          </h2>
           <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
         </div>
         <span id="hostBadge" class="badge">ожидание</span>
@@ -68,7 +74,7 @@
           </div>
           <div class="invite-tools">
             <button id="copyInvite" class="secondary" onclick="copyInviteLink()">Скопировать ссылку-приглашение</button>
-            <div class="qr-wrap">
+            <div id="inviteQrWrap" class="qr-wrap secret-value">
               <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
             </div>
           </div>

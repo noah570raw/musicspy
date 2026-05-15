@@ -27,16 +27,22 @@ const state = {
   currentTrackId: null,
   trackHistory: [],
   siteVolume: DEFAULT_SITE_VOLUME,
-  ready: false
+  ready: false,
+  inviteSecretsVisible: false
 };
 
 const $ = (id) => document.getElementById(id);
 
 function showScreen(id) {
+  if (id === "lobby" && state.phase !== "lobby") {
+    state.inviteSecretsVisible = false;
+  }
+
   for (const screen of document.querySelectorAll(".screen")) {
     screen.classList.toggle("hidden", screen.id !== id);
   }
   state.phase = id;
+  updateInviteSecretsVisibility();
 }
 
 function setStatus(id, message = "", isError = false) {
@@ -201,6 +207,30 @@ async function copyInviteLink() {
   }
 }
 
+function updateInviteSecretsVisibility() {
+  const isVisible = Boolean(state.inviteSecretsVisible);
+  const copyCode = $("copyCode");
+  const qrWrap = $("inviteQrWrap");
+  const toggle = $("toggleInviteSecrets");
+
+  for (const el of [copyCode, qrWrap]) {
+    if (el) el.classList.toggle("secret-blurred", !isVisible);
+  }
+
+  if (toggle) {
+    const label = isVisible ? "Скрыть код комнаты и QR" : "Показать код комнаты и QR";
+    toggle.textContent = isVisible ? "🙈" : "👁️";
+    toggle.setAttribute("aria-label", label);
+    toggle.setAttribute("aria-pressed", String(isVisible));
+    toggle.title = label;
+  }
+}
+
+function toggleInviteSecrets() {
+  state.inviteSecretsVisible = !state.inviteSecretsVisible;
+  updateInviteSecretsVisibility();
+}
+
 function readSettingsFromForm() {
   const spyModeValue = $("settingSpyMode").value;
   return {
@@ -292,6 +322,7 @@ function renderLobby(lobby) {
   state.hostId = lobby.host || state.hostId;
 
   $("copyCode").textContent = state.currentCode || "-----";
+  updateInviteSecretsVisibility();
   const inviteLink = buildInviteLink();
   const qr = $("inviteQr");
   if (inviteLink) {
