@@ -142,7 +142,7 @@ h2 {
 h1 {
   display: inline-block;
   padding-bottom: 0.2em;
-  font-size: clamp(3.15rem, 10.8vw, 6.3rem);
+  font-size: clamp(2.835rem, 9.72vw, 5.67rem);
   line-height: 1.16;
   background: linear-gradient(100deg, #fff, #ff3340 48%, #ffffff);
   -webkit-background-clip: text;
