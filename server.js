@@ -11,8 +11,24 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-const DATA_DIR = path.join(__dirname, "data");
+const DEFAULT_DATA_DIR = path.join(__dirname, "data");
+const RENDER_PERSISTENT_DIR = "/var/data";
+
+function resolveDataDir(env = process.env, fsImpl = fs) {
+  const explicitDataDir = String(env.MUSICSPY_DATA_DIR || env.DATA_DIR || "").trim();
+  if (explicitDataDir) return path.resolve(explicitDataDir);
+
+  const renderDiskMount = String(env.RENDER_DISK_MOUNT_PATH || "").trim();
+  const persistentCandidates = [renderDiskMount, RENDER_PERSISTENT_DIR].filter(Boolean);
+  const persistentRoot = persistentCandidates.find((candidate) => fsImpl.existsSync(candidate));
+  if (persistentRoot) return path.join(persistentRoot, "musicspy");
+
+  return DEFAULT_DATA_DIR;
+}
+
+const DATA_DIR = resolveDataDir();
 const USERS_FILE = path.join(DATA_DIR, "users.json");
+const LEGACY_USERS_FILE = path.join(DEFAULT_DATA_DIR, "users.json");
 const PASSWORD_ITERATIONS = 120000;
 const AVATAR_MAX_BYTES = 64 * 1024;
 
@@ -26,12 +42,24 @@ function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+function readJsonStore(file) {
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+  return { users: Array.isArray(parsed.users) ? parsed.users : [] };
+}
+
 function readUsersStore() {
   try {
     ensureDataDir();
-    if (!fs.existsSync(USERS_FILE)) return { users: [] };
-    const parsed = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
-    return { users: Array.isArray(parsed.users) ? parsed.users : [] };
+    if (fs.existsSync(USERS_FILE)) return readJsonStore(USERS_FILE);
+
+    if (USERS_FILE !== LEGACY_USERS_FILE && fs.existsSync(LEGACY_USERS_FILE)) {
+      const legacyStore = readJsonStore(LEGACY_USERS_FILE);
+      fs.writeFileSync(USERS_FILE, JSON.stringify(legacyStore, null, 2));
+      console.log(`Migrated users store from ${LEGACY_USERS_FILE} to ${USERS_FILE}`);
+      return legacyStore;
+    }
+
+    return { users: [] };
   } catch (error) {
     console.error("Failed to read users store", error);
     return { users: [] };
@@ -42,7 +70,9 @@ let usersStore = readUsersStore();
 
 function saveUsersStore() {
   ensureDataDir();
-  fs.writeFileSync(USERS_FILE, JSON.stringify(usersStore, null, 2));
+  const tmpFile = `${USERS_FILE}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpFile, JSON.stringify(usersStore, null, 2));
+  fs.renameSync(tmpFile, USERS_FILE);
 }
 
 function normalizeUsername(username) {
@@ -1014,7 +1044,7 @@ function pickTheme() {
 
 if (require.main === module) {
   server.listen(process.env.PORT || 3000, () => {
-    console.log("Music Spy server running");
+    console.log(`Music Spy server running; users store: ${USERS_FILE}`);
   });
 }
 
@@ -1027,5 +1057,6 @@ module.exports = {
   normalizeAvatar,
   normalizeUsername,
   hashPassword,
-  verifyPassword
+  verifyPassword,
+  resolveDataDir
 };
