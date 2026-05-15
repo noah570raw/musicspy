@@ -74,6 +74,12 @@ function getSpyCount(lobby) {
   return 1;
 }
 
+
+function getActiveTurnOrder(lobby) {
+  const activePlayerIds = new Set(lobby.players.map((player) => player.id));
+  return lobby.baseOrder.filter((id) => activePlayerIds.has(id));
+}
+
 function publicLobby(lobby) {
   return {
     code: lobby.code,
@@ -264,8 +270,7 @@ function advanceTurn(code) {
 
     lobby.round += 1;
     lobby.currentTurnIndex = 0;
-codex/scan-project-for-conflicts-with-server.js-and-style.css-slcx9t
-    lobby.order = lobby.order.filter((id) => lobby.players.some((player) => player.id === id));
+    lobby.order = getActiveTurnOrder(lobby);
     io.to(code).emit("roundStarted", { round: lobby.round, order: lobby.order });
   }
 
@@ -640,6 +645,12 @@ function pickTheme() {
   return themes[Math.floor(Math.random() * themes.length)];
 }
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log("Music Spy server running");
-});
+if (require.main === module) {
+  server.listen(process.env.PORT || 3000, () => {
+    console.log("Music Spy server running");
+  });
+}
+
+module.exports = {
+  getActiveTurnOrder
+};
