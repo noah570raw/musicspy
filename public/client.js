@@ -3,6 +3,8 @@ const socket = io();
 const DEFAULT_LISTEN_TIME = 30;
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 const DEFAULT_SITE_VOLUME = 70;
+const BACKGROUND_MUSIC_VOLUME = 0.13;
+const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.018;
 const state = {
   currentCode: "",
   myId: "",
@@ -78,7 +80,7 @@ function createAudioEngine() {
 
   master.gain.value = state.siteVolume / 100;
   fxGain.gain.value = 0.24;
-  musicGain.gain.value = 0.13;
+  musicGain.gain.value = getBackgroundMusicVolume();
   fxFilter.type = "lowpass";
   fxFilter.frequency.value = 1700;
   fxFilter.Q.value = 0.55;
@@ -132,10 +134,19 @@ function setGainValue(gain, value, time = 0.025) {
   gain.gain.setTargetAtTime(value, context.currentTime, time);
 }
 
-function syncAudioVolume() {
+function isTrackListening() {
+  return state.turnStage === "listening" && Boolean(state.currentTrackId);
+}
+
+function getBackgroundMusicVolume() {
+  if (!state.musicEnabled) return 0;
+  return isTrackListening() ? DUCKED_BACKGROUND_MUSIC_VOLUME : BACKGROUND_MUSIC_VOLUME;
+}
+
+function syncAudioVolume({ fadeTime = 0.18 } = {}) {
   if (!state.audio) return;
   setGainValue(state.audio.master, state.siteVolume / 100, 0.08);
-  setGainValue(state.audio.musicGain, state.musicEnabled ? 0.13 : 0, 0.18);
+  setGainValue(state.audio.musicGain, getBackgroundMusicVolume(), fadeTime);
 }
 
 function unlockAudio({ startMusic = true } = {}) {
@@ -767,7 +778,6 @@ function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) 
   clearPlayer();
   state.reactionCounts = {};
   state.selectedReaction = null;
-  state.currentTrackId = null;
   renderReactions();
   updateTimer({ timeLeft: null, stage: "waiting", listenTime: state.settings.listenTime || DEFAULT_LISTEN_TIME });
   setStatus("gameStatus", isMine ? "Очередь ждет тебя: вставь ссылку на трек." : "Ждем, пока игрок поставит трек. Таймер пока не идет.");
@@ -787,6 +797,7 @@ function updateSendButton(submitted = false) {
 function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_TIME }) {
   state.turnStage = stage;
   state.timeLeft = timeLeft;
+  syncAudioVolume({ fadeTime: stage === "listening" ? 0.12 : 0.32 });
   const waiting = timeLeft === null || timeLeft === undefined;
   $("timer").textContent = waiting ? "∞" : timeLeft;
   const circle = $("timerCircle");
@@ -809,6 +820,8 @@ function updateVoteTimer(timeLeft) {
 }
 
 function clearPlayer() {
+  state.currentTrackId = null;
+  syncAudioVolume({ fadeTime: 0.32 });
   const embed = $("embed");
   const activeIframes = embed.querySelectorAll("iframe");
   activeIframes.forEach((frame) => {
@@ -851,7 +864,12 @@ function loadTrack(track) {
     embed.innerHTML = `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">Открыть трек</a>`;
   }
 
+  if (typeof track !== "string") {
+    state.turnStage = "listening";
+  }
   applySiteVolume();
+  syncAudioVolume({ fadeTime: 0.12 });
+  updateSendButton(true);
 
   if (track.playerName) {
     setStatus("gameStatus", `${track.playerName} поставил трек — слушаем ${state.settings.listenTime || DEFAULT_LISTEN_TIME} секунд`);
@@ -969,6 +987,7 @@ socket.on("gameStarted", (data) => {
   state.trackHistory = data.trackHistory || [];
   state.turnStage = "waiting";
   state.timeLeft = null;
+  syncAudioVolume({ fadeTime: 0.32 });
 
   $("roleTitle").textContent = data.role === "spy" ? "Ты шпион" : "Ты мирный";
   $("theme").textContent = data.role === "spy"
