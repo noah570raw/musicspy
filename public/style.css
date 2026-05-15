@@ -2256,11 +2256,18 @@ body[data-screen="game"] .language-switcher {
 .chat-messages {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   align-items: flex-start;
   gap: 8px;
+  min-height: 0;
   max-height: min(220px, 28vh);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.chat-messages:not(.empty)::before {
+  content: "";
+  margin-top: auto;
 }
 
 .chat-messages.empty {

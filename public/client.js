@@ -2314,6 +2314,9 @@ function renderChat(messages = state.chatMessages) {
     }
     box.classList.remove("empty");
     box.innerHTML = markup;
+    requestAnimationFrame(() => {
+      box.scrollTop = box.scrollHeight;
+    });
   }
 }
 
