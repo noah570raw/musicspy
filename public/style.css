@@ -1875,7 +1875,7 @@ html[lang="ru"] .language-switcher span:first-child {
 
 @media (min-width: 921px) {
   body[data-screen="game"] .app-shell {
-    width: min(1400px, calc(100% - 24px));
+    width: min(1080px, calc(100% - 24px));
     min-height: 100dvh;
     padding: 10px 0;
   }
@@ -2409,12 +2409,14 @@ body[data-screen="game"] .language-switcher {
 }
 
 @media (min-width: 1580px) {
-  #lobby {
+  #lobby,
+  #game {
     position: relative;
   }
 
   .lobby-page-chat,
-  .lobby-page-actions {
+  .lobby-page-actions,
+  .game-page-chat {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -2424,7 +2426,8 @@ body[data-screen="game"] .language-switcher {
     min-height: 0;
   }
 
-  .lobby-page-chat {
+  .lobby-page-chat,
+  .game-page-chat {
     right: calc(100% + 14px);
   }
 
@@ -2432,13 +2435,15 @@ body[data-screen="game"] .language-switcher {
     left: calc(100% + 14px);
   }
 
-  .lobby-page-chat .game-chat-panel {
+  .lobby-page-chat .game-chat-panel,
+  .game-page-chat .game-chat-panel {
     height: 100%;
     max-height: none;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
 
-  .lobby-page-chat .chat-messages {
+  .lobby-page-chat .chat-messages,
+  .game-page-chat .chat-messages {
     min-height: 0;
     max-height: none;
   }
@@ -2473,34 +2478,6 @@ body[data-screen="game"] .language-switcher {
   }
 }
 
-@media (min-width: 1880px) {
-  #game {
-    position: relative;
-  }
-
-  .game-page-chat {
-    position: absolute;
-    top: 0;
-    right: calc(100% + 14px);
-    bottom: 0;
-    z-index: 3;
-    display: flex;
-    width: min(300px, calc((100vw - 1400px) / 2 - 28px));
-    min-height: 0;
-  }
-
-  .game-page-chat .game-chat-panel {
-    height: 100%;
-    max-height: none;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-  }
-
-  .game-page-chat .chat-messages {
-    min-height: 0;
-    max-height: none;
-  }
-}
-
 @media (max-width: 1579px) {
   .page-chat-column,
   .page-action-column {
@@ -2508,8 +2485,3 @@ body[data-screen="game"] .language-switcher {
   }
 }
 
-@media (min-width: 1580px) and (max-width: 1879px) {
-  .game-page-chat {
-    margin-top: 12px;
-  }
-}
