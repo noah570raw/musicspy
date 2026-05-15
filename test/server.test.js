@@ -218,3 +218,26 @@ test("buildFinalBreakdown exposes vote details and track highlights", () => {
   assert.equal(breakdown.mostSuspiciousTrack.playerName, "Шпион");
   assert.deepEqual(breakdown.reactionTotals, { "🔥": 2, "🕵️": 2, "🤔": 1 });
 });
+
+test("host timer helpers pause and clamp an active listening turn", () => {
+  const { pauseTurnTimer, adjustTurnTimer } = require("../server");
+  const lobby = {
+    code: "ROOM2",
+    phase: "playing",
+    turnStage: "listening",
+    timeLeft: 12,
+    settings: { listenTime: 30 },
+    order: ["host"],
+    players: [{ id: "host", name: "Host" }],
+    currentTurnIndex: 0,
+    currentTrackReactions: {},
+    trackHistory: []
+  };
+
+  assert.equal(adjustTurnTimer(lobby, -15), 5);
+  assert.equal(lobby.timeLeft, 5);
+  assert.equal(pauseTurnTimer(lobby), true);
+  assert.equal(lobby.turnStage, "paused");
+  assert.equal(lobby.pausedTurnStage, "listening");
+  assert.equal(adjustTurnTimer(lobby, 400), 300);
+});

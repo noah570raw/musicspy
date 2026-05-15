@@ -62,6 +62,7 @@ const state = {
   totalRounds: 3,
   timeLeft: null,
   turnStage: "waiting",
+  pausedTurnStage: null,
   votedTarget: null,
   voteCandidates: [],
   voteCounts: {},
@@ -177,10 +178,20 @@ const EN_TRANSLATIONS = {
   "Ожидаем ход...": "Waiting for a turn...",
   "Пульт хоста": "Host controls",
   "управление игрой": "game management",
+  "Сейчас": "Now",
+  "Таймер": "Timer",
+  "Пауза": "Pause",
+  "Продолжить": "Resume",
+  "−15 сек": "−15 sec",
+  "+15 сек": "+15 sec",
+  "пауза": "paused",
+  "слушаем": "listening",
   "Пропустить ход": "Skip turn",
   "К голосованию": "Start voting",
   "Пересоздать лобби": "Recreate lobby",
   "Кикнуть игрока": "Kick a player",
+  "Игроки": "Players",
+  "передать": "pass turn",
   "сек": "sec",
   "Ждем трек от текущего игрока": "Waiting for the current player's track",
   "Реакции на трек": "Track reactions",
@@ -393,6 +404,8 @@ function translateText(value) {
     .replace(/Тема: «(.+)»/g, "Theme: “$1”")
     .replace(/Код комнаты (.+)/g, "Room code $1")
     .replace(/Хост пропустил ход: (.+)/g, "Host skipped turn: $1")
+    .replace(/Хост передал ход: (.+)/g, "Host passed the turn: $1")
+    .replace(/Хост (добавил|убрал) 15 секунд/g, (match, action) => `Host ${action === "добавил" ? "added" : "removed"} 15 seconds`)
     .replace(/Шпион(ы?)$/g, "Spy$1");
 }
 
@@ -1483,6 +1496,27 @@ function hostStartVoting() {
   });
 }
 
+function hostTogglePause() {
+  socket.emit("hostTogglePause", { code: state.currentCode }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    setStatus("gameStatus", res.paused ? "Прослушивание на паузе" : "Прослушивание продолжено");
+  });
+}
+
+function hostAdjustTimer(delta) {
+  socket.emit("hostAdjustTimer", { code: state.currentCode, delta }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    setStatus("gameStatus", `Таймер: ${res.timeLeft} сек`);
+  });
+}
+
+function hostSetTurn(playerId) {
+  socket.emit("hostSetTurn", { code: state.currentCode, playerId }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    setStatus("gameStatus", "Ход передан игроку");
+  });
+}
+
 function hostKickPlayer(playerId) {
   socket.emit("hostKickPlayer", { code: state.currentCode, playerId }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
@@ -1752,6 +1786,7 @@ function renderGameState(data) {
   state.round = data.round || state.round;
   state.totalRounds = data.totalRounds || state.totalRounds;
   state.turnStage = data.turnStage || state.turnStage;
+  state.pausedTurnStage = data.pausedTurnStage || null;
   state.timeLeft = data.timeLeft ?? state.timeLeft;
   state.voteCandidates = data.voteCandidates || state.voteCandidates;
   state.reactionCounts = data.reactionCounts || state.reactionCounts;
@@ -1769,7 +1804,7 @@ function renderGameState(data) {
   renderTrackHistory();
   updateSendButton(data.submittedThisTurn);
 
-  if (data.turnStage === "listening" && data.lastTrack) loadTrack(data.lastTrack);
+  if (["listening", "paused"].includes(data.turnStage) && data.lastTrack) loadTrack(data.lastTrack);
 }
 
 function renderOrder() {
@@ -1789,6 +1824,9 @@ function renderOrder() {
 function renderHostControls() {
   const controls = $("hostControls");
   const kickList = $("hostKickList");
+  const nowPlaying = $("hostNowPlaying");
+  const timerState = $("hostTimerState");
+  const pauseBtn = $("hostPauseBtn");
   if (!controls || !kickList) return;
 
   const isHost = state.hostId === socket.id;
@@ -1798,14 +1836,32 @@ function renderHostControls() {
     return;
   }
 
+  const currentPlayer = state.players.find((player) => player.id === state.currentPlayerId);
+  if (nowPlaying) nowPlaying.textContent = currentPlayer?.name || t("Ожидаем ход...");
+  if (timerState) {
+    const stageLabel = state.turnStage === "paused"
+      ? t("пауза")
+      : state.turnStage === "listening"
+        ? t("слушаем")
+        : t("ожидание");
+    timerState.textContent = Number.isFinite(state.timeLeft) ? `${state.timeLeft} ${t("сек")} · ${stageLabel}` : stageLabel;
+  }
+  if (pauseBtn) {
+    pauseBtn.textContent = state.turnStage === "paused" ? t("Продолжить") : t("Пауза");
+    pauseBtn.disabled = !["listening", "paused"].includes(state.turnStage);
+  }
+
   kickList.innerHTML = state.players.map((player) => {
     const isMe = player.id === socket.id;
     const isCurrent = player.id === state.currentPlayerId;
     return `
-      <button class="kick-row" ${isMe ? "disabled" : ""} onclick="hostKickPlayer('${escapeAttribute(player.id)}')">
+      <div class="kick-row host-player-row">
         <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
-        <strong>${isMe ? t("хост") : isCurrent ? t("ходит") : t("кик")}</strong>
-      </button>
+        <div class="host-player-actions">
+          <button class="mini-action" ${isCurrent ? "disabled" : ""} onclick="hostSetTurn('${escapeAttribute(player.id)}')">${isCurrent ? t("ходит") : t("передать")}</button>
+          <button class="mini-action danger" ${isMe ? "disabled" : ""} onclick="hostKickPlayer('${escapeAttribute(player.id)}')">${isMe ? t("хост") : t("кик")}</button>
+        </div>
+      </div>
     `;
   }).join("");
 }
@@ -1900,6 +1956,8 @@ function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_
   if (!waiting && timeLeft > 0 && timeLeft <= 5) {
     playMetronomeTick();
   }
+
+  renderHostControls();
 }
 
 function updateVoteTimer(timeLeft) {
