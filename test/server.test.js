@@ -169,3 +169,52 @@ test("handlePlayerDeparture lets a waiting lobby member leave and reassigns host
   assert.equal(lobby.host, "guest");
   assert.deepEqual(lobby.players, [{ id: "guest" }]);
 });
+
+
+test("normalizeSettings applies game mode presets and keeps manual spy settings", () => {
+  const { normalizeSettings } = require("../server");
+
+  assert.deepEqual(normalizeSettings({ gameMode: "hardcore", spyMode: "manual", spyCount: 2 }), {
+    gameMode: "hardcore",
+    label: "Хардкор",
+    rounds: 4,
+    listenTime: 15,
+    spyMode: "manual",
+    spyCount: 2,
+    anonymousVoting: true,
+    votingTime: 30,
+    runoffOnTie: false
+  });
+});
+
+test("normalizeGuess makes theme guesses forgiving", () => {
+  const { normalizeGuess } = require("../server");
+
+  assert.equal(normalizeGuess("  Хиты-2021!! "), normalizeGuess("хиты 2021"));
+  assert.equal(normalizeGuess("Ёдм электронщина"), "едм электронщина");
+});
+
+test("buildFinalBreakdown exposes vote details and track highlights", () => {
+  const { buildFinalBreakdown } = require("../server");
+  const lobby = {
+    players: [
+      { id: "civilian", name: "Мирный" },
+      { id: "spy", name: "Шпион" },
+      { id: "other", name: "Друг" }
+    ],
+    spies: ["spy"],
+    votes: { civilian: "spy", spy: "other", other: "spy" },
+    trackHistory: [
+      { id: "track-1", playerName: "Мирный", reactions: { "🔥": 2 } },
+      { id: "track-2", playerName: "Шпион", reactions: { "🕵️": 2, "🤔": 1 } }
+    ]
+  };
+
+  const breakdown = buildFinalBreakdown(lobby, ["spy"], { spy: 2, other: 1 });
+
+  assert.deepEqual(breakdown.topVoted, ["Шпион"]);
+  assert.equal(breakdown.topVoteCount, 2);
+  assert.equal(breakdown.voteDetails[0].hitSpy, true);
+  assert.equal(breakdown.mostSuspiciousTrack.playerName, "Шпион");
+  assert.deepEqual(breakdown.reactionTotals, { "🔥": 2, "🕵️": 2, "🤔": 1 });
+});
