@@ -4,6 +4,8 @@ const DEFAULT_LISTEN_TIME = 30;
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 const DEFAULT_SITE_VOLUME = 70;
 const BACKGROUND_MUSIC_VOLUME = 0.12;
+const AUTH_TOKEN_KEY = "musicspy_auth_token";
+const AVATAR_MAX_BYTES = 64 * 1024;
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
 const UI_CUE_FADE_SECONDS = 0.045;
 const state = {
@@ -36,7 +38,10 @@ const state = {
   inviteSecretsVisible: false,
   cinematicTimer: null,
   cinematicIntervals: [],
-  cinematicOnClose: null
+  cinematicOnClose: null,
+  profile: null,
+  authGuest: true,
+  pendingAvatar: undefined
 };
 
 const $ = (id) => document.getElementById(id);
@@ -755,6 +760,156 @@ function getName() {
   return $("name").value.trim() || "Без имени";
 }
 
+function getStoredAuthToken() {
+  return window.localStorage.getItem(AUTH_TOKEN_KEY) || "";
+}
+
+function storeAuthToken(token) {
+  if (token) window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+function clearStoredAuthToken() {
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+function applyProfile(profileData = { user: null, guest: true }) {
+  state.profile = profileData.user || null;
+  state.authGuest = Boolean(profileData.guest);
+  const user = state.profile;
+  const displayName = user?.displayName || getName() || "Гость";
+  $("authGuestView").classList.toggle("hidden", Boolean(user));
+  $("profileView").classList.remove("hidden");
+  $("logoutBtn").classList.toggle("hidden", !user);
+  $("authModeLabel").textContent = user ? "профиль сохранен" : "гостевой режим";
+  $("profileName").textContent = displayName;
+  $("profileLogin").textContent = user ? `@${user.username}` : "гость без регистрации";
+  $("profileDisplayName").value = displayName;
+  $("profileAvatar").innerHTML = user?.avatar
+    ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
+    : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
+  if (user && !$("name").value.trim()) $("name").value = user.displayName;
+}
+
+function authenticateWithStoredToken() {
+  const token = getStoredAuthToken();
+  if (!token) {
+    applyProfile({ user: null, guest: true });
+    return;
+  }
+  socket.emit("auth:session", { token }, (res) => {
+    if (res?.success) {
+      applyProfile(res.profile);
+      setStatus("authStatus", "С возвращением!");
+    } else {
+      clearStoredAuthToken();
+      applyProfile({ user: null, guest: true });
+    }
+  });
+}
+
+function authPayload() {
+  return {
+    username: $("authLogin").value.trim(),
+    password: $("authPassword").value,
+    displayName: getName() || $("authLogin").value.trim()
+  };
+}
+
+function loginAccount() {
+  setStatus("authStatus");
+  socket.emit("auth:login", authPayload(), (res) => {
+    if (res?.error) return setStatus("authStatus", res.error, true);
+    storeAuthToken(res.token);
+    applyProfile(res.profile);
+    setStatus("authStatus", "Вход выполнен");
+  });
+}
+
+function registerAccount() {
+  setStatus("authStatus");
+  socket.emit("auth:register", authPayload(), (res) => {
+    if (res?.error) return setStatus("authStatus", res.error, true);
+    storeAuthToken(res.token);
+    applyProfile(res.profile);
+    setStatus("authStatus", "Аккаунт создан");
+  });
+}
+
+function continueAsGuest() {
+  clearStoredAuthToken();
+  socket.emit("auth:guest", { name: getName() }, (res) => {
+    applyProfile(res?.profile || { user: null, guest: true });
+    setStatus("authStatus", "Ок, играем без регистрации");
+  });
+}
+
+function logoutAccount() {
+  clearStoredAuthToken();
+  socket.emit("auth:logout", () => {
+    applyProfile({ user: null, guest: true });
+    setStatus("authStatus", "Ты вышел из аккаунта");
+  });
+}
+
+function toggleProfileEditor() {
+  $("profileEditor").classList.toggle("hidden");
+}
+
+function previewAvatarFile(file) {
+  state.pendingAvatar = undefined;
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return setStatus("authStatus", "Выбери картинку", true);
+  if (file.size > 1024 * 1024) return setStatus("authStatus", "Файл слишком большой. Выбери картинку до 1 МБ", true);
+  const reader = new FileReader();
+  reader.onload = () => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 128;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, size, size);
+      const scale = Math.max(size / image.width, size / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+      const dataUrl = canvas.toDataURL("image/webp", 0.72);
+      if (dataUrl.length > AVATAR_MAX_BYTES) {
+        return setStatus("authStatus", "Аватар не удалось сжать до 64 КБ", true);
+      }
+      state.pendingAvatar = dataUrl;
+      $("profileAvatar").innerHTML = `<img src="${escapeAttribute(dataUrl)}" alt="Предпросмотр аватара">`;
+      setStatus("authStatus", "Предпросмотр готов. Нажми «Сохранить профиль»");
+    };
+    image.src = String(reader.result || "");
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAvatar() {
+  state.pendingAvatar = "";
+  $("profileAvatar").textContent = ($("profileDisplayName").value || "?").slice(0, 1).toUpperCase();
+  setStatus("authStatus", "Аватар будет удален после сохранения");
+}
+
+function saveProfile() {
+  const payload = { displayName: $("profileDisplayName").value.trim() || getName() };
+  if (state.pendingAvatar !== undefined) payload.avatar = state.pendingAvatar;
+  socket.emit("profile:update", payload, (res) => {
+    if (res?.error) return setStatus("authStatus", res.error, true);
+    state.pendingAvatar = undefined;
+    applyProfile(res.profile);
+    setStatus("authStatus", "Профиль обновлен");
+  });
+}
+
+function playerAvatarMarkup(player, fallback = "?") {
+  if (player?.avatar) return `<span class="avatar image-avatar"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`;
+  return `<span class="avatar">${escapeHtml(fallback)}</span>`;
+}
+
 function getCode() {
   return $("code").value.trim().toUpperCase();
 }
@@ -1003,7 +1158,7 @@ function renderLobby(lobby) {
 
   $("players").innerHTML = state.players.map((player, index) => `
     <div class="player-row">
-      <span class="avatar">${index + 1}</span>
+      ${playerAvatarMarkup(player, index + 1)}
       <strong>${escapeHtml(player.name)}</strong>
       ${player.ready ? "<em>готов</em>" : "<em>не готов</em>"}
       ${player.id === lobby.host ? "<em>host</em>" : ""}
@@ -1308,6 +1463,7 @@ function escapeAttribute(value) {
 
 socket.on("connect", () => {
   state.myId = socket.id;
+  authenticateWithStoredToken();
 });
 
 socket.on("lobbyUpdate", (lobby) => {

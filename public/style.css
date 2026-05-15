@@ -1298,3 +1298,113 @@ select:focus-visible {
     transition-duration: 0.001ms !important;
   }
 }
+
+.auth-panel {
+  width: min(100%, 46rem);
+  margin: 1.3rem auto 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.auth-grid,
+.profile-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.auth-actions,
+.profile-editor .actions {
+  margin-top: 0.75rem;
+}
+
+.three-col {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ghost-button {
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.profile-view {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.profile-avatar,
+.avatar.image-avatar {
+  overflow: hidden;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, rgba(229, 9, 20, 0.42), rgba(255, 255, 255, 0.12));
+}
+
+.profile-avatar {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 1rem;
+  font-weight: 800;
+  font-size: 1.35rem;
+}
+
+.profile-avatar img,
+.avatar.image-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-info {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.profile-info strong,
+.profile-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-info span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.profile-editor {
+  margin-top: 0.9rem;
+}
+
+.profile-editor .actions {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .auth-grid,
+  .profile-editor,
+  .three-col {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-view {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .profile-view button {
+    grid-column: span 1;
+  }
+}
