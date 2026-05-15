@@ -2193,20 +2193,19 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 .detached-chat {
-  --detached-chat-width: 300px;
-  --detached-chat-gap: 14px;
-  position: fixed;
+  --detached-chat-gap: 12px;
   z-index: 2;
-  left: max(12px, calc((100vw - 1180px) / 2 - var(--detached-chat-width) - var(--detached-chat-gap)));
-  top: 50%;
-  width: var(--detached-chat-width);
-  max-height: calc(100dvh - 24px);
-  transform: translateY(-50%);
+  width: 100%;
+  max-height: none;
+}
+
+.lobby-chat {
+  margin-top: clamp(8px, 1vh, 11px);
 }
 
 .game-chat {
-  --detached-chat-width: 230px;
-  left: max(12px, calc((100vw - 1400px) / 2 - var(--detached-chat-width) - var(--detached-chat-gap)));
+  grid-column: 1 / -1;
+  order: -1;
 }
 
 .game-chat-panel {
@@ -2314,29 +2313,51 @@ body:not([data-screen="menu"]) .account-corner {
   max-height: none;
 }
 
-@media (max-width: 1910px) {
-  .detached-chat {
-    position: static;
-    width: 100%;
-    max-height: none;
+@media (min-width: 1724px) {
+  body[data-screen="lobby"] .lobby-chat {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    width: calc((100vw - 1180px) / 2 - var(--detached-chat-gap));
+    max-height: calc(100dvh - 24px);
+    margin-top: 0;
+    transform: translateY(-50%);
+  }
+}
+
+@media (min-width: 1864px) {
+  body[data-screen="game"] .game-chat {
+    position: fixed;
+    left: 0;
+    top: 10px;
+    width: calc((100vw - 1400px) / 2 - var(--detached-chat-gap));
+    max-height: calc(100dvh - 20px);
     transform: none;
   }
 
-  .lobby-chat {
-    margin-top: clamp(8px, 1vh, 11px);
+  body[data-screen="game"] .game-chat .game-chat-panel {
+    height: calc(100dvh - 20px);
   }
+}
 
-  .game-chat {
-    grid-column: 1 / -1;
-    order: -1;
-  }
-
+@media (max-width: 1723px) {
   .detached-chat .game-chat-panel {
     height: auto;
     min-height: 260px;
   }
 
   .detached-chat .chat-messages {
+    max-height: min(220px, 28vh);
+  }
+}
+
+@media (min-width: 1724px) and (max-width: 1863px) {
+  body[data-screen="game"] .game-chat .game-chat-panel {
+    height: auto;
+    min-height: 260px;
+  }
+
+  body[data-screen="game"] .game-chat .chat-messages {
     max-height: min(220px, 28vh);
   }
 }
