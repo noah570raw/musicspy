@@ -575,7 +575,7 @@ button:disabled {
 .game-layout {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(210px, 0.78fr) minmax(390px, 1.44fr) minmax(210px, 0.78fr);
+  grid-template-columns: minmax(180px, 0.68fr) minmax(190px, 0.72fr) minmax(360px, 1.42fr) minmax(190px, 0.72fr);
   gap: clamp(12px, 1.7vw, 18px);
   align-items: stretch;
 }
@@ -594,7 +594,7 @@ button:disabled {
   flex-direction: column;
 }
 
-.game-layout .side-panel:first-child .host-controls {
+.role-side-panel .host-controls {
   margin-top: auto;
 }
 
@@ -1829,13 +1829,13 @@ html[lang="ru"] .language-switcher span:first-child {
 
 @media (min-width: 921px) {
   body[data-screen="game"] .app-shell {
-    width: min(1400px, calc(100% - 24px));
+    width: min(1640px, calc(100% - 24px));
     min-height: 100dvh;
     padding: 10px 0;
   }
 
   body[data-screen="game"] .game-layout {
-    grid-template-columns: minmax(190px, 0.7fr) minmax(420px, 1.55fr) minmax(210px, 0.72fr);
+    grid-template-columns: minmax(180px, 0.68fr) minmax(190px, 0.72fr) minmax(420px, 1.55fr) minmax(210px, 0.72fr);
     gap: 12px;
   }
 
@@ -2278,9 +2278,30 @@ body:not([data-screen="menu"]) .account-corner {
   min-height: 1.1em;
 }
 
-@media (min-width: 921px) {
-  body[data-screen="game"] .chat-messages {
-    max-height: 22vh;
+.chat-side-panel .game-chat-panel {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.chat-side-panel .chat-messages {
+  max-height: none;
+}
+
+@media (min-width: 921px) and (max-width: 1180px) {
+  body[data-screen="game"] .game-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-screen="game"] .player-card {
+    grid-column: 1 / -1;
+  }
+
+  body[data-screen="game"] .side-panel,
+  body[data-screen="game"] .player-card {
+    min-height: auto;
+    max-height: none;
   }
 }
 
