@@ -1637,3 +1637,53 @@ html[lang="ru"] .language-switcher span:first-child {
     bottom: 12px;
   }
 }
+
+.spy-guess-form {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.result-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.breakdown-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: radial-gradient(circle at top right, rgba(229, 9, 20, 0.14), transparent 42%), rgba(255, 255, 255, 0.045);
+}
+
+.breakdown-card span,
+.breakdown-card small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.breakdown-card span {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.breakdown-card strong {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.vote-row.hit-spy {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(229, 9, 20, 0.16);
+}
+
+@media (max-width: 560px) {
+  .result-breakdown {
+    grid-template-columns: 1fr;
+  }
+}

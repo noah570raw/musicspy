@@ -31,6 +31,7 @@ const USERS_FILE = path.join(DATA_DIR, "users.json");
 const LEGACY_USERS_FILE = path.join(DEFAULT_DATA_DIR, "users.json");
 const PASSWORD_ITERATIONS = 120000;
 const AVATAR_MAX_BYTES = 64 * 1024;
+const SPY_GUESS_SECONDS = 60;
 
 const lobbies = {};
 const timers = {};
@@ -171,14 +172,50 @@ function syncUserProfileInLobbies(user) {
   }
 }
 
+const GAME_MODES = {
+  classic: {
+    label: "Классика",
+    rounds: 3,
+    listenTime: 30,
+    anonymousVoting: false,
+    votingTime: 60,
+    runoffOnTie: true
+  },
+  blitz: {
+    label: "Блиц",
+    rounds: 2,
+    listenTime: 15,
+    anonymousVoting: false,
+    votingTime: 30,
+    runoffOnTie: false
+  },
+  hardcore: {
+    label: "Хардкор",
+    rounds: 4,
+    listenTime: 15,
+    anonymousVoting: true,
+    votingTime: 30,
+    runoffOnTie: false
+  },
+  party: {
+    label: "Вечеринка",
+    rounds: 3,
+    listenTime: 45,
+    anonymousVoting: false,
+    votingTime: 90,
+    runoffOnTie: true
+  }
+};
+
 const DEFAULT_SETTINGS = {
-  rounds: 3,
-  listenTime: 30,
+  gameMode: "classic",
+  rounds: GAME_MODES.classic.rounds,
+  listenTime: GAME_MODES.classic.listenTime,
   spyMode: "auto",
   spyCount: 1,
-  anonymousVoting: false,
-  votingTime: 60,
-  runoffOnTie: true
+  anonymousVoting: GAME_MODES.classic.anonymousVoting,
+  votingTime: GAME_MODES.classic.votingTime,
+  runoffOnTie: GAME_MODES.classic.runoffOnTie
 };
 
 function generateCode() {
@@ -210,14 +247,16 @@ function clampNumber(value, allowed, fallback) {
 }
 
 function normalizeSettings(input = {}) {
-  const next = { ...DEFAULT_SETTINGS };
-  next.rounds = clampNumber(input.rounds, [2, 3, 4, 5], DEFAULT_SETTINGS.rounds);
-  next.listenTime = clampNumber(input.listenTime, [15, 30, 45, 60], DEFAULT_SETTINGS.listenTime);
+  const requestedMode = GAME_MODES[input.gameMode] ? input.gameMode : DEFAULT_SETTINGS.gameMode;
+  const modePreset = GAME_MODES[requestedMode];
+  const next = { ...DEFAULT_SETTINGS, gameMode: requestedMode, ...modePreset };
+  next.rounds = clampNumber(input.rounds, [2, 3, 4, 5], next.rounds);
+  next.listenTime = clampNumber(input.listenTime, [15, 30, 45, 60], next.listenTime);
   next.spyMode = input.spyMode === "manual" ? "manual" : "auto";
   next.spyCount = clampNumber(input.spyCount, [1, 2, 3], DEFAULT_SETTINGS.spyCount);
-  next.anonymousVoting = Boolean(input.anonymousVoting);
-  next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], DEFAULT_SETTINGS.votingTime);
-  next.runoffOnTie = input.runoffOnTie !== false;
+  next.anonymousVoting = input.anonymousVoting === undefined ? next.anonymousVoting : Boolean(input.anonymousVoting);
+  next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], next.votingTime);
+  next.runoffOnTie = input.runoffOnTie === undefined ? next.runoffOnTie : input.runoffOnTie !== false;
   return next;
 }
 
@@ -256,6 +295,71 @@ function syncLastTrackHistory(lobby) {
   const entry = lobby.trackHistory.find((item) => item.id === lobby.lastTrack.id);
   if (!entry) return;
   entry.reactions = countReactions(lobby.currentTrackReactions);
+}
+
+
+function normalizeGuess(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[«»"'`.,!?;:()\[\]{}_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildVoteDetails(lobby) {
+  return Object.entries(lobby.votes || {}).map(([voterId, targetId]) => {
+    const voter = lobby.players.find((player) => player.id === voterId);
+    const target = lobby.players.find((player) => player.id === targetId);
+    return {
+      voterId,
+      voterName: voter?.name || "Игрок",
+      targetId,
+      targetName: target?.name || "Игрок",
+      hitSpy: lobby.spies.includes(targetId)
+    };
+  });
+}
+
+function buildFinalBreakdown(lobby, suspected = [], finalVotes = {}) {
+  const tracks = lobby.trackHistory || [];
+  const sortedVotes = Object.entries(finalVotes).sort((a, b) => b[1] - a[1]);
+  const topVoteCount = sortedVotes[0]?.[1] || 0;
+  const topVoted = sortedVotes
+    .filter(([, count]) => count === topVoteCount && count > 0)
+    .map(([id]) => lobby.players.find((player) => player.id === id)?.name || "Игрок");
+
+  const reactionTotals = {};
+  let mostReactedTrack = null;
+  let mostSuspiciousTrack = null;
+
+  for (const track of tracks) {
+    const reactions = track.reactions || {};
+    const reactionCount = Object.values(reactions).reduce((sum, count) => sum + Number(count || 0), 0);
+    const suspicionCount = Number(reactions["🕵️"] || 0) + Number(reactions["🤔"] || 0);
+
+    for (const [reaction, count] of Object.entries(reactions)) {
+      reactionTotals[reaction] = (reactionTotals[reaction] || 0) + Number(count || 0);
+    }
+
+    if (reactionCount > (mostReactedTrack?.reactionCount || 0)) {
+      mostReactedTrack = { ...track, reactionCount };
+    }
+    if (suspicionCount > (mostSuspiciousTrack?.suspicionCount || 0)) {
+      mostSuspiciousTrack = { ...track, suspicionCount };
+    }
+  }
+
+  return {
+    voteDetails: buildVoteDetails(lobby),
+    topVoted,
+    topVoteCount,
+    reactionTotals,
+    mostReactedTrack,
+    mostSuspiciousTrack,
+    suspectedNames: suspected.map((id) => lobby.players.find((player) => player.id === id)?.name || "Игрок")
+  };
 }
 
 function removePlayerFromLobby(lobby, playerId) {
@@ -330,6 +434,8 @@ function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
     startTurn(code);
   } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
     finishVote(code);
+  } else if (lobby.phase === "spyGuess" && !lobby.players.some((player) => lobby.spies.includes(player.id))) {
+    finishGame(code, lobby.suspected || [], lobby.finalVotes || null, { text: "", correct: false, skipped: true });
   }
 
   emitLobbyUpdate(code);
@@ -556,17 +662,68 @@ function finishVote(code) {
     return;
   }
 
-  finishGame(code, suspected, voteTotals);
+  const caughtSpy = suspected.some((id) => lobby.spies.includes(id));
+  if (caughtSpy) {
+    startSpyGuess(code, suspected, voteTotals);
+    return;
+  }
+
+  finishGame(code, suspected, voteTotals, { text: "", correct: false, skipped: true });
 }
 
-function finishGame(code, suspected = [], voteTotals = null) {
+function startSpyGuess(code, suspected, voteTotals) {
+  const lobby = lobbies[code];
+  if (!lobby) return;
+
+  const activeSpies = lobby.players.filter((player) => lobby.spies.includes(player.id));
+  if (!activeSpies.length) {
+    finishGame(code, suspected, voteTotals, { text: "", correct: false, skipped: true });
+    return;
+  }
+
+  clearTimer(code);
+  lobby.phase = "spyGuess";
+  lobby.suspected = suspected;
+  lobby.finalVotes = voteTotals || publicVotes(lobby);
+  lobby.spyGuess = null;
+  lobby.spyGuessTimeLeft = SPY_GUESS_SECONDS;
+
+  io.to(code).emit("spyGuessStarted", {
+    spies: lobby.spies,
+    spyNames: activeSpies.map((player) => player.name),
+    suspected,
+    votes: lobby.finalVotes,
+    trackHistory: lobby.trackHistory || [],
+    timeLeft: lobby.spyGuessTimeLeft
+  });
+  emitLobbyUpdate(code);
+
+  timers[code] = setInterval(() => {
+    const currentLobby = lobbies[code];
+    if (!currentLobby || currentLobby.phase !== "spyGuess") {
+      clearTimer(code);
+      return;
+    }
+
+    currentLobby.spyGuessTimeLeft -= 1;
+    io.to(code).emit("spyGuessTimer", { timeLeft: currentLobby.spyGuessTimeLeft });
+    if (currentLobby.spyGuessTimeLeft <= 0) {
+      finishGame(code, currentLobby.suspected || [], currentLobby.finalVotes || null, { text: "", correct: false, skipped: true });
+    }
+  }, 1000);
+}
+
+function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const lobby = lobbies[code];
   if (!lobby) return;
 
   syncLastTrackHistory(lobby);
   const finalVotes = voteTotals || publicVotes(lobby);
   const spyPlayers = lobby.players.filter((player) => lobby.spies.includes(player.id));
-  const civiliansWin = suspected.some((id) => lobby.spies.includes(id));
+  const caughtSpy = suspected.some((id) => lobby.spies.includes(id));
+  const finalSpyGuess = spyGuess || lobby.spyGuess || { text: "", correct: false, skipped: true };
+  const civiliansWin = caughtSpy && !finalSpyGuess.correct;
+  const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
   lobby.phase = "ended";
   clearTimer(code);
@@ -578,10 +735,13 @@ function finishGame(code, suspected = [], voteTotals = null) {
     spyName: spyPlayers.map((player) => player.name).join(", ") || "Шпион",
     votes: finalVotes,
     suspected,
+    caughtSpy,
     civiliansWin,
+    spyGuess: finalSpyGuess,
     theme: lobby.theme,
     settings: lobby.settings,
-    trackHistory: lobby.trackHistory || []
+    trackHistory: lobby.trackHistory || [],
+    breakdown
   });
   emitLobbyUpdate(code);
 }
@@ -603,6 +763,10 @@ function resetLobbyToWaiting(lobby) {
   lobby.lastTrack = null;
   lobby.currentTrackReactions = {};
   lobby.trackHistory = [];
+  lobby.suspected = [];
+  lobby.finalVotes = null;
+  lobby.spyGuess = null;
+  lobby.spyGuessTimeLeft = null;
   lobby.submittedThisTurn = false;
   lobby.timeLeft = null;
   lobby.turnStage = "waiting";
@@ -629,6 +793,10 @@ function createLobbyState(code, hostId, player) {
     lastTrack: null,
     currentTrackReactions: {},
     trackHistory: [],
+    suspected: [],
+    finalVotes: null,
+    spyGuess: null,
+    spyGuessTimeLeft: null,
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
@@ -808,6 +976,10 @@ io.on("connection", (socket) => {
     lobby.lastTrack = null;
     lobby.currentTrackReactions = {};
     lobby.trackHistory = [];
+    lobby.suspected = [];
+    lobby.finalVotes = null;
+    lobby.spyGuess = null;
+    lobby.spyGuessTimeLeft = null;
     lobby.submittedThisTurn = false;
     lobby.turnStage = "waiting";
     lobby.timeLeft = null;
@@ -901,6 +1073,8 @@ io.on("connection", (socket) => {
       if (Object.keys(lobby.votes).length >= lobby.players.length) {
         finishVote(lobby.code);
       }
+    } else if (lobby.phase === "spyGuess" && !lobby.players.some((player) => lobby.spies.includes(player.id))) {
+      finishGame(lobby.code, lobby.suspected || [], lobby.finalVotes || null, { text: "", correct: false, skipped: true });
     }
 
     emitLobbyUpdate(lobby.code);
@@ -984,6 +1158,23 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("submitSpyGuess", ({ code, guess }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby || lobby.phase !== "spyGuess") return cb({ error: "Сейчас нельзя угадывать тему" });
+    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
+    if (!lobby.spies.includes(socket.id)) return cb({ error: "Тему угадывает только шпион" });
+
+    const text = String(guess || "").trim().slice(0, 80);
+    if (!text) return cb({ error: "Введи версию темы" });
+
+    const correct = normalizeGuess(text) === normalizeGuess(lobby.theme);
+    const player = lobby.players.find((item) => item.id === socket.id);
+    const spyGuess = { text, correct, playerId: socket.id, playerName: player?.name || "Шпион", skipped: false };
+    lobby.spyGuess = spyGuess;
+    cb({ success: true, correct });
+    finishGame(lobby.code, lobby.suspected || [], lobby.finalVotes || null, spyGuess);
+  });
+
   socket.on("restartLobby", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
@@ -1058,6 +1249,10 @@ if (require.main === module) {
 
 module.exports = {
   ALLOWED_REACTIONS,
+  GAME_MODES,
+  buildFinalBreakdown,
+  normalizeGuess,
+  normalizeSettings,
   countReactions,
   getActiveTurnOrder,
   removePlayerFromLobby,

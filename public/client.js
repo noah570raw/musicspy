@@ -6,6 +6,44 @@ const DEFAULT_SITE_VOLUME = 70;
 const BACKGROUND_MUSIC_VOLUME = 0.12;
 const AUTH_TOKEN_KEY = "musicspy_auth_token";
 const AVATAR_MAX_BYTES = 64 * 1024;
+const GAME_MODE_PRESETS = {
+  classic: {
+    label: "Классика",
+    hint: "сбалансированные правила для обычной партии",
+    rounds: 3,
+    listenTime: 30,
+    anonymousVoting: false,
+    votingTime: 60,
+    runoffOnTie: true
+  },
+  blitz: {
+    label: "Блиц",
+    hint: "короткая партия: 2 круга, 15 секунд на трек и быстрый финал",
+    rounds: 2,
+    listenTime: 15,
+    anonymousVoting: false,
+    votingTime: 30,
+    runoffOnTie: false
+  },
+  hardcore: {
+    label: "Хардкор",
+    hint: "анонимные голоса, мало времени и никаких переголосований",
+    rounds: 4,
+    listenTime: 15,
+    anonymousVoting: true,
+    votingTime: 30,
+    runoffOnTie: false
+  },
+  party: {
+    label: "Вечеринка",
+    hint: "больше времени на треки и мягкое голосование для шумной компании",
+    rounds: 3,
+    listenTime: 45,
+    anonymousVoting: false,
+    votingTime: 90,
+    runoffOnTie: true
+  }
+};
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
 const UI_CUE_FADE_SECONDS = 0.045;
 const state = {
@@ -28,6 +66,7 @@ const state = {
   voteCandidates: [],
   voteCounts: {},
   anonymousVoting: false,
+  spyGuessActive: false,
   reactionCounts: {},
   selectedReaction: null,
   currentTrackId: null,
@@ -282,6 +321,46 @@ const EN_TRANSLATIONS = {
   "Нельзя голосовать за себя": "You cannot vote for yourself",
   "Игрок вышел — нужно минимум 3 участника": "A player left — at least 3 participants are required",
   "Поддерживаются только PNG, JPG, WEBP или GIF": "Only PNG, JPG, WEBP, or GIF are supported",
+  "Режим": "Mode",
+  "Классика": "Classic",
+  "Блиц": "Blitz",
+  "Хардкор": "Hardcore",
+  "Вечеринка": "Party",
+  "сбалансированные правила для обычной партии": "balanced rules for a standard game",
+  "короткая партия: 2 круга, 15 секунд на трек и быстрый финал": "short game: 2 rounds, 15 seconds per track, and a quick finale",
+  "анонимные голоса, мало времени и никаких переголосований": "anonymous votes, little time, and no runoffs",
+  "больше времени на треки и мягкое голосование для шумной компании": "more time for tracks and softer voting for a loud party",
+  "последний шанс": "last chance",
+  "Шпион угадывает тему": "The spy guesses the theme",
+  "Мирные нашли шпиона. Теперь шпион может спасти игру, если назовет точную тему.": "Civilians found the spy. Now the spy can save the game by naming the exact theme.",
+  "Введи тему как можно точнее": "Enter the theme as precisely as possible",
+  "Угадать тему": "Guess theme",
+  "последние зацепки": "last clues",
+  "Кто за кого голосовал": "Who voted for whom",
+  "финальный разбор": "final breakdown",
+  "Тема угадана — шпион спас игру": "Theme guessed — the spy saved the game",
+  "Версия принята — открываем досье": "Guess accepted — opening the dossier",
+  "Мирные тебя нашли. Напиши точную тему, чтобы вырвать победу в последнюю секунду.": "Civilians found you. Enter the exact theme to steal the win at the last second.",
+  "Последний шанс: угадай тему": "Last chance: guess the theme",
+  "Ждем версию шпиона": "Waiting for the spy's guess",
+  "Шпиона поймали, но он угадал тему и спасся.": "The spy was caught, but guessed the theme and escaped.",
+  "Мирные победили": "Civilians win",
+  "Шпион забрал игру": "The spy takes the game",
+  "шпион не называл тему": "the spy did not name the theme",
+  "угадал тему": "guessed the theme",
+  "не угадал тему": "did not guess the theme",
+  "не потребовалось": "not needed",
+  "Итог": "Result",
+  "Мирные вычислили шпиона": "Civilians exposed the spy",
+  "Шпион угадал тему": "The spy guessed the theme",
+  "Шпион не попал под подозрение": "The spy avoided suspicion",
+  "Главный подозреваемый": "Top suspect",
+  "Реакции вечера": "Night reactions",
+  "Самый подозрительный трек": "Most suspicious track",
+  "Голосов не было": "No votes",
+  "Сейчас нельзя угадывать тему": "You cannot guess the theme right now",
+  "Тему угадывает только шпион": "Only the spy can guess the theme",
+  "Введи версию темы": "Enter your theme guess",
   "Аватарка слишком большая. Максимум 64 КБ после сжатия": "Avatar is too large. Maximum is 64 KB after compression"
 };
 
@@ -300,11 +379,16 @@ function translateText(value) {
     .replace(/Готовы: (\d+)\/(\d+)/g, "Ready: $1/$2")
     .replace(/хост: (.+)/g, "host: $1")
     .replace(/Проголосовало (\d+)\/(\d+)/g, "Voted $1/$2")
+    .replace(/Последний шанс: угадай тему \((\d+)с\)/g, "Last chance: guess the theme ($1s)")
+    .replace(/Ждем версию шпиона \((\d+)с\)/g, "Waiting for the spy's guess ($1s)")
     .replace(/Начался раунд (\d+)/g, "Round $1 started")
     .replace(/Ник обновлен: (.+)/g, "Nickname updated: $1")
     .replace(/Трек принят\. Слушаем (\d+) секунд\.\.\./g, "Track accepted. Listening for $1 seconds...")
     .replace(/(.+) поставил трек — слушаем (\d+) секунд/g, "$1 submitted a track — listening for $2 seconds")
     .replace(/Шпионы: (.+)\. Тема: «(.+)»\. Зачервили: (.+)\./g, "Spies: $1. Theme: “$2”. Suspected: $3.")
+    .replace(/Мирные нашли шпиона: (.+)\. Ждем, сможет ли он назвать тему\./g, "Civilians found the spy: $1. Waiting to see if they can name the theme.")
+    .replace(/голосов: (\d+)/g, "votes: $1")
+    .replace(/подозрительных реакций: (\d+)/g, "suspicious reactions: $1")
     .replace(/Твоя задача — понять тему по чужим трекам и не выдать себя\. Шпионов в игре: (\d+)\./g, "Your goal is to figure out the theme from other tracks and avoid exposing yourself. Spies in the game: $1.")
     .replace(/Тема: «(.+)»/g, "Theme: “$1”")
     .replace(/Код комнаты (.+)/g, "Room code $1")
@@ -344,6 +428,9 @@ function setLanguage(lang) {
   if (state.phase === "voting") {
     renderVoteList(state.voteCounts);
     renderTrackHistory("voteTrackHistory", state.trackHistory);
+  }
+  if (state.phase === "spyGuess") {
+    renderTrackHistory("spyGuessTrackHistory", state.trackHistory);
   }
 }
 
@@ -1024,7 +1111,11 @@ function showSpyRevealCountdown(data, onDone) {
 
     meta.innerHTML = `<span>${t(data.spyNames?.length > 1 ? "Шпионы" : "Шпионы").replace(/s$/, data.spyNames?.length > 1 ? "s" : "")}</span><strong>${escapeHtml(spyNames || t("не найден"))}</strong><small>${t(`Тема: «${escapeHtml(data.theme || "?")}»`)}</small>`;
     $("cinematicTitle").textContent = data.civiliansWin ? t("Мирные вычислили!") : t("Шпион ускользнул!");
-    $("cinematicText").textContent = data.civiliansWin ? t("Красиво зачервили подозреваемых.") : t("Подозрения ушли не туда, шпион забирает победу.");
+    $("cinematicText").textContent = data.spyGuess?.correct
+      ? t("Шпиона поймали, но он угадал тему и спасся.")
+      : data.civiliansWin
+        ? t("Красиво зачервили подозреваемых.")
+        : t("Подозрения ушли не туда, шпион забирает победу.");
     const close = $("cinematicClose");
     close.textContent = t("Показать результаты");
     close.classList.remove("hidden");
@@ -1498,6 +1589,7 @@ function leaveLobby() {
 function readSettingsFromForm() {
   const spyModeValue = $("settingSpyMode").value;
   return {
+    gameMode: $("settingGameMode").value,
     rounds: Number($("settingRounds").value),
     listenTime: Number($("settingListenTime").value),
     spyMode: spyModeValue === "auto" ? "auto" : "manual",
@@ -1506,6 +1598,24 @@ function readSettingsFromForm() {
     votingTime: Number($("settingVotingTime").value),
     runoffOnTie: $("settingRunoffOnTie").value === "true"
   };
+}
+
+function changeGameMode() {
+  const preset = GAME_MODE_PRESETS[$("settingGameMode").value] || GAME_MODE_PRESETS.classic;
+  $("settingRounds").value = String(preset.rounds);
+  $("settingListenTime").value = String(preset.listenTime);
+  $("settingAnonymousVoting").value = String(preset.anonymousVoting);
+  $("settingVotingTime").value = String(preset.votingTime);
+  $("settingRunoffOnTie").value = String(preset.runoffOnTie);
+  updateGameModeHint(preset);
+  updateLobbySettings();
+}
+
+function updateGameModeHint(preset = null) {
+  const mode = $("settingGameMode")?.value || state.settings.gameMode || "classic";
+  const activePreset = preset || GAME_MODE_PRESETS[mode] || GAME_MODE_PRESETS.classic;
+  const hint = $("gameModeHint");
+  if (hint) hint.textContent = t(activePreset.hint);
 }
 
 function updateLobbySettings() {
@@ -1544,6 +1654,7 @@ function changeNickname() {
 function applySettingsToForm(settings = {}, isHost = false) {
   const spyValue = settings.spyMode === "manual" ? String(settings.spyCount || 1) : "auto";
   const fields = {
+    settingGameMode: settings.gameMode || "classic",
     settingRounds: settings.rounds || 3,
     settingListenTime: settings.listenTime || DEFAULT_LISTEN_TIME,
     settingSpyMode: spyValue,
@@ -1559,6 +1670,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
     el.disabled = !isHost;
   }
 
+  updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
   $("settingsHint").textContent = isHost ? t("ты можешь менять") : t("меняет хост");
 }
 
@@ -1896,10 +2008,17 @@ function renderVoteList(votes = {}) {
 }
 
 function renderResults(data) {
-  const suspectedNames = data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || t("Игрок")).join(", ");
+  const suspectedNames = (data.breakdown?.suspectedNames?.length ? data.breakdown.suspectedNames : data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || t("Игрок"))).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
-  $("resultTitle").textContent = data.civiliansWin ? t("Шпион паражняк") : t("Шпион красавчик");
+  const guessText = data.spyGuess?.skipped
+    ? t("шпион не называл тему")
+    : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(data.spyGuess?.text || "—")}»`;
+  $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион забрал игру");
   $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`);
+
+  renderResultBreakdown(data, guessText);
+  renderVoteDetails(data.breakdown?.voteDetails || []);
+
   $("resultVotes").innerHTML = state.players.map((player) => `
     <div class="vote-row static">
       <span>${escapeHtml(player.name)}</span>
@@ -1909,6 +2028,54 @@ function renderResults(data) {
   state.trackHistory = data.trackHistory || state.trackHistory;
   renderTrackHistory("resultTrackHistory", state.trackHistory);
   $("restartBtn").classList.toggle("hidden", state.lobby?.host !== socket.id);
+}
+
+function renderResultBreakdown(data, guessText) {
+  const breakdown = data.breakdown || {};
+  const mostReacted = breakdown.mostReactedTrack;
+  const suspicious = breakdown.mostSuspiciousTrack;
+  const topVoted = breakdown.topVoted?.length ? breakdown.topVoted.join(", ") : t("никто");
+  const reactionTotals = formatReactions(breakdown.reactionTotals || {});
+  const guessResult = data.spyGuess?.correct ? t("угадал тему") : data.caughtSpy ? t("не угадал тему") : t("не потребовалось");
+
+  $("resultBreakdown").innerHTML = `
+    <div class="breakdown-card">
+      <span>${t("Итог")}</span>
+      <strong>${data.civiliansWin ? t("Мирные вычислили шпиона") : data.spyGuess?.correct ? t("Шпион угадал тему") : t("Шпион не попал под подозрение")}</strong>
+      <small>${guessText} · ${guessResult}</small>
+    </div>
+    <div class="breakdown-card">
+      <span>${t("Главный подозреваемый")}</span>
+      <strong>${escapeHtml(topVoted)}</strong>
+      <small>${t(`голосов: ${breakdown.topVoteCount || 0}`)}</small>
+    </div>
+    <div class="breakdown-card">
+      <span>${t("Реакции вечера")}</span>
+      <strong>${escapeHtml(reactionTotals)}</strong>
+      <small>${mostReacted ? `${escapeHtml(mostReacted.playerName || t("Игрок"))}: ${mostReacted.reactionCount}` : t("без реакций")}</small>
+    </div>
+    <div class="breakdown-card">
+      <span>${t("Самый подозрительный трек")}</span>
+      <strong>${suspicious ? escapeHtml(suspicious.playerName || t("Игрок")) : t("не найден")}</strong>
+      <small>${suspicious ? t(`подозрительных реакций: ${suspicious.suspicionCount}`) : t("без реакций")}</small>
+    </div>
+  `;
+}
+
+function renderVoteDetails(details = []) {
+  const el = $("resultVoteDetails");
+  if (!el) return;
+  if (!details.length) {
+    el.innerHTML = `<div class="vote-row static"><span>${t("Голосов не было")}</span><strong>—</strong></div>`;
+    return;
+  }
+
+  el.innerHTML = details.map((item) => `
+    <div class="vote-row static ${item.hitSpy ? "hit-spy" : ""}">
+      <span>${escapeHtml(item.voterName)} → ${escapeHtml(item.targetName)}</span>
+      <strong>${item.hitSpy ? "🎯" : "•"}</strong>
+    </div>
+  `).join("");
 }
 
 function escapeHtml(value) {
@@ -2039,11 +2206,35 @@ socket.on("voteUpdate", ({ votes, votedCount, total, anonymous }) => {
   setStatus("voteStatus", `Проголосовало ${votedCount}/${total}`);
 });
 
+socket.on("spyGuessStarted", ({ spies, spyNames, votes, trackHistory, timeLeft }) => {
+  playSoundCue("danger");
+  state.spyGuessActive = true;
+  state.voteCounts = votes || state.voteCounts;
+  state.trackHistory = trackHistory || state.trackHistory;
+  const isSpy = spies?.includes(socket.id);
+  const names = spyNames?.length ? spyNames.join(", ") : t("Шпион");
+  showScreen("spyGuess");
+  $("spyGuessForm").classList.toggle("hidden", !isSpy);
+  $("spyGuessText").textContent = isSpy
+    ? t("Мирные тебя нашли. Напиши точную тему, чтобы вырвать победу в последнюю секунду.")
+    : t(`Мирные нашли шпиона: ${names}. Ждем, сможет ли он назвать тему.`);
+  $("spyGuessInput").value = "";
+  setStatus("spyGuessStatus", isSpy ? `Последний шанс: угадай тему (${timeLeft || 60}с)` : `Ждем версию шпиона (${timeLeft || 60}с)`);
+  renderTrackHistory("spyGuessTrackHistory", state.trackHistory);
+});
+
+socket.on("spyGuessTimer", ({ timeLeft }) => {
+  if (state.phase !== "spyGuess") return;
+  const isSpy = state.role === "spy";
+  setStatus("spyGuessStatus", isSpy ? `Последний шанс: угадай тему (${timeLeft}с)` : `Ждем версию шпиона (${timeLeft}с)`);
+});
+
 socket.on("runoffStarted", () => {
   setStatus("voteStatus", "Ничья — запускаем второй тур");
 });
 
 socket.on("gameEnd", (data) => {
+  state.spyGuessActive = false;
   clearPlayer();
   updateVoteTimer(null);
   showSpyRevealCountdown(data, () => {
