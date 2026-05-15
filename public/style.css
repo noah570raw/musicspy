@@ -2295,35 +2295,9 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 .page-chat-column .game-chat-panel {
+  width: 100%;
+  min-height: 0;
   margin-top: 0;
-}
-
-@media (min-width: 1580px) {
-  #lobby {
-    position: relative;
-  }
-
-  .lobby-page-chat {
-    position: absolute;
-    right: calc(100% + 14px);
-    bottom: 0;
-    z-index: 3;
-    width: min(300px, calc((100vw - 1080px) / 2 - 28px));
-  }
-}
-
-@media (min-width: 1880px) {
-  #game {
-    position: relative;
-  }
-
-  .game-page-chat {
-    position: absolute;
-    right: calc(100% + 14px);
-    bottom: 0;
-    z-index: 3;
-    width: min(300px, calc((100vw - 1400px) / 2 - 28px));
-  }
 }
 
 @media (min-width: 1580px) {
@@ -2334,6 +2308,62 @@ body:not([data-screen="menu"]) .account-corner {
 
   .page-chat-column .chat-messages {
     max-height: min(260px, 30vh);
+  }
+}
+
+@media (min-width: 1580px) {
+  #lobby {
+    position: relative;
+  }
+
+  .lobby-page-chat {
+    position: absolute;
+    top: 0;
+    right: calc(100% + 14px);
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    width: min(300px, calc((100vw - 1080px) / 2 - 28px));
+    min-height: 0;
+  }
+
+  .lobby-page-chat .game-chat-panel {
+    height: 100%;
+    max-height: none;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .lobby-page-chat .chat-messages {
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+@media (min-width: 1880px) {
+  #game {
+    position: relative;
+  }
+
+  .game-page-chat {
+    position: absolute;
+    top: 0;
+    right: calc(100% + 14px);
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    width: min(300px, calc((100vw - 1400px) / 2 - 28px));
+    min-height: 0;
+  }
+
+  .game-page-chat .game-chat-panel {
+    height: 100%;
+    max-height: none;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .game-page-chat .chat-messages {
+    min-height: 0;
+    max-height: none;
   }
 }
 
