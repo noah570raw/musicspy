@@ -32,6 +32,8 @@ const LEGACY_USERS_FILE = path.join(DEFAULT_DATA_DIR, "users.json");
 const PASSWORD_ITERATIONS = 120000;
 const AVATAR_MAX_BYTES = 64 * 1024;
 const SPY_GUESS_SECONDS = 60;
+const DECOY_GUESS_SECONDS = 10;
+const DECOY_HOST_APPROVAL_SECONDS = 2;
 const HOST_TIMER_STEP_SECONDS = 15;
 const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
@@ -116,6 +118,19 @@ function findUserByToken(token) {
   return usersStore.users.find((user) => (user.sessions || []).some((session) => session.tokenHash === tokenHash)) || null;
 }
 
+function defaultStats() {
+  return {
+    games: 0,
+    wins: 0,
+    spyGames: 0,
+    spyWins: 0,
+    civilianGames: 0,
+    civilianWins: 0,
+    winStreak: 0,
+    bestWinStreak: 0
+  };
+}
+
 function publicUser(user) {
   if (!user) return null;
   return {
@@ -123,7 +138,8 @@ function publicUser(user) {
     username: user.username,
     displayName: user.displayName,
     avatar: user.avatar || "",
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
+    stats: { ...defaultStats(), ...(user.stats || {}) }
   };
 }
 
@@ -703,13 +719,7 @@ function finishVote(code) {
     return;
   }
 
-  const caughtSpy = suspected.some((id) => lobby.spies.includes(id));
-  if (caughtSpy) {
-    startSpyGuess(code, suspected, voteTotals);
-    return;
-  }
-
-  finishGame(code, suspected, voteTotals, { text: "", correct: false, skipped: true });
+  startSpyGuess(code, suspected, voteTotals);
 }
 
 function startSpyGuess(code, suspected, voteTotals) {
@@ -723,22 +733,59 @@ function startSpyGuess(code, suspected, voteTotals) {
   }
 
   clearTimer(code);
+  const caughtSpy = suspected.some((id) => lobby.spies.includes(id));
+  const guessedPlayer = lobby.players.find((player) => suspected.includes(player.id)) || lobby.players[0];
+  const guesserId = caughtSpy ? activeSpies[0].id : guessedPlayer?.id;
   lobby.phase = "spyGuess";
   lobby.suspected = suspected;
   lobby.finalVotes = voteTotals || publicVotes(lobby);
   lobby.spyGuess = null;
   lobby.pendingSpyGuess = null;
-  lobby.spyGuessTimeLeft = SPY_GUESS_SECONDS;
+  lobby.spyGuessMode = caughtSpy ? "spy" : "decoy";
+  lobby.spyGuessTargetId = guesserId || null;
+  lobby.spyGuessTimeLeft = caughtSpy ? SPY_GUESS_SECONDS : DECOY_GUESS_SECONDS;
 
-  io.to(code).emit("spyGuessStarted", {
-    spies: lobby.spies,
-    spyNames: activeSpies.map((player) => player.name),
-    suspected,
-    votes: lobby.finalVotes,
-    trackHistory: lobby.trackHistory || [],
-    timeLeft: lobby.spyGuessTimeLeft
-  });
+  for (const player of lobby.players) {
+    const isGuesser = player.id === guesserId;
+    io.to(player.id).emit("spyGuessStarted", {
+      spies: caughtSpy && isGuesser ? lobby.spies : [],
+      guesserId: isGuesser ? guesserId : null,
+      guesserRole: caughtSpy ? (isGuesser ? "spy" : "hidden") : (isGuesser ? "decoy" : "hidden"),
+      accusedNames: suspected.map((id) => lobby.players.find((item) => item.id === id)?.name || "Игрок"),
+      prefillTheme: !caughtSpy && isGuesser ? lobby.theme : "",
+      suspected,
+      votes: lobby.finalVotes,
+      trackHistory: lobby.trackHistory || [],
+      timeLeft: lobby.spyGuessTimeLeft
+    });
+  }
   emitLobbyUpdate(code);
+
+  if (!caughtSpy) {
+    timers[code] = setInterval(() => {
+      const currentLobby = lobbies[code];
+      if (!currentLobby || currentLobby.phase !== "spyGuess" || currentLobby.spyGuessMode !== "decoy") {
+        clearTimer(code);
+        return;
+      }
+
+      currentLobby.spyGuessTimeLeft -= 1;
+      io.to(code).emit("spyGuessTimer", { timeLeft: currentLobby.spyGuessTimeLeft });
+      if (currentLobby.spyGuessTimeLeft <= 0) {
+        clearTimer(code);
+        const player = currentLobby.players.find((item) => item.id === currentLobby.spyGuessTargetId);
+        const pendingGuess = { text: currentLobby.theme, playerId: player?.id || "", playerName: player?.name || "Игрок", skipped: false, decoy: true, correct: false };
+        currentLobby.pendingSpyGuess = pendingGuess;
+        currentLobby.spyGuess = pendingGuess;
+        io.to(code).emit("decoyGuessAutoSubmitted", { guess: pendingGuess });
+        io.to(currentLobby.host).emit("spyGuessSubmitted", { guess: pendingGuess, decoy: true, spies: [] });
+        timers[code] = setTimeout(() => {
+          finishGame(code, currentLobby.suspected || [], currentLobby.finalVotes || null, pendingGuess);
+        }, DECOY_HOST_APPROVAL_SECONDS * 1000);
+      }
+    }, 1000);
+    return;
+  }
 
   timers[code] = setInterval(() => {
     const currentLobby = lobbies[code];
@@ -755,6 +802,35 @@ function startSpyGuess(code, suspected, voteTotals) {
   }, 1000);
 }
 
+
+
+function updateUserStatsForGame(lobby, civiliansWin) {
+  let changed = false;
+  const playerByAccount = new Map(lobby.players.filter((player) => player.accountId).map((player) => [player.accountId, player]));
+  for (const user of usersStore.users) {
+    const player = playerByAccount.get(user.id);
+    if (!player) continue;
+    const isSpy = lobby.spies.includes(player.id);
+    const won = isSpy ? !civiliansWin : civiliansWin;
+    const stats = { ...defaultStats(), ...(user.stats || {}) };
+    stats.games += 1;
+    stats.wins += won ? 1 : 0;
+    stats.winStreak = won ? stats.winStreak + 1 : 0;
+    stats.bestWinStreak = Math.max(stats.bestWinStreak || 0, stats.winStreak || 0);
+    if (isSpy) {
+      stats.spyGames += 1;
+      stats.spyWins += won ? 1 : 0;
+    } else {
+      stats.civilianGames += 1;
+      stats.civilianWins += won ? 1 : 0;
+    }
+    user.stats = stats;
+    user.updatedAt = new Date().toISOString();
+    changed = true;
+  }
+  if (changed) saveUsersStore();
+}
+
 function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const lobby = lobbies[code];
   if (!lobby) return;
@@ -765,10 +841,17 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const caughtSpy = suspected.some((id) => lobby.spies.includes(id));
   const finalSpyGuess = spyGuess || lobby.spyGuess || { text: "", correct: false, skipped: true };
   const civiliansWin = caughtSpy && !finalSpyGuess.correct;
+  const decoyReveal = !caughtSpy && suspected.length > 0;
   const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
+  updateUserStatsForGame(lobby, civiliansWin);
   lobby.phase = "ended";
   clearTimer(code);
+
+  for (const player of lobby.players) {
+    const user = usersStore.users.find((item) => item.id === player.accountId);
+    if (user) io.to(player.id).emit("profile:updated", { profile: { user: publicUser(user), guest: false } });
+  }
 
   io.to(code).emit("gameEnd", {
     spies: lobby.spies,
@@ -778,6 +861,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     votes: finalVotes,
     suspected,
     caughtSpy,
+    decoyReveal,
     civiliansWin,
     spyGuess: finalSpyGuess,
     theme: lobby.theme,
@@ -842,6 +926,8 @@ function createLobbyState(code, hostId, player) {
     spyGuess: null,
     pendingSpyGuess: null,
     spyGuessTimeLeft: null,
+    spyGuessMode: null,
+    spyGuessTargetId: null,
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
@@ -880,6 +966,7 @@ io.on("connection", (socket) => {
       username: normalizedUsername,
       displayName: normalizeName(displayName || username),
       avatar: "",
+      stats: defaultStats(),
       salt,
       passwordHash: hash,
       sessions: [],
@@ -1027,6 +1114,8 @@ io.on("connection", (socket) => {
     lobby.spyGuess = null;
     lobby.pendingSpyGuess = null;
     lobby.spyGuessTimeLeft = null;
+    lobby.spyGuessMode = null;
+    lobby.spyGuessTargetId = null;
     lobby.submittedThisTurn = false;
     lobby.turnStage = "waiting";
     lobby.timeLeft = null;

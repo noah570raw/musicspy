@@ -29,6 +29,7 @@
 
   <div id="authModal" class="auth-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
     <div class="auth-modal-card">
+      <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть окно аккаунта">×</button>
       <p class="eyebrow">аккаунт</p>
       <h2 id="authModalTitle">Как продолжим?</h2>
       <p id="authModalText" class="auth-modal-text">Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.</p>
@@ -50,6 +51,29 @@
         <div class="actions two-col auth-actions">
           <button id="authSubmitBtn" class="primary" type="button" onclick="submitAuthForm()">Создать аккаунт</button>
           <button class="secondary" type="button" onclick="selectAuthMode('choice')">Назад</button>
+        </div>
+      </div>
+
+      <div id="accountProfileView" class="account-profile-view hidden">
+        <div class="profile-hero">
+          <div id="profileAvatar" class="profile-avatar profile-avatar-large">?</div>
+          <div>
+            <strong id="profileName">Гость</strong>
+            <span id="profileLogin">без аккаунта</span>
+          </div>
+        </div>
+        <div id="profileStatsGrid" class="profile-stats-grid"></div>
+        <div class="profile-editor-panel">
+          <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
+          <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
+        </div>
+        <div id="profileEditor" class="profile-editor hidden">
+          <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
+          <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
+          <div class="actions two-col">
+            <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
+            <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
+          </div>
         </div>
       </div>
       <p id="authStatus" class="status"></p>
@@ -80,36 +104,23 @@
     </div>
   </div>
   <div class="account-corner" aria-label="Аккаунт игрока">
-    <div id="guestAccountNotice" class="guest-account-notice hidden">
-      <span>Вы играете как гость</span>
-      <button class="secondary" type="button" onclick="showAuthModal('register')">Зарегистрироваться</button>
-      <button class="ghost-button" type="button" onclick="showAuthModal('login')">Войти</button>
-    </div>
-    <div id="profileView" class="profile-view hidden">
-      <div id="profileAvatar" class="profile-avatar">?</div>
-      <div class="profile-info">
-        <strong id="profileName">Гость</strong>
-        <span id="profileLogin">без аккаунта</span>
-      </div>
-      <button class="secondary" type="button" onclick="toggleProfileEditor()">Профиль</button>
-      <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
-    </div>
-    <div id="profileEditor" class="profile-editor hidden">
-      <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
-      <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
-      <div class="actions two-col">
-        <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
-        <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
-      </div>
-    </div>
+    <button id="accountToggle" class="corner-toggle account-toggle" type="button" onclick="openAccountPanel()" aria-label="Открыть аккаунт" title="Аккаунт и статистика">
+      <span id="accountToggleAvatar">👤</span>
+      <strong id="accountToggleLabel">Гость</strong>
+    </button>
     <p id="accountStatus" class="status"></p>
   </div>
 
-  <div class="volume-control" aria-label="Громкость сайта">
-    <span>Звук</span>
-    <button id="musicToggle" class="sound-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить музыкальное сопровождение">🎧</button>
-    <input id="siteVolume" type="range" min="0" max="100" value="70" oninput="updateSiteVolume(this.value)" aria-label="Громкость звуков и музыки">
-    <strong id="siteVolumeValue">70%</strong>
+  <div id="volumeControl" class="volume-control" aria-label="Громкость сайта">
+    <button id="volumeToggle" class="corner-toggle sound-toggle" type="button" onclick="toggleVolumePanel()" aria-expanded="false" aria-controls="volumePanel" title="Звук в игре">
+      <span id="musicToggleIcon">🎧</span>
+      <strong>Звук</strong>
+    </button>
+    <div id="volumePanel" class="volume-panel" aria-hidden="true">
+      <button id="musicToggle" class="sound-mode-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить музыкальное сопровождение">🎧</button>
+      <input id="siteVolume" type="range" min="0" max="100" value="70" oninput="updateSiteVolume(this.value)" aria-label="Громкость звуков и музыки">
+      <strong id="siteVolumeValue">70%</strong>
+    </div>
   </div>
 
   <div class="language-switcher" aria-label="Переключатель языка">

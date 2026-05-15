@@ -86,6 +86,7 @@ const state = {
   authGuest: true,
   pendingAvatar: undefined,
   authFormMode: "choice",
+  volumePanelOpen: false,
   lang: "ru"
 };
 
@@ -982,10 +983,24 @@ function stopBackgroundMusic() {
 
 function updateMusicToggle() {
   const toggle = $("musicToggle");
-  if (!toggle) return;
-  toggle.textContent = state.musicEnabled ? "🎧" : "🔇";
-  toggle.setAttribute("aria-pressed", String(state.musicEnabled));
-  toggle.title = state.musicEnabled ? t("Музыкальное сопровождение включено") : t("Музыкальное сопровождение выключено");
+  const icon = $("musicToggleIcon");
+  const emoji = state.musicEnabled ? "🎧" : "🔇";
+  if (toggle) {
+    toggle.textContent = emoji;
+    toggle.setAttribute("aria-pressed", String(state.musicEnabled));
+    toggle.title = state.musicEnabled ? t("Музыкальное сопровождение включено") : t("Музыкальное сопровождение выключено");
+  }
+  if (icon) icon.textContent = emoji;
+}
+
+function toggleVolumePanel(force) {
+  state.volumePanelOpen = typeof force === "boolean" ? force : !state.volumePanelOpen;
+  const control = $("volumeControl");
+  const toggle = $("volumeToggle");
+  const panel = $("volumePanel");
+  control?.classList.toggle("open", state.volumePanelOpen);
+  toggle?.setAttribute("aria-expanded", String(state.volumePanelOpen));
+  panel?.setAttribute("aria-hidden", String(!state.volumePanelOpen));
 }
 
 function toggleMusic() {
@@ -1124,17 +1139,47 @@ function showRoleReveal(data) {
 function showSpyRevealCountdown(data, onDone) {
   clearCinematicTimers();
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
+  const suspectedNames = data.breakdown?.suspectedNames?.length ? data.breakdown.suspectedNames.join(", ") : t("подозреваемый");
   let count = 3;
 
   setCinematicOverlay({
     eyebrow: t("голоса приняты"),
-    title: t("Шпионом был..."),
-    text: t("Сейчас вскроем досье. Не моргай."),
+    title: data.decoyReveal ? t("Проверяем подозреваемого...") : t("Шпионом был..."),
+    text: data.decoyReveal ? t("Хост одобрил тему. Сейчас узнаем, попали ли игроки.") : t("Сейчас вскроем досье. Не моргай."),
     meta: `<strong class="countdown-number">${count}</strong>`,
     mode: "countdown",
     closable: false
   });
   playSoundCue("reveal");
+
+  const showFinalSpy = () => {
+    const meta = $("cinematicMeta");
+    if (meta) {
+      meta.innerHTML = `<span>${t(data.spyNames?.length > 1 ? "Шпионы" : "Шпион")}</span><strong>${escapeHtml(spyNames || t("не найден"))}</strong><small>${t(`Тема: «${escapeHtml(data.theme || "?")}»`)}</small>`;
+    }
+    $("cinematicTitle").textContent = data.civiliansWin ? t("Мирные вычислили!") : t("Шпион ускользнул!");
+    $("cinematicText").textContent = data.spyGuess?.correct
+      ? t("Шпиона поймали, но он угадал тему и спасся.")
+      : data.civiliansWin
+        ? t("Красиво зачервили подозреваемых.")
+        : t("Подозрения ушли не туда, настоящий шпион забирает победу.");
+    const close = $("cinematicClose");
+    close.textContent = t("Показать результаты");
+    close.classList.remove("hidden");
+    state.cinematicOnClose = onDone;
+    playSoundCue(data.civiliansWin ? "confirm" : "danger");
+  };
+
+  const showWrongSuspect = () => {
+    const meta = $("cinematicMeta");
+    if (meta) {
+      meta.innerHTML = `<span>${t("Подозреваемый")}</span><strong>${escapeHtml(suspectedNames)}</strong><small>${t("это был мирный игрок")}</small>`;
+    }
+    $("cinematicTitle").textContent = t("Это не шпион");
+    $("cinematicText").textContent = t("Игроки промахнулись. Настоящее досье откроется через 5 секунд.");
+    playSoundCue("danger");
+    state.cinematicIntervals.push(window.setTimeout(showFinalSpy, 5000));
+  };
 
   const tick = () => {
     count -= 1;
@@ -1146,18 +1191,11 @@ function showSpyRevealCountdown(data, onDone) {
       return;
     }
 
-    meta.innerHTML = `<span>${t(data.spyNames?.length > 1 ? "Шпионы" : "Шпионы").replace(/s$/, data.spyNames?.length > 1 ? "s" : "")}</span><strong>${escapeHtml(spyNames || t("не найден"))}</strong><small>${t(`Тема: «${escapeHtml(data.theme || "?")}»`)}</small>`;
-    $("cinematicTitle").textContent = data.civiliansWin ? t("Мирные вычислили!") : t("Шпион ускользнул!");
-    $("cinematicText").textContent = data.spyGuess?.correct
-      ? t("Шпиона поймали, но он угадал тему и спасся.")
-      : data.civiliansWin
-        ? t("Красиво зачервили подозреваемых.")
-        : t("Подозрения ушли не туда, шпион забирает победу.");
-    const close = $("cinematicClose");
-    close.textContent = t("Показать результаты");
-    close.classList.remove("hidden");
-    state.cinematicOnClose = onDone;
-    playSoundCue(data.civiliansWin ? "confirm" : "danger");
+    if (data.decoyReveal) {
+      showWrongSuspect();
+      return;
+    }
+    showFinalSpy();
   };
 
   [1000, 2000, 3000].forEach((delay) => {
@@ -1290,6 +1328,10 @@ function showAuthModal(mode = "choice") {
   $("authModal").classList.remove("hidden");
 }
 
+function openAccountPanel() {
+  showAuthModal(state.profile ? "profile" : "choice");
+}
+
 function hideAuthModal() {
   $("authModal").classList.add("hidden");
   setAuthStatus();
@@ -1297,18 +1339,26 @@ function hideAuthModal() {
 
 function selectAuthMode(mode) {
   state.authFormMode = mode;
-  const isChoice = mode === "choice";
+  const isProfile = mode === "profile" && state.profile;
+  const isChoice = mode === "choice" || (mode === "profile" && !state.profile);
   const isRegister = mode === "register";
+  const isForm = !isChoice && !isProfile;
   $("authChoiceView").classList.toggle("hidden", !isChoice);
-  $("authFormView").classList.toggle("hidden", isChoice);
+  $("authFormView").classList.toggle("hidden", !isForm);
+  $("accountProfileView").classList.toggle("hidden", !isProfile);
   $("authRegisterHint").classList.toggle("hidden", !isRegister);
-  $("authModalTitle").textContent = isChoice ? t("Как продолжим?") : (isRegister ? t("Регистрация") : t("Вход в аккаунт"));
-  $("authModalText").textContent = isChoice
-    ? t("Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.")
-    : (isRegister ? t("Создай аккаунт, чтобы сайт узнавал тебя на этом устройстве.") : t("Войди, если уже регистрировался раньше."));
+  $("authModalTitle").textContent = isProfile
+    ? t("Профиль игрока")
+    : isChoice ? t("Как продолжим?") : (isRegister ? t("Регистрация") : t("Вход в аккаунт"));
+  $("authModalText").textContent = isProfile
+    ? t("Твоя музыкальная легенда, аватар и статистика партий.")
+    : isChoice
+      ? t("Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.")
+      : (isRegister ? t("Создай аккаунт, чтобы сайт узнавал тебя на этом устройстве.") : t("Войди, если уже регистрировался раньше."));
   $("authSubmitBtn").textContent = isRegister ? t("Создать аккаунт") : t("Войти");
+  if (isProfile) renderProfileStats();
   setAuthStatus();
-  if (!isChoice) $("authLogin").focus();
+  if (isForm) $("authLogin").focus();
 }
 
 function submitAuthForm() {
@@ -1321,18 +1371,65 @@ function applyProfile(profileData = { user: null, guest: true }) {
   state.authGuest = Boolean(profileData.guest);
   const user = state.profile;
   const displayName = user?.displayName || $("name").value.trim() || t("Гость");
-  $("guestAccountNotice").classList.toggle("hidden", Boolean(user));
-  $("profileView").classList.toggle("hidden", !user);
-  $("profileEditor").classList.add("hidden");
-  $("logoutBtn").classList.toggle("hidden", !user);
-  $("profileName").textContent = displayName;
-  $("profileLogin").textContent = user ? `@${user.username}` : t("гость без регистрации");
-  $("profileDisplayName").value = displayName;
-  $("profileAvatar").innerHTML = user?.avatar
-    ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
-    : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
+  $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
+  $("profileEditor")?.classList.add("hidden");
+  $("logoutBtn")?.classList.toggle("hidden", !user);
+  if ($("profileName")) $("profileName").textContent = displayName;
+  if ($("profileLogin")) $("profileLogin").textContent = user ? `@${user.username}` : t("гость без регистрации");
+  if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
+  if ($("profileAvatar")) {
+    $("profileAvatar").innerHTML = user?.avatar
+      ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
+      : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
+  }
+  updateAccountToggle(displayName, user);
+  renderProfileStats();
   syncNameInput();
   updateLobbyRenameControls();
+}
+
+function updateAccountToggle(displayName, user) {
+  const avatar = $("accountToggleAvatar");
+  const label = $("accountToggleLabel");
+  if (label) label.textContent = user ? displayName : t("Гость");
+  if (!avatar) return;
+  avatar.innerHTML = user?.avatar
+    ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
+    : (user ? escapeHtml(displayName.slice(0, 1).toUpperCase() || "?") : "👤");
+}
+
+function percent(value, total) {
+  if (!total) return "0%";
+  return `${Math.round((Number(value || 0) / total) * 100)}%`;
+}
+
+function renderProfileStats() {
+  const grid = $("profileStatsGrid");
+  if (!grid || !state.profile) return;
+  const stats = state.profile.stats || {};
+  const games = Number(stats.games || 0);
+  const spyGames = Number(stats.spyGames || 0);
+  const civilianGames = Number(stats.civilianGames || 0);
+  const wins = Number(stats.wins || 0);
+  const spyWins = Number(stats.spyWins || 0);
+  const civilianWins = Number(stats.civilianWins || 0);
+  const spyRate = spyGames ? spyWins / spyGames : 0;
+  const civilianRate = civilianGames ? civilianWins / civilianGames : 0;
+  const bestRole = spyGames && spyRate >= civilianRate ? t("теневой шпион") : t("народный детектив");
+  grid.innerHTML = [
+    ["🎮", t("Игр сыграно"), games],
+    ["🏆", t("Общий винрейт"), percent(wins, games)],
+    ["🕵️", t("Побед за шпиона"), `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
+    ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
+    ["🎯", t("Любимая роль"), bestRole],
+    ["🔥", t("Серия побед"), stats.winStreak || 0]
+  ].map(([icon, label, value]) => `
+    <div class="profile-stat-card">
+      <span>${icon}</span>
+      <small>${escapeHtml(label)}</small>
+      <strong>${escapeHtml(String(value))}</strong>
+    </div>
+  `).join("");
 }
 
 function authenticateWithStoredToken() {
@@ -2334,6 +2431,9 @@ socket.on("gameStarted", (data) => {
 });
 
 socket.on("gameState", renderGameState);
+socket.on("profile:updated", ({ profile }) => {
+  applyProfile(profile);
+});
 socket.on("turn", updateTurn);
 socket.on("timer", updateTimer);
 socket.on("voteTimer", ({ timeLeft }) => updateVoteTimer(timeLeft));
@@ -2386,31 +2486,44 @@ socket.on("voteUpdate", ({ votes, votedCount, total, anonymous }) => {
   setStatus("voteStatus", `Проголосовало ${votedCount}/${total}`);
 });
 
-socket.on("spyGuessStarted", ({ spies, spyNames, votes, trackHistory, timeLeft }) => {
+socket.on("spyGuessStarted", ({ spies, guesserId, guesserRole, accusedNames, prefillTheme, votes, trackHistory, timeLeft }) => {
   playSoundCue("danger");
   state.spyGuessActive = true;
   state.pendingSpyGuess = null;
   state.voteCounts = votes || state.voteCounts;
   state.trackHistory = trackHistory || state.trackHistory;
-  const isSpy = spies?.includes(socket.id);
-  const names = spyNames?.length ? spyNames.join(", ") : t("Шпион");
+  const isGuesser = guesserId === socket.id || spies?.includes(socket.id);
+  const isDecoy = guesserRole === "decoy";
+  const accused = accusedNames?.length ? accusedNames.join(", ") : t("подозреваемый игрок");
   showScreen("spyGuess");
-  $("spyGuessForm").classList.toggle("hidden", !isSpy);
-  $("spyGuessText").textContent = isSpy
-    ? t("Мирные тебя нашли. Напиши точную тему, чтобы вырвать победу в последнюю секунду.")
-    : t(`Мирные нашли шпиона: ${names}. Ждем, сможет ли он назвать тему.`);
-  $("spyGuessInput").value = "";
-  $("spyGuessInput").disabled = false;
+  $("spyGuessForm").classList.toggle("hidden", !isGuesser);
+  $("spyGuessText").textContent = isGuesser
+    ? (isDecoy
+      ? t("Игроки решили, что ты шпион. Тема уже введена — жди решения хоста.")
+      : t("Тебя подозревают. Напиши точную тему, чтобы вырвать победу в последнюю секунду."))
+    : t(`Голоса сошлись на игроке: ${accused}. Ждем, какую тему он отправит хосту.`);
+  $("spyGuessInput").value = isDecoy ? (prefillTheme || state.theme || "") : "";
+  $("spyGuessInput").disabled = isDecoy;
   const submitBtn = $("spyGuessSubmitBtn");
-  if (submitBtn) submitBtn.disabled = false;
-  setStatus("spyGuessStatus", isSpy ? `Последний шанс: угадай тему (${timeLeft || 60}с)` : `Ждем версию шпиона (${timeLeft || 60}с)`);
+  if (submitBtn) {
+    submitBtn.disabled = isDecoy;
+    submitBtn.textContent = isDecoy ? t("Тема отправится автоматически") : t("Отправить свои догадки");
+  }
+  const waitingText = isDecoy ? t("Хост проверяет тему") : t("Ждем версию подозреваемого");
+  setStatus("spyGuessStatus", isGuesser && !isDecoy ? `Последний шанс: угадай тему (${timeLeft || 60}с)` : `${waitingText} (${timeLeft || 60}с)`);
   renderTrackHistory("spyGuessTrackHistory", state.trackHistory);
+});
+
+socket.on("decoyGuessAutoSubmitted", ({ guess }) => {
+  state.pendingSpyGuess = guess || null;
+  setStatus("spyGuessStatus", "Тема отправлена хосту. Хост одобряет версию...");
 });
 
 socket.on("spyGuessTimer", ({ timeLeft }) => {
   if (state.phase !== "spyGuess") return;
-  const isSpy = state.role === "spy";
-  setStatus("spyGuessStatus", isSpy ? `Последний шанс: угадай тему (${timeLeft}с)` : `Ждем версию шпиона (${timeLeft}с)`);
+  const input = $("spyGuessInput");
+  const isEditableGuesser = !$("spyGuessForm")?.classList.contains("hidden") && !input?.disabled;
+  setStatus("spyGuessStatus", isEditableGuesser ? `Последний шанс: угадай тему (${timeLeft}с)` : `Ждем версию подозреваемого (${timeLeft}с)`);
 });
 
 socket.on("runoffStarted", () => {
@@ -2438,8 +2551,13 @@ socket.on("spyGuessPending", ({ guess }) => {
   setStatus("spyGuessStatus", guess ? `Версия шпиона «${guess.text}» отправлена хосту` : "Ждем решение хоста");
 });
 
-socket.on("spyGuessSubmitted", ({ guess }) => {
+socket.on("spyGuessSubmitted", ({ guess, decoy }) => {
   state.pendingSpyGuess = guess || null;
+  if (decoy || guess?.decoy) {
+    setStatus("spyGuessStatus", "Хост одобрил тему. Готовим финальное раскрытие...");
+    playSoundCue("confirm");
+    return;
+  }
   const text = $("spyReviewText");
   if (text) text.textContent = `${guess?.playerName || "Шпион"}: «${guess?.text || "—"}»`;
   setStatus("spyReviewStatus");
