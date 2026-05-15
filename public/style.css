@@ -526,14 +526,19 @@ button:disabled {
 .action-rename-row {
   display: grid;
   grid-template-columns: 1fr;
+  grid-auto-rows: auto;
   gap: 10px;
-}
-
-.action-rename-row #renameBtn {
-  order: 1;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .action-rename-row #renameInput {
+  order: 1;
+}
+
+.action-rename-row #renameBtn {
   order: 2;
 }
 
@@ -556,6 +561,10 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
+}
+
+.rename-row.action-rename-row {
+  grid-template-columns: 1fr;
 }
   
 .qr-wrap {
@@ -2423,14 +2432,20 @@ body[data-screen="game"] .language-switcher {
 
   .lobby-page-actions .lobby-action-panel > button,
   .lobby-page-actions .lobby-action-panel input,
-  .lobby-page-actions .lobby-action-panel .rename-row,
   .lobby-page-actions .lobby-action-panel .rename-row button {
     min-height: 0;
     height: 100%;
   }
 
+  .lobby-page-actions .lobby-action-panel .rename-row {
+    min-height: 0;
+    height: 100%;
+  }
+
   .lobby-page-actions .lobby-action-panel .action-rename-row {
+    grid-template-columns: 1fr;
     grid-template-rows: repeat(2, minmax(0, 1fr));
+    align-content: stretch;
   }
 }
 
