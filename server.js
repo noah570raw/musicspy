@@ -485,7 +485,8 @@ function publicLobby(lobby) {
     phase: lobby.phase,
     minPlayers: 3,
     totalRounds: lobby.settings.rounds,
-    settings: lobby.settings
+    settings: lobby.settings,
+    chatMessages: lobby.chatMessages || []
   };
 }
 
@@ -1359,8 +1360,8 @@ io.on("connection", (socket) => {
   socket.on("chat:send", ({ code, text }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
-    if (!lobby.started || !["playing", "voting", "spyGuess"].includes(lobby.phase)) {
-      return cb({ error: "Чат доступен только во время игры" });
+    if (!["lobby", "playing", "voting", "spyGuess"].includes(lobby.phase)) {
+      return cb({ error: "Чат сейчас недоступен" });
     }
     const player = lobby.players.find((item) => item.id === socket.id);
     if (!player) return cb({ error: "Ты не в этой комнате" });

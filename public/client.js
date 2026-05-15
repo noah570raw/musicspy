@@ -385,6 +385,7 @@ const EN_TRANSLATIONS = {
   "Введи версию темы": "Enter your theme guess",
   "Аватарка слишком большая. Максимум 64 КБ после сжатия": "Avatar is too large. Maximum is 64 KB after compression",
   "Чат игры": "Game chat",
+  "Чат лобби": "Lobby chat",
   "общайся без подсказок": "no spoiler hints",
   "Пока сообщений нет": "No messages yet",
   "Сообщение в чат": "Chat message",
@@ -2018,6 +2019,7 @@ function renderLobby(lobby) {
   state.settings = lobby.settings || state.settings;
   state.currentCode = lobby.code || state.currentCode;
   state.hostId = lobby.host || state.hostId;
+  state.chatMessages = lobby.chatMessages || state.chatMessages;
 
   updateInviteSecretsVisibility();
   const inviteLink = buildInviteLink();
@@ -2055,6 +2057,7 @@ function renderLobby(lobby) {
       ${player.id === socket.id ? `<em>${t("ты")}</em>` : ""}
     </div>
   `).join("");
+  renderChat();
 
   if (state.phase === "game") renderHostControls();
 }
@@ -2217,19 +2220,11 @@ function formatChatTime(createdAt) {
 }
 
 function renderChat(messages = state.chatMessages) {
-  const box = $("chatMessages");
-  if (!box) return;
+  const boxes = [...document.querySelectorAll("[data-chat-messages]")];
+  if (!boxes.length) return;
   const list = Array.isArray(messages) ? messages : [];
   state.chatMessages = list;
-
-  if (!list.length) {
-    box.classList.add("empty");
-    box.textContent = t("Пока сообщений нет");
-    return;
-  }
-
-  box.classList.remove("empty");
-  box.innerHTML = list.map((message) => {
+  const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
     return `
       <div class="chat-message ${isMine ? "mine" : ""}">
@@ -2241,7 +2236,17 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
   }).join("");
-  box.scrollTop = box.scrollHeight;
+
+  for (const box of boxes) {
+    if (!list.length) {
+      box.classList.add("empty");
+      box.textContent = t("Пока сообщений нет");
+      continue;
+    }
+    box.classList.remove("empty");
+    box.innerHTML = markup;
+    box.scrollTop = box.scrollHeight;
+  }
 }
 
 function handleChatKeydown(event) {
@@ -2250,14 +2255,29 @@ function handleChatKeydown(event) {
   sendChatMessage();
 }
 
+function activeChatElements() {
+  const root = document.querySelector(`.screen:not(.hidden)`) || document;
+  return {
+    input: root.querySelector("[data-chat-input]"),
+    status: root.querySelector("[data-chat-status]")
+  };
+}
+
+function setChatStatus(message = "", isError = false) {
+  for (const status of document.querySelectorAll("[data-chat-status]")) {
+    status.textContent = t(message);
+    status.classList.toggle("error", isError);
+  }
+}
+
 function sendChatMessage() {
-  const input = $("chatInput");
+  const { input } = activeChatElements();
   const text = input?.value.trim() || "";
-  if (!text) return setStatus("chatStatus", "Напиши сообщение", true);
+  if (!text) return setChatStatus("Напиши сообщение", true);
   socket.emit("chat:send", { code: state.currentCode, text }, (res) => {
-    if (res?.error) return setStatus("chatStatus", res.error, true);
-    if (input) input.value = "";
-    setStatus("chatStatus", "Сообщение отправлено");
+    if (res?.error) return setChatStatus(res.error, true);
+    for (const chatInput of document.querySelectorAll("[data-chat-input]")) chatInput.value = "";
+    setChatStatus("Сообщение отправлено");
   });
 }
 
