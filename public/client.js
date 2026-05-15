@@ -1,6 +1,8 @@
 const socket = io();
 
 const DEFAULT_LISTEN_TIME = 30;
+const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
+const DEFAULT_SITE_VOLUME = 70;
 const state = {
   currentCode: "",
   myId: "",
@@ -20,6 +22,11 @@ const state = {
   votedTarget: null,
   voteCandidates: [],
   anonymousVoting: false,
+  reactionCounts: {},
+  selectedReaction: null,
+  currentTrackId: null,
+  trackHistory: [],
+  siteVolume: DEFAULT_SITE_VOLUME,
   ready: false
 };
 
@@ -37,6 +44,54 @@ function setStatus(id, message = "", isError = false) {
   if (!el) return;
   el.textContent = message;
   el.classList.toggle("error", isError);
+}
+
+function updateSiteVolume(value) {
+  const volume = Math.max(0, Math.min(100, Number(value) || 0));
+  state.siteVolume = volume;
+  const volumeInput = $("siteVolume");
+  const volumeValue = $("siteVolumeValue");
+  if (volumeInput) volumeInput.value = String(volume);
+  if (volumeValue) volumeValue.textContent = `${volume}%`;
+  try {
+    window.localStorage.setItem("musicSpyVolume", String(volume));
+  } catch {
+    // Ignore storage errors in private or restricted browser modes.
+  }
+  applySiteVolume();
+}
+
+function applySiteVolume() {
+  const normalizedVolume = state.siteVolume / 100;
+  for (const media of document.querySelectorAll("audio, video")) {
+    media.volume = normalizedVolume;
+  }
+
+  const trackFrame = $("trackFrame");
+  if (trackFrame?.contentWindow && trackFrame.src.includes("youtube.com")) {
+    trackFrame.contentWindow.postMessage(JSON.stringify({
+      event: "command",
+      func: "setVolume",
+      args: [state.siteVolume]
+    }), "*");
+    trackFrame.contentWindow.postMessage(JSON.stringify({
+      event: "command",
+      func: state.siteVolume === 0 ? "mute" : "unMute",
+      args: []
+    }), "*");
+  }
+}
+
+function restoreSiteVolume() {
+  let savedVolume = DEFAULT_SITE_VOLUME;
+  try {
+    const storedVolume = window.localStorage.getItem("musicSpyVolume");
+    savedVolume = storedVolume === null ? DEFAULT_SITE_VOLUME : Number(storedVolume);
+  } catch {
+    savedVolume = DEFAULT_SITE_VOLUME;
+  }
+
+  updateSiteVolume(Number.isFinite(savedVolume) ? savedVolume : DEFAULT_SITE_VOLUME);
 }
 
 function getName() {
@@ -113,6 +168,15 @@ function hostKickPlayer(playerId) {
   socket.emit("hostKickPlayer", { code: state.currentCode, playerId }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     setStatus("gameStatus", "Игрок удален из комнаты");
+  });
+}
+
+function sendReaction(reaction) {
+  socket.emit("trackReaction", { code: state.currentCode, reaction }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    state.selectedReaction = res.selectedReaction || null;
+    state.reactionCounts = res.reactionCounts || state.reactionCounts;
+    renderReactions();
   });
 }
 
@@ -276,11 +340,19 @@ function renderGameState(data) {
   state.turnStage = data.turnStage || state.turnStage;
   state.timeLeft = data.timeLeft ?? state.timeLeft;
   state.voteCandidates = data.voteCandidates || state.voteCandidates;
+  state.reactionCounts = data.reactionCounts || state.reactionCounts;
+  state.trackHistory = data.trackHistory || state.trackHistory;
+  if (data.lastTrack?.id && data.lastTrack.id !== state.currentTrackId) {
+    state.currentTrackId = data.lastTrack.id;
+    state.selectedReaction = null;
+  }
 
   $("roundInfo").textContent = `Раунд ${state.round}/${state.totalRounds}`;
   $("roundBar").style.width = `${Math.min(100, (state.round / state.totalRounds) * 100)}%`;
   renderOrder();
   renderHostControls();
+  renderReactions();
+  renderTrackHistory();
   updateSendButton(data.submittedThisTurn);
 
   if (data.turnStage === "listening" && data.lastTrack) loadTrack(data.lastTrack);
@@ -324,6 +396,51 @@ function renderHostControls() {
   }).join("");
 }
 
+function renderReactions() {
+  const buttons = $("reactionButtons");
+  const summary = $("reactionSummary");
+  if (!buttons || !summary) return;
+
+  buttons.innerHTML = ALLOWED_REACTIONS.map((reaction) => `
+    <button class="reaction-btn ${state.selectedReaction === reaction ? "selected" : ""}" onclick="sendReaction('${escapeAttribute(reaction)}')">
+      <span>${reaction}</span>
+      <strong>${state.reactionCounts[reaction] || 0}</strong>
+    </button>
+  `).join("");
+
+  const activeCounts = ALLOWED_REACTIONS
+    .filter((reaction) => state.reactionCounts[reaction])
+    .map((reaction) => `${reaction} ${state.reactionCounts[reaction]}`);
+  summary.textContent = activeCounts.length ? activeCounts.join(" · ") : "Пока реакций нет";
+}
+
+function formatReactions(reactions = {}) {
+  const activeCounts = ALLOWED_REACTIONS
+    .filter((reaction) => reactions[reaction])
+    .map((reaction) => `${reaction} ${reactions[reaction]}`);
+  return activeCounts.length ? activeCounts.join(" · ") : "без реакций";
+}
+
+function renderTrackHistory(targetId = "trackHistory", history = state.trackHistory) {
+  const el = $(targetId);
+  if (!el) return;
+
+  if (!history?.length) {
+    el.classList.add("empty");
+    el.textContent = "Пока треков нет";
+    return;
+  }
+
+  el.classList.remove("empty");
+  el.innerHTML = history.map((track) => `
+    <div class="history-row">
+      <span>Раунд ${track.round}, ход ${track.turnNumber || "?"}</span>
+      <strong>${escapeHtml(track.playerName || "Игрок")}</strong>
+      <small>${formatReactions(track.reactions)}</small>
+    </div>
+  `).join("");
+}
+
 function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) {
   state.currentPlayerId = playerId;
   state.round = round;
@@ -336,6 +453,10 @@ function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) 
     <small>ход ${turnNumber}/${turnsInRound}</small>
   `;
   clearPlayer();
+  state.reactionCounts = {};
+  state.selectedReaction = null;
+  state.currentTrackId = null;
+  renderReactions();
   updateTimer({ timeLeft: null, stage: "waiting", listenTime: state.settings.listenTime || DEFAULT_LISTEN_TIME });
   setStatus("gameStatus", isMine ? "Очередь ждет тебя: вставь ссылку на трек." : "Ждем, пока игрок поставит трек. Таймер пока не идет.");
   renderOrder();
@@ -390,22 +511,35 @@ function clearPlayer() {
       media.currentTime = 0;
     }
   });
+  applySiteVolume();
 }
 
 function loadTrack(track) {
   const url = typeof track === "string" ? track : track.url;
+  if (typeof track !== "string") {
+    const nextTrackId = track.id || state.currentTrackId;
+    if (nextTrackId !== state.currentTrackId) {
+      state.selectedReaction = null;
+    }
+    state.currentTrackId = nextTrackId;
+    state.reactionCounts = track.reactionCounts || {};
+    renderReactions();
+  }
   const embed = $("embed");
   const youtubeId = extractYoutubeId(url);
   const soundCloud = isSoundCloudUrl(url);
 
   embed.classList.remove("empty");
   if (youtubeId) {
-    embed.innerHTML = `<iframe src="https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0" title="YouTube player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    const origin = encodeURIComponent(window.location.origin);
+    embed.innerHTML = `<iframe id="trackFrame" src="https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&enablejsapi=1&origin=${origin}" title="YouTube player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   } else if (soundCloud) {
-    embed.innerHTML = `<iframe src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&visual=true" title="SoundCloud player" allow="autoplay"></iframe>`;
+    embed.innerHTML = `<iframe id="trackFrame" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&visual=true" title="SoundCloud player" allow="autoplay"></iframe>`;
   } else {
     embed.innerHTML = `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">Открыть трек</a>`;
   }
+
+  applySiteVolume();
 
   if (track.playerName) {
     setStatus("gameStatus", `${track.playerName} поставил трек — слушаем ${state.settings.listenTime || DEFAULT_LISTEN_TIME} секунд`);
@@ -463,6 +597,8 @@ function renderResults(data) {
       <strong>${data.votes[player.id] || 0}</strong>
     </div>
   `).join("");
+  state.trackHistory = data.trackHistory || state.trackHistory;
+  renderTrackHistory("resultTrackHistory", state.trackHistory);
   $("restartBtn").classList.toggle("hidden", state.lobby?.host !== socket.id);
 }
 
@@ -489,6 +625,8 @@ socket.on("lobbyUpdate", (lobby) => {
 });
 
 window.addEventListener("DOMContentLoaded", () => {
+  restoreSiteVolume();
+  renderReactions();
   const presetCode = new URL(window.location.href).searchParams.get("room");
   if (presetCode) {
     $("code").value = presetCode.slice(0, 5).toUpperCase();
@@ -506,6 +644,10 @@ socket.on("gameStarted", (data) => {
   state.settings = data.settings || state.settings;
   state.currentCode = data.code;
   state.votedTarget = null;
+  state.reactionCounts = {};
+  state.selectedReaction = null;
+  state.currentTrackId = null;
+  state.trackHistory = data.trackHistory || [];
   state.turnStage = "waiting";
   state.timeLeft = null;
 
@@ -519,6 +661,8 @@ socket.on("gameStarted", (data) => {
   showScreen("game");
   renderOrder();
   renderHostControls();
+  renderReactions();
+  renderTrackHistory();
 });
 
 socket.on("gameState", renderGameState);
@@ -526,12 +670,25 @@ socket.on("turn", updateTurn);
 socket.on("timer", updateTimer);
 socket.on("voteTimer", ({ timeLeft }) => updateVoteTimer(timeLeft));
 socket.on("newTrack", loadTrack);
+socket.on("reactionUpdate", ({ trackId, reactionCounts, trackHistory }) => {
+  if (trackId === state.currentTrackId) {
+    state.reactionCounts = reactionCounts || {};
+  }
+  state.trackHistory = trackHistory || state.trackHistory;
+  renderReactions();
+  renderTrackHistory();
+  renderTrackHistory("voteTrackHistory", state.trackHistory);
+});
 socket.on("roundStarted", ({ round, order }) => {
   state.round = round;
   state.order = order;
+  state.reactionCounts = {};
+  state.selectedReaction = null;
   setStatus("gameStatus", `Начался раунд ${round}`);
   renderOrder();
   renderHostControls();
+  renderReactions();
+  renderTrackHistory();
 });
 
 socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, votingTime }) => {
@@ -542,6 +699,7 @@ socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, 
   clearPlayer();
   showScreen("voting");
   renderVoteList(votes);
+  renderTrackHistory("voteTrackHistory", state.trackHistory);
   updateVoteTimer(votingTime > 0 ? votingTime : null);
   $("voteDescription").textContent = voteRound > 1
     ? "Ничья! Голосуем во втором туре только между кандидатами."
@@ -577,6 +735,9 @@ socket.on("kicked", ({ reason }) => {
   state.lobby = null;
   state.players = [];
   state.order = [];
+  state.trackHistory = [];
+  state.reactionCounts = {};
+  state.selectedReaction = null;
   clearPlayer();
   showScreen("menu");
   setStatus("menuError", reason || "Тебя удалили из комнаты", true);

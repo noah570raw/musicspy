@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getActiveTurnOrder, removePlayerFromLobby } = require("../server");
+const { ALLOWED_REACTIONS, countReactions, getActiveTurnOrder, removePlayerFromLobby } = require("../server");
 
 test("getActiveTurnOrder keeps the first-round order for later rounds", () => {
   const lobby = {
@@ -49,4 +49,42 @@ test("removePlayerFromLobby clears a kicked player from game state", () => {
   assert.deepEqual(lobby.voteCandidates, ["host", "next"]);
   assert.deepEqual(lobby.votes, {});
   assert.equal(lobby.currentTurnIndex, 1);
+});
+
+
+test("countReactions aggregates only allowed reactions", () => {
+  const [fire, heart, laugh] = ALLOWED_REACTIONS;
+
+  assert.deepEqual(countReactions({
+    player1: fire,
+    player2: heart,
+    player3: fire,
+    player4: "invalid",
+    player5: laugh
+  }), {
+    [fire]: 2,
+    [heart]: 1,
+    [laugh]: 1
+  });
+});
+
+test("removePlayerFromLobby removes current track reaction and syncs history", () => {
+  const [fire, heart] = ALLOWED_REACTIONS;
+  const lobby = {
+    players: [{ id: "host" }, { id: "kicked" }, { id: "next" }],
+    order: ["host", "kicked", "next"],
+    baseOrder: ["host", "kicked", "next"],
+    spies: [],
+    voteCandidates: ["host", "kicked", "next"],
+    votes: {},
+    currentTurnIndex: 1,
+    lastTrack: { id: "track-1" },
+    currentTrackReactions: { host: fire, kicked: heart },
+    trackHistory: [{ id: "track-1", reactions: {} }]
+  };
+
+  removePlayerFromLobby(lobby, "kicked");
+
+  assert.deepEqual(lobby.currentTrackReactions, { host: fire });
+  assert.deepEqual(lobby.trackHistory[0].reactions, { [fire]: 1 });
 });
