@@ -28,7 +28,6 @@ test("getActiveTurnOrder removes disconnected players without reshuffling surviv
 
   assert.deepEqual(getActiveTurnOrder(lobby), ["player-2", "player-1", "player-3"]);
 });
-
 test("removePlayerFromLobby clears a kicked player from game state", () => {
   const lobby = {
     players: [{ id: "host" }, { id: "kicked" }, { id: "next" }],

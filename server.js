@@ -80,6 +80,7 @@ function getActiveTurnOrder(lobby) {
   return lobby.baseOrder.filter((id) => activePlayerIds.has(id));
 }
 
+
 function removePlayerFromLobby(lobby, playerId) {
   const removedOrderIndex = lobby.order.indexOf(playerId);
 
@@ -104,6 +105,8 @@ function removePlayerFromLobby(lobby, playerId) {
 
   return removedOrderIndex;
 }
+
+
 
 function publicLobby(lobby) {
   return {
