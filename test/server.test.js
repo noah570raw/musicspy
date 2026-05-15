@@ -89,6 +89,19 @@ test("removePlayerFromLobby removes current track reaction and syncs history", (
   assert.deepEqual(lobby.trackHistory[0].reactions, { [fire]: 1 });
 });
 
+
+test("resolveDataDir prefers persistent deployment storage over repo data", () => {
+  const { resolveDataDir } = require("../server");
+  const fakeFs = {
+    existsSync(file) {
+      return file === "/var/data";
+    }
+  };
+
+  assert.equal(resolveDataDir({}, fakeFs), "/var/data/musicspy");
+  assert.equal(resolveDataDir({ MUSICSPY_DATA_DIR: "/tmp/custom-users" }, fakeFs), "/tmp/custom-users");
+});
+
 test("account helpers normalize usernames and verify password hashes", () => {
   const { normalizeUsername, hashPassword, verifyPassword } = require("../server");
   const user = hashPassword("secret-password");
