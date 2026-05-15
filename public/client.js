@@ -35,7 +35,8 @@ const state = {
   ready: false,
   inviteSecretsVisible: false,
   cinematicTimer: null,
-  cinematicIntervals: []
+  cinematicIntervals: [],
+  cinematicOnClose: null
 };
 
 const $ = (id) => document.getElementById(id);
@@ -360,38 +361,41 @@ function playMetronomeTick() {
   if (!audio || state.siteVolume === 0) return;
 
   const now = audio.context.currentTime;
-  const click = audio.context.createOscillator();
+  const bell = audio.context.createOscillator();
   const body = audio.context.createOscillator();
-  const clickEnvelope = audio.context.createGain();
+  const bellEnvelope = audio.context.createGain();
   const bodyEnvelope = audio.context.createGain();
   const filter = audio.context.createBiquadFilter();
+  const tickGain = audio.context.createGain();
 
-  click.type = "square";
-  click.frequency.setValueAtTime(2100, now);
-  click.frequency.exponentialRampToValueAtTime(950, now + 0.035);
-  body.type = "sine";
-  body.frequency.setValueAtTime(1800, now);
-  body.frequency.exponentialRampToValueAtTime(620, now + 0.055);
-  filter.type = "highpass";
-  filter.frequency.value = 520;
-  filter.Q.value = 0.7;
+  bell.type = "sine";
+  bell.frequency.setValueAtTime(880, now);
+  bell.frequency.exponentialRampToValueAtTime(660, now + 0.12);
+  body.type = "triangle";
+  body.frequency.setValueAtTime(440, now);
+  body.frequency.exponentialRampToValueAtTime(330, now + 0.16);
+  filter.type = "lowpass";
+  filter.frequency.value = 1250;
+  filter.Q.value = 0.45;
+  tickGain.gain.value = 0.78;
 
-  clickEnvelope.gain.setValueAtTime(0.0001, now);
-  clickEnvelope.gain.exponentialRampToValueAtTime(0.09, now + 0.004);
-  clickEnvelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+  bellEnvelope.gain.setValueAtTime(0.0001, now);
+  bellEnvelope.gain.exponentialRampToValueAtTime(0.028, now + 0.018);
+  bellEnvelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
   bodyEnvelope.gain.setValueAtTime(0.0001, now);
-  bodyEnvelope.gain.exponentialRampToValueAtTime(0.04, now + 0.006);
-  bodyEnvelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+  bodyEnvelope.gain.exponentialRampToValueAtTime(0.018, now + 0.024);
+  bodyEnvelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
 
-  click.connect(clickEnvelope);
+  bell.connect(bellEnvelope);
   body.connect(bodyEnvelope);
-  clickEnvelope.connect(filter);
+  bellEnvelope.connect(filter);
   bodyEnvelope.connect(filter);
-  filter.connect(audio.master);
-  click.start(now);
+  filter.connect(tickGain);
+  tickGain.connect(audio.fxGain);
+  bell.start(now);
   body.start(now);
-  click.stop(now + 0.08);
-  body.stop(now + 0.09);
+  bell.stop(now + 0.3);
+  body.stop(now + 0.32);
 }
 
 function playInviteStyleCue(destination, {
@@ -587,7 +591,7 @@ function clearCinematicTimers() {
   state.cinematicIntervals = [];
 }
 
-function setCinematicOverlay({ eyebrow = "секретное досье", title = "...", text = "", meta = "", mode = "role", closeLabel = "Понял, играем", closable = true } = {}) {
+function setCinematicOverlay({ eyebrow = "секретное досье", title = "...", text = "", meta = "", mode = "role", closeLabel = "Понял, играем", closable = true, onClose = null } = {}) {
   const overlay = $("cinematicOverlay");
   if (!overlay) return null;
 
@@ -599,6 +603,7 @@ function setCinematicOverlay({ eyebrow = "секретное досье", title 
   const close = $("cinematicClose");
   close.textContent = closeLabel;
   close.classList.toggle("hidden", !closable);
+  state.cinematicOnClose = typeof onClose === "function" ? onClose : null;
   overlay.classList.remove("hidden");
   document.body.classList.add("cinematic-open");
   return overlay;
@@ -608,11 +613,14 @@ function hideCinematicOverlay() {
   clearCinematicTimers();
   const overlay = $("cinematicOverlay");
   if (!overlay) return;
+  const onClose = state.cinematicOnClose;
+  state.cinematicOnClose = null;
   overlay.classList.add("closing");
   document.body.classList.remove("cinematic-open");
   state.cinematicTimer = window.setTimeout(() => {
     overlay.className = "cinematic-overlay hidden";
     state.cinematicTimer = null;
+    if (onClose) onClose();
   }, 280);
 }
 
@@ -667,20 +675,16 @@ function showSpyRevealCountdown(data, onDone) {
     meta.innerHTML = `<span>Шпион${data.spyNames?.length > 1 ? "ы" : ""}</span><strong>${escapeHtml(spyNames || "не найден")}</strong><small>Тема: «${escapeHtml(data.theme || "?")}»</small>`;
     $("cinematicTitle").textContent = data.civiliansWin ? "Мирные вычислили!" : "Шпион ускользнул!";
     $("cinematicText").textContent = data.civiliansWin ? "Красиво зачервили подозреваемых." : "Подозрения ушли не туда, шпион забирает победу.";
+    const close = $("cinematicClose");
+    close.textContent = "Показать результаты";
+    close.classList.remove("hidden");
+    state.cinematicOnClose = onDone;
     playSoundCue(data.civiliansWin ? "confirm" : "danger");
   };
 
   [1000, 2000, 3000].forEach((delay) => {
     state.cinematicIntervals.push(window.setTimeout(tick, delay));
   });
-
-  state.cinematicTimer = window.setTimeout(() => {
-    clearCinematicTimers();
-    const overlay = $("cinematicOverlay");
-    if (overlay) overlay.classList.add("hidden");
-    document.body.classList.remove("cinematic-open");
-    onDone();
-  }, 4700);
 }
 
 function addButtonRipple(button, event) {
