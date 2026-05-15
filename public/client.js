@@ -1038,11 +1038,15 @@ function sendReaction(reaction) {
 
 async function copyRoomCode() {
   if (!state.currentCode) return;
+  if (!state.inviteSecretsVisible) {
+    setStatus("lobbyStatus", "Сначала покажи код комнаты кнопкой с глазом", true);
+    return;
+  }
   try {
     await navigator.clipboard.writeText(state.currentCode);
     setStatus("lobbyStatus", "Код скопирован");
   } catch {
-    setStatus("lobbyStatus", `Код комнаты: ${state.currentCode}`);
+    setStatus("lobbyStatus", "Не удалось скопировать код автоматически", true);
   }
 }
 
@@ -1063,8 +1067,15 @@ function updateInviteSecretsVisibility() {
   const qrWrap = $("inviteQrWrap");
   const toggle = $("toggleInviteSecrets");
 
-  for (const el of [copyCode, qrWrap]) {
-    if (el) el.classList.toggle("secret-blurred", !isVisible);
+  if (copyCode) {
+    copyCode.textContent = isVisible ? (state.currentCode || "-----") : "•••••";
+    copyCode.classList.toggle("secret-blurred", !isVisible);
+    copyCode.setAttribute("aria-label", isVisible ? `Код комнаты ${state.currentCode || ""}` : "Код комнаты скрыт");
+  }
+
+  if (qrWrap) {
+    qrWrap.classList.toggle("secret-blurred", !isVisible);
+    qrWrap.setAttribute("aria-hidden", String(!isVisible));
   }
 
   if (toggle) {
@@ -1079,6 +1090,37 @@ function updateInviteSecretsVisibility() {
 function toggleInviteSecrets() {
   state.inviteSecretsVisible = !state.inviteSecretsVisible;
   updateInviteSecretsVisibility();
+}
+
+function resetRoomState() {
+  state.currentCode = "";
+  state.lobby = null;
+  state.players = [];
+  state.order = [];
+  state.hostId = null;
+  state.ready = false;
+  state.trackHistory = [];
+  state.reactionCounts = {};
+  state.selectedReaction = null;
+  state.inviteSecretsVisible = false;
+}
+
+function leaveLobby() {
+  if (!state.currentCode) {
+    resetRoomState();
+    showScreen("menu");
+    return;
+  }
+
+  setStatus("lobbyStatus", "Выходим из лобби...");
+  socket.emit("leaveLobby", { code: state.currentCode }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    resetRoomState();
+    clearPlayer();
+    hideCinematicOverlay();
+    showScreen("menu");
+    setStatus("menuError", "Ты вышел из лобби");
+  });
 }
 
 function readSettingsFromForm() {
@@ -1173,7 +1215,6 @@ function renderLobby(lobby) {
   state.currentCode = lobby.code || state.currentCode;
   state.hostId = lobby.host || state.hostId;
 
-  $("copyCode").textContent = state.currentCode || "-----";
   updateInviteSecretsVisibility();
   const inviteLink = buildInviteLink();
   const qr = $("inviteQr");
@@ -1634,13 +1675,7 @@ socket.on("hostAction", ({ message }) => {
 });
 
 socket.on("kicked", ({ reason }) => {
-  state.currentCode = "";
-  state.lobby = null;
-  state.players = [];
-  state.order = [];
-  state.trackHistory = [];
-  state.reactionCounts = {};
-  state.selectedReaction = null;
+  resetRoomState();
   clearPlayer();
   hideCinematicOverlay();
   showScreen("menu");

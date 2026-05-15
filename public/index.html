@@ -158,7 +158,10 @@
               <button class="secondary" data-sound="nickname" onclick="changeNickname()">Сменить ник</button>
             </div>
           </div>
-          <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
+          <div class="lobby-bottom-actions">
+            <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
+            <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
+          </div>
           <p id="lobbyStatus" class="status"></p>
         </section>
 
@@ -169,7 +172,7 @@
               <span id="settingsHint">меняет хост</span>
             </div>
 
-            <label>
+            <label class="setting-control">
               <span>Раунды</span>
               <select id="settingRounds" onchange="updateLobbySettings()">
                 <option value="2">2</option>
@@ -177,9 +180,10 @@
                 <option value="4">4</option>
                 <option value="5">5</option>
               </select>
+              <small>сколько кругов сыграет каждый</small>
             </label>
 
-            <label>
+            <label class="setting-control">
               <span>Время трека</span>
               <select id="settingListenTime" onchange="updateLobbySettings()">
                 <option value="15">15 секунд</option>
@@ -187,9 +191,10 @@
                 <option value="45">45 секунд</option>
                 <option value="60">60 секунд</option>
               </select>
+              <small>пауза на прослушивание</small>
             </label>
 
-            <label>
+            <label class="setting-control setting-control-wide">
               <span>Шпионы</span>
               <select id="settingSpyMode" onchange="updateLobbySettings()">
                 <option value="auto" selected>Авто по игрокам</option>
@@ -197,17 +202,19 @@
                 <option value="2">2 шпиона</option>
                 <option value="3">3 шпиона</option>
               </select>
+              <small>авто добавляет шпионов в больших компаниях</small>
             </label>
 
-            <label>
+            <label class="setting-control">
               <span>Голосование</span>
               <select id="settingAnonymousVoting" onchange="updateLobbySettings()">
                 <option value="false" selected>Открытое</option>
                 <option value="true">Анонимное</option>
               </select>
+              <small>виден ли счет во время выбора</small>
             </label>
 
-            <label>
+            <label class="setting-control">
               <span>Таймер голосования</span>
               <select id="settingVotingTime" onchange="updateLobbySettings()">
                 <option value="0">Без таймера</option>
@@ -215,14 +222,16 @@
                 <option value="60" selected>60 секунд</option>
                 <option value="90">90 секунд</option>
               </select>
+              <small>давление для финального решения</small>
             </label>
 
-            <label>
+            <label class="setting-control setting-control-wide">
               <span>Ничья</span>
               <select id="settingRunoffOnTie" onchange="updateLobbySettings()">
                 <option value="true" selected>Второй тур</option>
                 <option value="false">Без второго тура</option>
               </select>
+              <small>переголосование между лидерами</small>
             </label>
           </div>
         </aside>
