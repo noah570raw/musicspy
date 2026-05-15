@@ -37,8 +37,15 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
-const AMBIENT_PAD_NOTES = [130.81, 146.83, 174.61, 196, 220, 261.63, 293.66, 329.63];
-const AMBIENT_SHIMMER_NOTES = [523.25, 587.33, 659.25, 783.99, 880, 783.99, 659.25, 587.33];
+const AMBIENT_CHORDS = [
+  [174.61, 261.63, 392, 440],
+  [146.83, 220, 329.63, 392],
+  [130.81, 196, 293.66, 349.23],
+  [164.81, 246.94, 369.99, 493.88],
+  [196, 293.66, 440, 523.25],
+  [146.83, 246.94, 369.99, 440]
+];
+const AMBIENT_SHIMMER_NOTES = [587.33, 659.25, 783.99, 880, 987.77, 880, 783.99, 659.25];
 
 function getAudioContextConstructor() {
   return window.AudioContext || window.webkitAudioContext;
@@ -207,42 +214,126 @@ function playButtonSound(button) {
   }
 }
 
+function playSoftChord(notes, { start = 0, duration = 1.35, gain = 0.026, attack = 0.22, release = 0.82, destination = null } = {}) {
+  notes.forEach((note, index) => {
+    playTone({
+      frequency: note,
+      duration: duration + index * 0.08,
+      destination,
+      start: start + index * 0.055,
+      gain: gain * (index === 0 ? 1.12 : 0.82),
+      attack: attack + index * 0.035,
+      release,
+      detune: index % 2 === 0 ? -5 : 5
+    });
+  });
+}
+
+function playFilteredNoise({ start = 0, duration = 0.42, gain = 0.018, attack = 0.08, release = 0.36, frequency = 2600, type = "bandpass", destination = null } = {}) {
+  const audio = unlockAudio({ startMusic: false });
+  if (!audio) return;
+
+  const now = audio.context.currentTime + start;
+  const length = Math.max(1, Math.floor(audio.context.sampleRate * duration));
+  const buffer = audio.context.createBuffer(1, length, audio.context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i += 1) {
+    const fade = 1 - i / length;
+    data[i] = (Math.random() * 2 - 1) * fade * fade;
+  }
+
+  const source = audio.context.createBufferSource();
+  const filter = audio.context.createBiquadFilter();
+  const envelope = audio.context.createGain();
+  source.buffer = buffer;
+  filter.type = type;
+  filter.frequency.setValueAtTime(frequency, now);
+  filter.Q.value = 1.4;
+  envelope.gain.setValueAtTime(0.0001, now);
+  envelope.gain.exponentialRampToValueAtTime(gain, now + attack);
+  envelope.gain.setTargetAtTime(0.0001, now + duration, release / 3);
+
+  source.connect(filter);
+  filter.connect(envelope);
+  envelope.connect(destination || audio.fxGain);
+  source.start(now);
+  source.stop(now + duration + release);
+}
+
+function playMetronomeTick() {
+  const audio = unlockAudio({ startMusic: false });
+  if (!audio || state.siteVolume === 0) return;
+
+  const now = audio.context.currentTime;
+  const click = audio.context.createOscillator();
+  const body = audio.context.createOscillator();
+  const clickEnvelope = audio.context.createGain();
+  const bodyEnvelope = audio.context.createGain();
+  const filter = audio.context.createBiquadFilter();
+
+  click.type = "square";
+  click.frequency.setValueAtTime(2100, now);
+  click.frequency.exponentialRampToValueAtTime(950, now + 0.035);
+  body.type = "sine";
+  body.frequency.setValueAtTime(1800, now);
+  body.frequency.exponentialRampToValueAtTime(620, now + 0.055);
+  filter.type = "highpass";
+  filter.frequency.value = 520;
+  filter.Q.value = 0.7;
+
+  clickEnvelope.gain.setValueAtTime(0.0001, now);
+  clickEnvelope.gain.exponentialRampToValueAtTime(0.09, now + 0.004);
+  clickEnvelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+  bodyEnvelope.gain.setValueAtTime(0.0001, now);
+  bodyEnvelope.gain.exponentialRampToValueAtTime(0.04, now + 0.006);
+  bodyEnvelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+
+  click.connect(clickEnvelope);
+  body.connect(bodyEnvelope);
+  clickEnvelope.connect(filter);
+  bodyEnvelope.connect(filter);
+  filter.connect(audio.master);
+  click.start(now);
+  body.start(now);
+  click.stop(now + 0.08);
+  body.stop(now + 0.09);
+}
+
 function playSoundCue(name) {
   const audio = unlockAudio({ startMusic: false });
   if (!audio || state.siteVolume === 0) return;
 
   const cues = {
-    click: () => playTone({ frequency: 329.63, duration: 0.18, gain: 0.035, slideTo: 392, attack: 0.035, release: 0.24 }),
+    click: () => {
+      playSoftChord([196, 293.66, 440], { duration: 0.72, gain: 0.014, attack: 0.08, release: 0.58 });
+      playFilteredNoise({ start: 0.03, duration: 0.26, gain: 0.006, frequency: 3200 });
+    },
     confirm: () => {
-      playTone({ frequency: 261.63, duration: 0.34, gain: 0.046, attack: 0.06, release: 0.38 });
-      playTone({ frequency: 392, duration: 0.42, start: 0.08, gain: 0.038, attack: 0.08, release: 0.46, detune: -4 });
-      playTone({ frequency: 523.25, duration: 0.48, start: 0.18, gain: 0.026, attack: 0.12, release: 0.55, detune: 5 });
+      playSoftChord([174.61, 261.63, 392, 523.25], { duration: 1.05, gain: 0.02, attack: 0.14, release: 0.75 });
+      playTone({ frequency: 783.99, duration: 0.85, start: 0.22, gain: 0.011, attack: 0.2, release: 0.8, detune: 8 });
     },
     danger: () => {
-      playTone({ frequency: 146.83, duration: 0.7, gain: 0.045, slideTo: 110, attack: 0.12, release: 0.65, detune: -6 });
-      playTone({ frequency: 220, duration: 0.56, start: 0.09, gain: 0.026, slideTo: 174.61, attack: 0.15, release: 0.68 });
+      playSoftChord([130.81, 196, 293.66], { duration: 1.2, gain: 0.024, attack: 0.18, release: 0.95 });
+      playTone({ frequency: 220, duration: 1.15, start: 0.12, gain: 0.015, slideTo: 164.81, attack: 0.24, release: 1.0, detune: -8 });
     },
     reaction: () => {
-      playTone({ frequency: 659.25, duration: 0.24, gain: 0.026, attack: 0.045, release: 0.32, detune: -5 });
-      playTone({ frequency: 880, duration: 0.34, start: 0.12, gain: 0.02, attack: 0.08, release: 0.42, detune: 7 });
+      playSoftChord([329.63, 493.88, 659.25], { duration: 0.9, gain: 0.013, attack: 0.1, release: 0.7 });
+      playTone({ frequency: 987.77, duration: 0.75, start: 0.18, gain: 0.008, attack: 0.18, release: 0.72, detune: -6 });
     },
     vote: () => {
-      playTone({ frequency: 196, duration: 0.32, gain: 0.038, attack: 0.08, release: 0.4 });
-      playTone({ frequency: 293.66, duration: 0.4, start: 0.1, gain: 0.032, attack: 0.1, release: 0.44 });
+      playSoftChord([146.83, 220, 329.63, 440], { duration: 1.0, gain: 0.017, attack: 0.14, release: 0.86 });
     },
     screen: () => {
-      playTone({ frequency: 164.81, duration: 0.65, gain: 0.034, slideTo: 246.94, attack: 0.16, release: 0.7 });
-      playTone({ frequency: 493.88, duration: 0.6, start: 0.18, gain: 0.022, attack: 0.2, release: 0.72, detune: 4 });
+      playSoftChord([164.81, 246.94, 369.99, 493.88], { duration: 1.24, gain: 0.019, attack: 0.22, release: 0.98 });
+      playFilteredNoise({ start: 0.18, duration: 0.75, gain: 0.006, frequency: 1900, type: "lowpass" });
     },
     track: () => {
-      playTone({ frequency: 130.81, duration: 0.58, gain: 0.043, attack: 0.12, release: 0.7 });
-      playTone({ frequency: 261.63, duration: 0.72, start: 0.16, gain: 0.035, attack: 0.18, release: 0.78, detune: -3 });
-      playTone({ frequency: 523.25, duration: 0.86, start: 0.36, gain: 0.022, attack: 0.22, release: 0.86, detune: 6 });
+      playSoftChord([174.61, 261.63, 392, 440], { duration: 1.4, gain: 0.021, attack: 0.2, release: 1.0 });
+      playTone({ frequency: 880, duration: 1.1, start: 0.46, gain: 0.008, attack: 0.26, release: 0.95, detune: 5 });
     },
     reveal: () => {
-      playTone({ frequency: 174.61, duration: 1.1, gain: 0.04, slideTo: 349.23, attack: 0.24, release: 1.05, detune: -5 });
-      playTone({ frequency: 440, duration: 0.9, start: 0.28, gain: 0.026, attack: 0.28, release: 0.95, detune: 5 });
-      playTone({ frequency: 659.25, duration: 1.0, start: 0.52, gain: 0.02, attack: 0.34, release: 1.1 });
+      playSoftChord([196, 293.66, 440, 523.25], { duration: 1.65, gain: 0.021, attack: 0.3, release: 1.15 });
+      playTone({ frequency: 987.77, duration: 1.35, start: 0.55, gain: 0.008, attack: 0.38, release: 1.1, detune: -4 });
     }
   };
 
@@ -253,16 +344,15 @@ function scheduleAmbientMusic() {
   const audio = state.audio;
   if (!audio || !state.musicEnabled || state.siteVolume === 0) return;
 
-  const rootIndex = audio.step % AMBIENT_PAD_NOTES.length;
-  const root = AMBIENT_PAD_NOTES[rootIndex];
-  const fifth = AMBIENT_PAD_NOTES[(rootIndex + 3) % AMBIENT_PAD_NOTES.length];
+  const chord = AMBIENT_CHORDS[audio.step % AMBIENT_CHORDS.length];
   const shimmer = AMBIENT_SHIMMER_NOTES[(audio.step * 2) % AMBIENT_SHIMMER_NOTES.length];
 
-  playTone({ frequency: root, duration: 3.7, destination: audio.musicGain, gain: 0.038, attack: 0.85, release: 1.4, detune: -4 });
-  playTone({ frequency: fifth, duration: 3.3, destination: audio.musicGain, start: 0.45, gain: 0.03, attack: 0.95, release: 1.35, detune: 4 });
-  playTone({ frequency: shimmer, duration: 1.45, destination: audio.musicGain, start: 1.2, gain: 0.012, attack: 0.35, release: 1.1, detune: audio.step % 2 === 0 ? 7 : -7 });
+  playSoftChord(chord, { destination: audio.musicGain, duration: 4.8, gain: 0.026, attack: 1.15, release: 1.9 });
+  playTone({ frequency: chord[0] / 2, duration: 5.2, destination: audio.musicGain, start: 0.08, gain: 0.024, attack: 1.35, release: 2.1, detune: -7 });
+  playTone({ frequency: shimmer, duration: 2.2, destination: audio.musicGain, start: 1.45, gain: 0.007, attack: 0.62, release: 1.55, detune: audio.step % 2 === 0 ? 9 : -9 });
+  playFilteredNoise({ start: 0.35, duration: 2.7, gain: 0.004, frequency: 2100, type: "lowpass", destination: audio.musicGain });
 
-  audio.step = (audio.step + 1) % AMBIENT_PAD_NOTES.length;
+  audio.step = (audio.step + 1) % AMBIENT_CHORDS.length;
   audio.startedAt = audio.context.currentTime;
 }
 
@@ -807,8 +897,7 @@ function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_
   circle.classList.toggle("danger", !waiting && timeLeft <= 10);
 
   if (!waiting && timeLeft > 0 && timeLeft <= 5) {
-    $("tickSound").currentTime = 0;
-    $("tickSound").play().catch(() => {});
+    playMetronomeTick();
   }
 }
 
