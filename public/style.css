@@ -235,6 +235,11 @@ button:disabled {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.danger {
+  border: 1px solid rgba(255, 31, 45, 0.45);
+  background: rgba(255, 31, 45, 0.16);
+}
+
 .rules {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -574,6 +579,53 @@ button:disabled {
   border-color: rgba(229, 9, 20, 0.72);
   background: rgba(229, 9, 20, 0.13);
   box-shadow: 0 0 26px rgba(229, 9, 20, 0.18);
+}
+
+.host-controls {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.host-action-grid,
+.kick-list {
+  display: grid;
+  gap: 10px;
+}
+
+.host-action-grid button,
+.kick-row {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+}
+
+.host-control-title {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+}
+
+.kick-row strong {
+  color: var(--accent-2);
+  font-size: 0.72rem;
+  text-transform: uppercase;
 }
 
 .vote-row {
