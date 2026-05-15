@@ -32,6 +32,9 @@ const LEGACY_USERS_FILE = path.join(DEFAULT_DATA_DIR, "users.json");
 const PASSWORD_ITERATIONS = 120000;
 const AVATAR_MAX_BYTES = 64 * 1024;
 const SPY_GUESS_SECONDS = 60;
+const HOST_TIMER_STEP_SECONDS = 15;
+const HOST_MIN_TIMER_SECONDS = 5;
+const HOST_MAX_TIMER_SECONDS = 300;
 
 const lobbies = {};
 const timers = {};
@@ -463,6 +466,7 @@ function emitGameState(code) {
     players: lobby.players,
     submittedThisTurn: lobby.submittedThisTurn,
     turnStage: lobby.turnStage,
+    pausedTurnStage: lobby.pausedTurnStage || null,
     timeLeft: lobby.timeLeft,
     listenTime: lobby.settings.listenTime,
     settings: lobby.settings,
@@ -511,20 +515,16 @@ function clearTimer(code) {
   delete timers[code];
 }
 
-function startListeningTimer(code) {
-  const lobby = lobbies[code];
-  if (!lobby || lobby.phase !== "playing") return;
-
-  clearTimer(code);
-  lobby.turnStage = "listening";
-  lobby.timeLeft = lobby.settings.listenTime;
-  io.to(code).emit("timer", {
+function emitTurnTimer(lobby) {
+  io.to(lobby.code).emit("timer", {
     timeLeft: lobby.timeLeft,
     stage: lobby.turnStage,
     listenTime: lobby.settings.listenTime
   });
-  emitGameState(code);
+}
 
+function runListeningCountdown(code) {
+  clearTimer(code);
   timers[code] = setInterval(() => {
     const currentLobby = lobbies[code];
     if (!currentLobby || currentLobby.phase !== "playing" || currentLobby.turnStage !== "listening") {
@@ -533,16 +533,55 @@ function startListeningTimer(code) {
     }
 
     currentLobby.timeLeft -= 1;
-    io.to(code).emit("timer", {
-      timeLeft: currentLobby.timeLeft,
-      stage: currentLobby.turnStage,
-      listenTime: currentLobby.settings.listenTime
-    });
+    emitTurnTimer(currentLobby);
 
     if (currentLobby.timeLeft <= 0) {
       advanceTurn(code);
     }
   }, 1000);
+}
+
+function startListeningTimer(code) {
+  const lobby = lobbies[code];
+  if (!lobby || lobby.phase !== "playing") return;
+
+  lobby.turnStage = "listening";
+  lobby.pausedTurnStage = null;
+  lobby.timeLeft = lobby.settings.listenTime;
+  emitTurnTimer(lobby);
+  emitGameState(code);
+  runListeningCountdown(code);
+}
+
+function pauseTurnTimer(lobby) {
+  if (!lobby || lobby.phase !== "playing" || lobby.turnStage !== "listening") return false;
+  clearTimer(lobby.code);
+  lobby.pausedTurnStage = "listening";
+  lobby.turnStage = "paused";
+  emitTurnTimer(lobby);
+  emitGameState(lobby.code);
+  return true;
+}
+
+function resumeTurnTimer(lobby) {
+  if (!lobby || lobby.phase !== "playing" || lobby.turnStage !== "paused") return false;
+  if (!lobby.submittedThisTurn || !lobby.lastTrack || !Number.isFinite(lobby.timeLeft)) return false;
+  lobby.turnStage = lobby.pausedTurnStage || "listening";
+  lobby.pausedTurnStage = null;
+  emitTurnTimer(lobby);
+  emitGameState(lobby.code);
+  runListeningCountdown(lobby.code);
+  return true;
+}
+
+function adjustTurnTimer(lobby, deltaSeconds) {
+  if (!lobby || lobby.phase !== "playing" || !["listening", "paused"].includes(lobby.turnStage)) return null;
+  if (!Number.isFinite(lobby.timeLeft)) return null;
+  const nextTimeLeft = Math.max(HOST_MIN_TIMER_SECONDS, Math.min(HOST_MAX_TIMER_SECONDS, lobby.timeLeft + deltaSeconds));
+  lobby.timeLeft = nextTimeLeft;
+  emitTurnTimer(lobby);
+  emitGameState(lobby.code);
+  return nextTimeLeft;
 }
 
 function startVotingTimer(code) {
@@ -585,6 +624,7 @@ function startTurn(code) {
   lobby.submittedThisTurn = false;
   lobby.turnStage = "waiting";
   lobby.timeLeft = null;
+  lobby.pausedTurnStage = null;
   io.to(code).emit("turn", {
     playerId,
     name: player.name,
@@ -770,6 +810,7 @@ function resetLobbyToWaiting(lobby) {
   lobby.submittedThisTurn = false;
   lobby.timeLeft = null;
   lobby.turnStage = "waiting";
+  lobby.pausedTurnStage = null;
 }
 
 function createLobbyState(code, hostId, player) {
@@ -800,6 +841,7 @@ function createLobbyState(code, hostId, player) {
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
+    pausedTurnStage: null,
     settings: { ...DEFAULT_SETTINGS }
   };
 }
@@ -983,6 +1025,7 @@ io.on("connection", (socket) => {
     lobby.submittedThisTurn = false;
     lobby.turnStage = "waiting";
     lobby.timeLeft = null;
+    lobby.pausedTurnStage = null;
 
     for (const player of lobby.players) {
       io.to(player.id).emit("gameStarted", {
@@ -1019,6 +1062,49 @@ io.on("connection", (socket) => {
     });
     cb({ success: true });
     advanceTurn(lobby.code);
+  });
+
+
+  socket.on("hostTogglePause", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост может ставить ход на паузу" });
+    if (lobby.phase !== "playing") return cb({ error: "Пауза доступна только во время игры" });
+
+    const paused = lobby.turnStage !== "paused";
+    const ok = paused ? pauseTurnTimer(lobby) : resumeTurnTimer(lobby);
+    if (!ok) return cb({ error: paused ? "Поставить на паузу можно только во время прослушивания" : "Продолжить можно только после паузы" });
+
+    io.to(lobby.code).emit("hostAction", { message: paused ? "Хост поставил прослушивание на паузу" : "Хост продолжил прослушивание" });
+    cb({ success: true, paused, timeLeft: lobby.timeLeft });
+  });
+
+  socket.on("hostAdjustTimer", ({ code, delta }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост может менять таймер" });
+    const normalizedDelta = Math.sign(Number(delta) || 0) * HOST_TIMER_STEP_SECONDS;
+    if (!normalizedDelta) return cb({ error: "Выбери изменение таймера" });
+    const timeLeft = adjustTurnTimer(lobby, normalizedDelta);
+    if (timeLeft === null) return cb({ error: "Таймер можно менять только во время прослушивания" });
+
+    io.to(lobby.code).emit("hostAction", { message: `Хост ${normalizedDelta > 0 ? "добавил" : "убрал"} 15 секунд` });
+    cb({ success: true, timeLeft });
+  });
+
+  socket.on("hostSetTurn", ({ code, playerId }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост может передать ход" });
+    if (lobby.phase !== "playing") return cb({ error: "Ход можно передать только во время игры" });
+    const targetIndex = lobby.order.indexOf(playerId);
+    if (targetIndex === -1 || !lobby.players.some((player) => player.id === playerId)) return cb({ error: "Игрок не найден в очереди" });
+
+    const target = lobby.players.find((player) => player.id === playerId);
+    lobby.currentTurnIndex = targetIndex;
+    io.to(lobby.code).emit("hostAction", { message: `Хост передал ход: ${target?.name || "игрок"}` });
+    cb({ success: true });
+    startTurn(lobby.code);
   });
 
   socket.on("hostStartVoting", ({ code }, cb = () => {}) => {
@@ -1262,5 +1348,8 @@ module.exports = {
   normalizeUsername,
   hashPassword,
   verifyPassword,
-  resolveDataDir
+  resolveDataDir,
+  pauseTurnTimer,
+  resumeTurnTimer,
+  adjustTurnTimer
 };

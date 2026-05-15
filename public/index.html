@@ -273,12 +273,25 @@
             <strong>Пульт хоста</strong>
             <span>управление игрой</span>
           </div>
+          <div class="host-status-grid">
+            <div>
+              <span>Сейчас</span>
+              <strong id="hostNowPlaying">—</strong>
+            </div>
+            <div>
+              <span>Таймер</span>
+              <strong id="hostTimerState">—</strong>
+            </div>
+          </div>
           <div class="host-action-grid">
             <button class="secondary" onclick="hostSkipTurn()">Пропустить ход</button>
             <button class="secondary" onclick="hostStartVoting()">К голосованию</button>
+            <button id="hostPauseBtn" class="secondary" onclick="hostTogglePause()">Пауза</button>
+            <button class="secondary" onclick="hostAdjustTimer(-15)">−15 сек</button>
+            <button class="secondary" onclick="hostAdjustTimer(15)">+15 сек</button>
             <button class="danger" onclick="restartLobby()">Пересоздать лобби</button>
           </div>
-          <p class="host-control-title">Кикнуть игрока</p>
+          <p class="host-control-title">Игроки</p>
           <div id="hostKickList" class="kick-list"></div>
         </div>
       </aside>
