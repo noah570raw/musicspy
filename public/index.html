@@ -80,7 +80,11 @@
     </div>
   </div>
   <div class="account-corner" aria-label="Аккаунт игрока">
-    <div id="guestAccountNotice" class="guest-account-notice hidden">Вы играете как гость</div>
+    <div id="guestAccountNotice" class="guest-account-notice hidden">
+      <span>Вы играете как гость</span>
+      <button class="secondary" type="button" onclick="showAuthModal('register')">Зарегистрироваться</button>
+      <button class="ghost-button" type="button" onclick="showAuthModal('login')">Войти</button>
+    </div>
     <div id="profileView" class="profile-view hidden">
       <div id="profileAvatar" class="profile-avatar">?</div>
       <div class="profile-info">

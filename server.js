@@ -1043,6 +1043,7 @@ io.on("connection", (socket) => {
         order: lobby.order,
         players: lobby.players,
         spyCount: lobby.spies.length,
+        spyIds: lobby.spies.includes(player.id) ? lobby.spies : [],
         settings: lobby.settings,
         trackHistory: lobby.trackHistory
       });
