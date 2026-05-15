@@ -56,7 +56,7 @@ body {
 }
 
 body[data-screen="lobby"] {
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 
 body[data-screen="lobby"] .app-shell {
@@ -135,7 +135,7 @@ button {
 }
 
 .lobby-card {
-  width: min(100%, 1180px);
+  width: min(100%, 1320px);
   padding: clamp(10px, 1.25vw, 16px);
   border-radius: 24px;
   font-size: 0.92rem;
@@ -417,7 +417,7 @@ button:disabled {
 
 .lobby-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 0.82fr) minmax(290px, 1.08fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(220px, 0.82fr) minmax(220px, 0.9fr) minmax(290px, 1.08fr) minmax(300px, 1fr);
   gap: clamp(8px, 1vw, 11px);
   align-items: stretch;
   margin-top: clamp(8px, 1vh, 11px);
@@ -575,7 +575,7 @@ button:disabled {
 .game-layout {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(210px, 0.78fr) minmax(390px, 1.44fr) minmax(210px, 0.78fr);
+  grid-template-columns: minmax(220px, 0.82fr) minmax(360px, 1.42fr) minmax(220px, 0.82fr);
   gap: clamp(12px, 1.7vw, 18px);
   align-items: stretch;
 }
@@ -1829,13 +1829,13 @@ html[lang="ru"] .language-switcher span:first-child {
 
 @media (min-width: 921px) {
   body[data-screen="game"] .app-shell {
-    width: min(1400px, calc(100% - 24px));
+    width: min(1640px, calc(100% - 24px));
     min-height: 100dvh;
     padding: 10px 0;
   }
 
   body[data-screen="game"] .game-layout {
-    grid-template-columns: minmax(230px, 0.88fr) minmax(380px, 1.35fr) minmax(230px, 0.88fr);
+    grid-template-columns: minmax(240px, 0.82fr) minmax(460px, 1.55fr) minmax(240px, 0.82fr);
     gap: 12px;
   }
 
@@ -1856,6 +1856,10 @@ html[lang="ru"] .language-switcher span:first-child {
 
   body[data-screen="game"] .track-history {
     max-height: 24vh;
+  }
+
+  body[data-screen="game"] .game-chat-panel {
+    min-height: 220px;
   }
 
   body[data-screen="game"] .order-list {
@@ -2192,22 +2196,6 @@ body:not([data-screen="menu"]) .account-corner {
   display: none;
 }
 
-.detached-chat {
-  --detached-chat-gap: 12px;
-  z-index: 2;
-  width: 100%;
-  max-height: none;
-}
-
-.lobby-chat {
-  margin-top: clamp(8px, 1vh, 11px);
-}
-
-.game-chat {
-  grid-column: 1 / -1;
-  order: -1;
-}
-
 .game-chat-panel {
   display: grid;
   min-height: 0;
@@ -2300,71 +2288,35 @@ body:not([data-screen="menu"]) .account-corner {
   min-height: 1.1em;
 }
 
-.detached-chat .game-chat-panel {
-  height: min(520px, calc(100dvh - 24px));
-  margin-top: 0;
+.lobby-chat .game-chat-panel,
+.role-side-panel .game-chat-panel {
+  flex: 1;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
-  background: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)), var(--panel);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255,255,255,0.08);
-  backdrop-filter: blur(22px);
 }
 
-.detached-chat .chat-messages {
+.lobby-chat .game-chat-panel {
+  height: 100%;
+  margin-top: 0;
+}
+
+.lobby-chat .chat-messages,
+.role-side-panel .chat-messages {
   max-height: none;
 }
 
-@media (min-width: 1724px) {
-  body[data-screen="lobby"] .lobby-chat {
-    --detached-chat-top: clamp(88px, 12vh, 132px);
-    position: fixed;
-    left: 18px;
-    top: var(--detached-chat-top);
-    width: calc((100vw - 1180px) / 2 - 30px);
-    max-height: calc(100dvh - var(--detached-chat-top) - 18px);
-    margin-top: 0;
-    transform: none;
+@media (min-width: 921px) and (max-width: 1180px) {
+  body[data-screen="game"] .game-layout {
+    grid-template-columns: minmax(220px, 0.85fr) minmax(360px, 1.35fr) minmax(220px, 0.85fr);
   }
 
-  body[data-screen="lobby"] .lobby-chat .game-chat-panel {
-    height: calc(100dvh - var(--detached-chat-top) - 18px);
-  }
-}
-
-@media (min-width: 1864px) {
-  body[data-screen="game"] .game-chat {
-    --detached-chat-top: clamp(88px, 12vh, 132px);
-    position: fixed;
-    left: 18px;
-    top: var(--detached-chat-top);
-    width: calc((100vw - 1400px) / 2 - 30px);
-    max-height: calc(100dvh - var(--detached-chat-top) - 18px);
-    transform: none;
+  body[data-screen="game"] .player-card {
+    grid-column: auto;
   }
 
-  body[data-screen="game"] .game-chat .game-chat-panel {
-    height: calc(100dvh - var(--detached-chat-top) - 18px);
-  }
-}
-
-@media (max-width: 1723px) {
-  .detached-chat .game-chat-panel {
-    height: auto;
-    min-height: 260px;
-  }
-
-  .detached-chat .chat-messages {
-    max-height: min(220px, 28vh);
-  }
-}
-
-@media (min-width: 1724px) and (max-width: 1863px) {
-  body[data-screen="game"] .game-chat .game-chat-panel {
-    height: auto;
-    min-height: 260px;
-  }
-
-  body[data-screen="game"] .game-chat .chat-messages {
-    max-height: min(220px, 28vh);
+  body[data-screen="game"] .side-panel,
+  body[data-screen="game"] .player-card {
+    min-height: auto;
+    max-height: none;
   }
 }
 
