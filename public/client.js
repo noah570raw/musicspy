@@ -5,6 +5,8 @@ const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 const DEFAULT_SITE_VOLUME = 70;
 const BACKGROUND_MUSIC_VOLUME = 0.12;
 const AUTH_TOKEN_KEY = "musicspy_auth_token";
+const RECONNECT_STATE_KEY = "musicspy_reconnect_state";
+const RECONNECT_TOKEN_KEY = "musicspy_reconnect_token";
 const AVATAR_MAX_BYTES = 64 * 1024;
 const GAME_MODE_PRESETS = {
   classic: {
@@ -1380,6 +1382,50 @@ function clearStoredAuthToken() {
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
+function getReconnectToken() {
+  let token = window.localStorage.getItem(RECONNECT_TOKEN_KEY) || "";
+  if (!token) {
+    token = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+    window.localStorage.setItem(RECONNECT_TOKEN_KEY, token);
+  }
+  return token;
+}
+
+function storeReconnectState(code) {
+  if (!code) return;
+  window.localStorage.setItem(RECONNECT_STATE_KEY, JSON.stringify({
+    code,
+    reconnectToken: getReconnectToken(),
+    name: getName(),
+    savedAt: Date.now()
+  }));
+}
+
+function getStoredReconnectState() {
+  try {
+    return JSON.parse(window.localStorage.getItem(RECONNECT_STATE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function clearReconnectState() {
+  window.localStorage.removeItem(RECONNECT_STATE_KEY);
+}
+
+function attemptReconnectToGame() {
+  const saved = getStoredReconnectState();
+  if (!saved?.code || !saved?.reconnectToken || state.currentCode || !state.authResolved || !socket.connected) return;
+
+  socket.emit("reconnectGame", { code: saved.code, reconnectToken: saved.reconnectToken }, (res) => {
+    if (!res?.success) return;
+    state.currentCode = res.code || saved.code;
+    state.myId = res.playerId || socket.id;
+    storeReconnectState(state.currentCode);
+    setStatus("gameStatus", "Ты вернулся в игру");
+  });
+}
+
 function setAuthStatus(message = "", isError = false) {
   setStatus("authStatus", message, isError);
   setStatus("accountStatus", message, isError);
@@ -1449,6 +1495,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   renderProfileStats();
   syncNameInput();
   updateLobbyRenameControls();
+  attemptReconnectToGame();
   attemptAutoJoinFromInvite();
 }
 
@@ -1645,7 +1692,7 @@ function attemptAutoJoinFromInvite() {
   if ($("code")) $("code").value = code;
   setStatus("menuError", "Подключаем к лобби по ссылке-приглашению...");
 
-  socket.emit("joinLobby", { code, name: getName() }, (res) => {
+  socket.emit("joinLobby", { code, name: getName(), reconnectToken: getReconnectToken() }, (res) => {
     if (res?.error) {
       state.inviteAutoJoinAttempted = false;
       return setStatus("menuError", res.error, true);
@@ -1653,6 +1700,7 @@ function attemptAutoJoinFromInvite() {
 
     state.currentCode = res.code || code;
     state.myId = res.playerId || socket.id;
+    storeReconnectState(state.currentCode);
     showScreen("lobby");
     setStatus("lobbyStatus", "Ты вошел в лобби по ссылке-приглашению");
   });
@@ -1660,10 +1708,11 @@ function attemptAutoJoinFromInvite() {
 
 function createLobby() {
   setStatus("menuError");
-  socket.emit("createLobby", { name: getName() }, (res) => {
+  socket.emit("createLobby", { name: getName(), reconnectToken: getReconnectToken() }, (res) => {
     if (res.error) return setStatus("menuError", res.error, true);
     state.currentCode = res.code;
     state.myId = res.playerId || socket.id;
+    storeReconnectState(state.currentCode);
     $("code").value = res.code;
     showScreen("lobby");
   });
@@ -1674,10 +1723,11 @@ function joinLobby() {
   const code = getCode();
   if (!code) return setStatus("menuError", "Введи код комнаты", true);
 
-  socket.emit("joinLobby", { code, name: getName() }, (res) => {
+  socket.emit("joinLobby", { code, name: getName(), reconnectToken: getReconnectToken() }, (res) => {
     if (res.error) return setStatus("menuError", res.error, true);
     state.currentCode = res.code || code;
     state.myId = res.playerId || socket.id;
+    storeReconnectState(state.currentCode);
     showScreen("lobby");
   });
 }
@@ -1898,6 +1948,7 @@ function resetRoomState() {
   state.reactionCounts = {};
   state.selectedReaction = null;
   state.inviteSecretsVisible = false;
+  clearReconnectState();
 }
 
 function leaveLobby() {
@@ -2597,6 +2648,7 @@ socket.on("gameStarted", (data) => {
   state.totalRounds = data.totalRounds;
   state.settings = data.settings || state.settings;
   state.currentCode = data.code;
+  storeReconnectState(state.currentCode);
   state.votedTarget = null;
   state.voteCounts = {};
   state.reactionCounts = {};

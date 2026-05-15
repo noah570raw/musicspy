@@ -516,6 +516,12 @@ button:disabled {
   min-height: 1.1em;
 }
 
+.lobby-action-panel > button,
+.lobby-action-panel .rename-row,
+.lobby-action-panel .rename-row button {
+  width: 100%;
+}
+
 .action-rename-row {
   grid-template-columns: 1fr;
 }
@@ -2210,6 +2216,11 @@ body:not([data-screen="menu"]) .account-corner {
   display: none;
 }
 
+body[data-screen="lobby"] .language-switcher,
+body[data-screen="game"] .language-switcher {
+  display: none;
+}
+
 .game-chat-panel {
   display: grid;
   gap: 10px;
@@ -2389,9 +2400,20 @@ body:not([data-screen="menu"]) .account-corner {
   }
 
   .lobby-page-actions .lobby-action-panel {
-    align-content: start;
+    grid-template-rows: auto repeat(3, minmax(0, 1fr)) minmax(0, 1.35fr) auto;
+    align-content: stretch;
     height: 100%;
     max-height: none;
+  }
+
+  .lobby-page-actions .lobby-action-panel > button,
+  .lobby-page-actions .lobby-action-panel .rename-row {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .lobby-page-actions .action-rename-row {
+    align-content: stretch;
   }
 }
 

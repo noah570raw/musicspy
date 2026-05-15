@@ -38,6 +38,7 @@ const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
+const RECONNECT_GRACE_MS = 60_000;
 
 const lobbies = {};
 const timers = {};
@@ -204,7 +205,12 @@ function profileForSocket(socket) {
   return { user: null, guest: true };
 }
 
-function playerFromSocket(socket, rawName, lobby = null) {
+function normalizeReconnectToken(token) {
+  const value = String(token || "").trim();
+  return /^[a-f0-9-]{24,80}$/i.test(value) ? value : crypto.randomUUID();
+}
+
+function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
   const user = socket.data.user;
   const baseName = user ? (user.displayName || user.username) : (rawName || "Гость");
   const name = lobby ? makeUniqueName(lobby, baseName) : normalizeName(baseName);
@@ -214,8 +220,21 @@ function playerFromSocket(socket, rawName, lobby = null) {
     guest: !user,
     name,
     avatar: user?.avatar || "",
-    ready: false
+    ready: false,
+    reconnectToken: normalizeReconnectToken(reconnectToken),
+    disconnected: false,
+    disconnectedAt: null,
+    reconnectTimer: null
   };
+}
+
+function publicPlayer(player) {
+  const { reconnectToken, reconnectTimer, disconnectedAt, ...safePlayer } = player;
+  return safePlayer;
+}
+
+function publicPlayers(players = []) {
+  return players.map(publicPlayer);
 }
 
 function syncUserProfileInLobbies(user) {
@@ -435,7 +454,111 @@ function buildFinalBreakdown(lobby, suspected = [], finalVotes = {}) {
   };
 }
 
+function replacePlayerId(lobby, oldId, newId) {
+  const replace = (value) => value === oldId ? newId : value;
+  lobby.host = replace(lobby.host);
+  lobby.spy = replace(lobby.spy);
+  lobby.order = lobby.order.map(replace);
+  lobby.baseOrder = lobby.baseOrder.map(replace);
+  lobby.spies = lobby.spies.map(replace);
+  lobby.voteCandidates = lobby.voteCandidates.map(replace);
+  lobby.suspected = (lobby.suspected || []).map(replace);
+  lobby.spyGuessTargetId = replace(lobby.spyGuessTargetId);
+
+  const nextVotes = {};
+  for (const [voter, target] of Object.entries(lobby.votes || {})) {
+    nextVotes[replace(voter)] = replace(target);
+  }
+  lobby.votes = nextVotes;
+
+  const nextReactions = {};
+  for (const [playerId, reaction] of Object.entries(lobby.currentTrackReactions || {})) {
+    nextReactions[replace(playerId)] = reaction;
+  }
+  lobby.currentTrackReactions = nextReactions;
+
+  if (lobby.lastTrack?.playerId === oldId) lobby.lastTrack.playerId = newId;
+  for (const track of lobby.trackHistory || []) {
+    if (track.playerId === oldId) track.playerId = newId;
+  }
+  if (lobby.pendingSpyGuess?.playerId === oldId) lobby.pendingSpyGuess.playerId = newId;
+  if (lobby.spyGuess?.playerId === oldId) lobby.spyGuess.playerId = newId;
+}
+
+function clearPlayerReconnectTimer(player) {
+  if (player?.reconnectTimer) {
+    clearTimeout(player.reconnectTimer);
+    player.reconnectTimer = null;
+  }
+}
+
+function schedulePlayerDeparture(lobby, socket) {
+  const player = lobby.players.find((item) => item.id === socket.id);
+  if (!player) return;
+  player.disconnected = true;
+  player.disconnectedAt = Date.now();
+  clearPlayerReconnectTimer(player);
+  player.reconnectTimer = setTimeout(() => {
+    const currentLobby = lobbies[lobby.code];
+    const currentPlayer = currentLobby?.players.find((item) => item.id === socket.id && item.disconnected);
+    if (!currentLobby || !currentPlayer) return;
+    clearPlayerReconnectTimer(currentPlayer);
+    handlePlayerDeparture(currentLobby, socket, { leaveRoom: false });
+  }, RECONNECT_GRACE_MS);
+  emitLobbyUpdate(lobby.code);
+  emitGameState(lobby.code);
+}
+
+function sendPrivateGameStart(lobby, socket) {
+  const isSpy = lobby.spies.includes(socket.id);
+  socket.emit("gameStarted", {
+    code: lobby.code,
+    host: lobby.host,
+    role: isSpy ? "spy" : "civilian",
+    theme: isSpy ? null : lobby.theme,
+    round: lobby.round,
+    totalRounds: lobby.settings.rounds,
+    order: lobby.order,
+    players: publicPlayers(lobby.players),
+    spyCount: lobby.spies.length,
+    spyIds: isSpy ? lobby.spies : [],
+    settings: lobby.settings,
+    trackHistory: lobby.trackHistory,
+    chatMessages: lobby.chatMessages
+  });
+}
+
+function reconnectPlayerToGame(socket, { code, reconnectToken } = {}) {
+  const lobby = lobbies[normalizeCode(code)];
+  if (!lobby || !lobby.started) return { error: "Активная игра не найдена" };
+  const normalizedToken = normalizeReconnectToken(reconnectToken);
+  const player = lobby.players.find((item) => item.reconnectToken === normalizedToken);
+  if (!player) return { error: "Не удалось восстановить игрока" };
+
+  const oldId = player.id;
+  socket.join(lobby.code);
+  if (oldId !== socket.id) {
+    replacePlayerId(lobby, oldId, socket.id);
+    player.id = socket.id;
+  }
+  if (socket.data.user && player.accountId === socket.data.user.id) {
+    player.name = makeUniqueName(lobby, socket.data.user.displayName || socket.data.user.username, player.id);
+    player.avatar = socket.data.user.avatar || "";
+    player.guest = false;
+  }
+  player.disconnected = false;
+  player.disconnectedAt = null;
+  clearPlayerReconnectTimer(player);
+
+  sendPrivateGameStart(lobby, socket);
+  emitLobbyUpdate(lobby.code);
+  emitGameState(lobby.code);
+  return { success: true, code: lobby.code, playerId: socket.id, phase: lobby.phase };
+}
+
 function removePlayerFromLobby(lobby, playerId) {
+  const removedPlayer = lobby.players.find((player) => player.id === playerId);
+  clearPlayerReconnectTimer(removedPlayer);
   const removedOrderIndex = lobby.order.indexOf(playerId);
 
   lobby.players = lobby.players.filter((player) => player.id !== playerId);
@@ -468,7 +591,7 @@ function publicLobby(lobby) {
   return {
     code: lobby.code,
     host: lobby.host,
-    players: lobby.players,
+    players: publicPlayers(lobby.players),
     started: lobby.started,
     phase: lobby.phase,
     minPlayers: 3,
@@ -534,7 +657,7 @@ function emitGameState(code) {
     turnNumber: lobby.currentTurnIndex + 1,
     turnsInRound: lobby.order.length,
     lastTrack: lobby.lastTrack,
-    players: lobby.players,
+    players: publicPlayers(lobby.players),
     submittedThisTurn: lobby.submittedThisTurn,
     turnStage: lobby.turnStage,
     pausedTurnStage: lobby.pausedTurnStage || null,
@@ -748,7 +871,7 @@ function startVoting(code, candidates = null, voteRound = 1) {
   lobby.voteTimeLeft = lobby.settings.votingTime;
 
   io.to(code).emit("votingStarted", {
-    players: lobby.players,
+    players: publicPlayers(lobby.players),
     votes: lobby.settings.anonymousVoting ? {} : publicVotes(lobby),
     anonymous: lobby.settings.anonymousVoting,
     voteRound: lobby.voteRound,
@@ -1067,9 +1190,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("createLobby", ({ name }, cb = () => {}) => {
+  socket.on("createLobby", ({ name, reconnectToken }, cb = () => {}) => {
     const code = generateCode();
-    const player = playerFromSocket(socket, name);
+    const player = playerFromSocket(socket, name, null, reconnectToken);
 
     lobbies[code] = createLobbyState(code, socket.id, player);
 
@@ -1078,7 +1201,7 @@ io.on("connection", (socket) => {
     emitLobbyUpdate(code);
   });
 
-  socket.on("joinLobby", ({ code, name }, cb = () => {}) => {
+  socket.on("joinLobby", ({ code, name, reconnectToken }, cb = () => {}) => {
     const roomCode = normalizeCode(code);
     const lobby = lobbies[roomCode];
     if (!lobby) return cb({ error: "Комната не найдена" });
@@ -1088,7 +1211,7 @@ io.on("connection", (socket) => {
     }
 
     socket.join(roomCode);
-    lobby.players.push(playerFromSocket(socket, name, lobby));
+    lobby.players.push(playerFromSocket(socket, name, lobby, reconnectToken));
 
     cb({ success: true, code: roomCode, playerId: socket.id });
     emitLobbyUpdate(roomCode);
@@ -1183,21 +1306,7 @@ io.on("connection", (socket) => {
     lobby.chatMessages = [];
 
     for (const player of lobby.players) {
-      io.to(player.id).emit("gameStarted", {
-        code: lobby.code,
-        host: lobby.host,
-        role: lobby.spies.includes(player.id) ? "spy" : "civilian",
-        theme: lobby.spies.includes(player.id) ? null : lobby.theme,
-        round: lobby.round,
-        totalRounds: lobby.settings.rounds,
-        order: lobby.order,
-        players: lobby.players,
-        spyCount: lobby.spies.length,
-        spyIds: lobby.spies.includes(player.id) ? lobby.spies : [],
-        settings: lobby.settings,
-        trackHistory: lobby.trackHistory,
-        chatMessages: lobby.chatMessages
-      });
+      sendPrivateGameStart(lobby, io.sockets.sockets.get(player.id) || { id: player.id, emit: (event, payload) => io.to(player.id).emit(event, payload) });
     }
 
     cb({ success: true });
@@ -1503,13 +1612,21 @@ io.on("connection", (socket) => {
     emitLobbyUpdate(lobby.code);
   });
 
+  socket.on("reconnectGame", (payload = {}, cb = () => {}) => {
+    cb(reconnectPlayerToGame(socket, payload));
+  });
+
   socket.on("disconnect", () => {
     for (const code of Object.keys(lobbies)) {
       const lobby = lobbies[code];
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
       if (!wasInLobby) continue;
 
-      handlePlayerDeparture(lobby, socket, { leaveRoom: false });
+      if (lobby.started) {
+        schedulePlayerDeparture(lobby, socket);
+      } else {
+        handlePlayerDeparture(lobby, socket, { leaveRoom: false });
+      }
     }
   });
 });
