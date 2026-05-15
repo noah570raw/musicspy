@@ -1361,9 +1361,11 @@ function updateLobbyRenameControls() {
   const input = $("renameInput");
   const button = $("renameBtn");
   const row = input?.closest(".rename-row");
+  const panel = input?.closest(".lobby-action-panel");
   if (!input || !button) return;
   const canRenameInLobby = state.authGuest;
   row?.classList.toggle("hidden", !canRenameInLobby);
+  panel?.classList.toggle("no-guest-rename", !canRenameInLobby);
   input.disabled = !canRenameInLobby;
   button.disabled = !canRenameInLobby;
   input.placeholder = canRenameInLobby ? t("Новый ник") : t("Ник меняется в профиле");

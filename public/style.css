@@ -517,13 +517,14 @@ button:disabled {
 }
 
 .lobby-action-panel > button,
+.lobby-action-panel input,
 .lobby-action-panel .rename-row,
 .lobby-action-panel .rename-row button {
   width: 100%;
 }
 
 .action-rename-row {
-  grid-template-columns: 1fr;
+  display: contents;
 }
 
 .lobby-card button,
@@ -2400,20 +2401,22 @@ body[data-screen="game"] .language-switcher {
   }
 
   .lobby-page-actions .lobby-action-panel {
-    grid-template-rows: auto repeat(3, minmax(0, 1fr)) minmax(0, 1.35fr) auto;
+    grid-template-rows: auto repeat(5, minmax(0, 1fr)) auto;
     align-content: stretch;
     height: 100%;
     max-height: none;
   }
 
-  .lobby-page-actions .lobby-action-panel > button,
-  .lobby-page-actions .lobby-action-panel .rename-row {
-    min-height: 0;
-    height: 100%;
+  .lobby-page-actions .lobby-action-panel.no-guest-rename {
+    grid-template-rows: auto repeat(3, minmax(0, 1fr)) auto;
   }
 
-  .lobby-page-actions .action-rename-row {
-    align-content: stretch;
+  .lobby-page-actions .lobby-action-panel > button,
+  .lobby-page-actions .lobby-action-panel input,
+  .lobby-page-actions .lobby-action-panel .rename-row,
+  .lobby-page-actions .lobby-action-panel .rename-row button {
+    min-height: 0;
+    height: 100%;
   }
 }
 
