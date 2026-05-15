@@ -14,6 +14,19 @@
   <div class="orb orb-one"></div>
   <div class="orb orb-two"></div>
 
+  <div id="cinematicOverlay" class="cinematic-overlay hidden" aria-live="polite" aria-modal="true" role="dialog">
+    <div class="cinematic-card">
+      <div class="cinematic-vinyl" aria-hidden="true">
+        <span></span>
+      </div>
+      <p id="cinematicEyebrow" class="eyebrow">секретное досье</p>
+      <h2 id="cinematicTitle">...</h2>
+      <p id="cinematicText" class="cinematic-text"></p>
+      <div id="cinematicMeta" class="cinematic-meta"></div>
+      <button id="cinematicClose" class="secondary cinematic-close" type="button" onclick="hideCinematicOverlay()">Понял, играем</button>
+    </div>
+  </div>
+
   <div class="volume-control" aria-label="Громкость сайта">
     <span>Звук</span>
     <button id="musicToggle" class="sound-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить музыкальное сопровождение">🎧</button>

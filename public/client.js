@@ -33,7 +33,9 @@ const state = {
   musicEnabled: true,
   audio: null,
   ready: false,
-  inviteSecretsVisible: false
+  inviteSecretsVisible: false,
+  cinematicTimer: null,
+  cinematicIntervals: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -576,6 +578,125 @@ function setStatus(id, message = "", isError = false) {
   el.classList.toggle("error", isError);
 }
 
+function clearCinematicTimers() {
+  if (state.cinematicTimer) {
+    window.clearTimeout(state.cinematicTimer);
+    state.cinematicTimer = null;
+  }
+  state.cinematicIntervals.forEach((timer) => window.clearTimeout(timer));
+  state.cinematicIntervals = [];
+}
+
+function setCinematicOverlay({ eyebrow = "секретное досье", title = "...", text = "", meta = "", mode = "role", closeLabel = "Понял, играем", closable = true } = {}) {
+  const overlay = $("cinematicOverlay");
+  if (!overlay) return null;
+
+  overlay.className = `cinematic-overlay ${mode ? `cinematic-${mode}` : ""}`;
+  $("cinematicEyebrow").textContent = eyebrow;
+  $("cinematicTitle").textContent = title;
+  $("cinematicText").textContent = text;
+  $("cinematicMeta").innerHTML = meta;
+  const close = $("cinematicClose");
+  close.textContent = closeLabel;
+  close.classList.toggle("hidden", !closable);
+  overlay.classList.remove("hidden");
+  document.body.classList.add("cinematic-open");
+  return overlay;
+}
+
+function hideCinematicOverlay() {
+  clearCinematicTimers();
+  const overlay = $("cinematicOverlay");
+  if (!overlay) return;
+  overlay.classList.add("closing");
+  document.body.classList.remove("cinematic-open");
+  state.cinematicTimer = window.setTimeout(() => {
+    overlay.className = "cinematic-overlay hidden";
+    state.cinematicTimer = null;
+  }, 280);
+}
+
+function showRoleReveal(data) {
+  clearCinematicTimers();
+  const isSpy = data.role === "spy";
+  const spyCount = data.spyCount || 1;
+  const meta = isSpy
+    ? `<span>Тема скрыта</span><strong>${spyCount} ${spyCount === 1 ? "шпион" : "шпионов"}</strong>`
+    : `<span>Тема игры</span><strong>«${escapeHtml(data.theme)}»</strong>`;
+
+  setCinematicOverlay({
+    eyebrow: "игра началась",
+    title: isSpy ? "Ты шпион" : "Ты мирный",
+    text: isSpy
+      ? "Слушай чужие треки, лови вайб темы и не выдавай себя. Тема тебе не показывается."
+      : "Это твоя секретная тема. Ставь треки так, чтобы свои поняли, а шпион запутался.",
+    meta,
+    mode: isSpy ? "spy" : "civilian",
+    closeLabel: "Запомнил"
+  });
+
+  playSoundCue(isSpy ? "danger" : "reveal");
+  state.cinematicTimer = window.setTimeout(hideCinematicOverlay, 5200);
+}
+
+function showSpyRevealCountdown(data, onDone) {
+  clearCinematicTimers();
+  const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
+  let count = 3;
+
+  setCinematicOverlay({
+    eyebrow: "голоса приняты",
+    title: "Шпионом был...",
+    text: "Сейчас вскроем досье. Не моргай.",
+    meta: `<strong class="countdown-number">${count}</strong>`,
+    mode: "countdown",
+    closable: false
+  });
+  playSoundCue("reveal");
+
+  const tick = () => {
+    count -= 1;
+    const meta = $("cinematicMeta");
+    if (!meta) return;
+    if (count > 0) {
+      meta.innerHTML = `<strong class="countdown-number pulse-pop">${count}</strong>`;
+      playMetronomeTick();
+      return;
+    }
+
+    meta.innerHTML = `<span>Шпион${data.spyNames?.length > 1 ? "ы" : ""}</span><strong>${escapeHtml(spyNames || "не найден")}</strong><small>Тема: «${escapeHtml(data.theme || "?")}»</small>`;
+    $("cinematicTitle").textContent = data.civiliansWin ? "Мирные вычислили!" : "Шпион ускользнул!";
+    $("cinematicText").textContent = data.civiliansWin ? "Красиво зачервили подозреваемых." : "Подозрения ушли не туда, шпион забирает победу.";
+    playSoundCue(data.civiliansWin ? "confirm" : "danger");
+  };
+
+  [1000, 2000, 3000].forEach((delay) => {
+    state.cinematicIntervals.push(window.setTimeout(tick, delay));
+  });
+
+  state.cinematicTimer = window.setTimeout(() => {
+    clearCinematicTimers();
+    const overlay = $("cinematicOverlay");
+    if (overlay) overlay.classList.add("hidden");
+    document.body.classList.remove("cinematic-open");
+    onDone();
+  }, 4700);
+}
+
+function addButtonRipple(button, event) {
+  if (!button || button.disabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const rect = button.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const ripple = document.createElement("span");
+  ripple.className = "button-ripple";
+  ripple.style.width = `${size}px`;
+  ripple.style.height = `${size}px`;
+  ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
+  ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
+  button.appendChild(ripple);
+  window.setTimeout(() => ripple.remove(), 620);
+}
+
 function updateSiteVolume(value) {
   const volume = Math.max(0, Math.min(100, Number(value) || 0));
   state.siteVolume = volume;
@@ -872,6 +993,7 @@ function renderLobby(lobby) {
       ? "Ждем готовность всех игроков"
       : "Запустить игру";
   $("readyBtn").textContent = state.ready ? "Не готов" : "Я готов";
+  $("readyBtn").classList.toggle("ready", state.ready);
   $("readySummary").textContent = `Готовы: ${readyCount}/${state.players.length}`;
   applySettingsToForm(state.settings, isHost);
 
@@ -1195,6 +1317,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (!button) return;
+    addButtonRipple(button, event);
     unlockAudio();
     playButtonSound(button);
   });
@@ -1206,7 +1329,6 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 socket.on("gameStarted", (data) => {
-  playSoundCue("reveal");
   state.role = data.role;
   state.theme = data.theme;
   state.hostId = data.host || state.hostId;
@@ -1232,6 +1354,7 @@ socket.on("gameStarted", (data) => {
   $("embed").innerHTML = "<span>Здесь появится YouTube/SoundCloud плеер</span>";
 
   showScreen("game");
+  showRoleReveal(data);
   renderOrder();
   renderHostControls();
   renderReactions();
@@ -1294,11 +1417,12 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
-  playSoundCue("reveal");
   clearPlayer();
-  showScreen("results");
   updateVoteTimer(null);
-  renderResults(data);
+  showSpyRevealCountdown(data, () => {
+    showScreen("results");
+    renderResults(data);
+  });
 });
 
 socket.on("hostAction", ({ message }) => {
@@ -1314,12 +1438,14 @@ socket.on("kicked", ({ reason }) => {
   state.reactionCounts = {};
   state.selectedReaction = null;
   clearPlayer();
+  hideCinematicOverlay();
   showScreen("menu");
   setStatus("menuError", reason || "Тебя удалили из комнаты", true);
 });
 
 socket.on("gameCancelled", ({ reason }) => {
   clearPlayer();
+  hideCinematicOverlay();
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
