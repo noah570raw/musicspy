@@ -15,8 +15,9 @@
   <div class="orb orb-two"></div>
 
   <div class="volume-control" aria-label="Громкость сайта">
-    <span>Громкость</span>
-    <input id="siteVolume" type="range" min="0" max="100" value="70" oninput="updateSiteVolume(this.value)">
+    <span>Звук</span>
+    <button id="musicToggle" class="sound-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить музыкальное сопровождение">🎧</button>
+    <input id="siteVolume" type="range" min="0" max="100" value="70" oninput="updateSiteVolume(this.value)" aria-label="Громкость звуков и музыки">
     <strong id="siteVolumeValue">70%</strong>
   </div>
 
