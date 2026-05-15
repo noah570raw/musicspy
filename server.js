@@ -474,7 +474,8 @@ function emitGameState(code) {
     voteCandidates: lobby.voteCandidates,
     votes: lobby.settings.anonymousVoting && lobby.phase === "voting" ? {} : publicVotes(lobby),
     reactionCounts: countReactions(lobby.currentTrackReactions),
-    trackHistory: lobby.trackHistory || []
+    trackHistory: lobby.trackHistory || [],
+    pendingSpyGuess: lobby.pendingSpyGuess || null
   });
 }
 
@@ -726,6 +727,7 @@ function startSpyGuess(code, suspected, voteTotals) {
   lobby.suspected = suspected;
   lobby.finalVotes = voteTotals || publicVotes(lobby);
   lobby.spyGuess = null;
+  lobby.pendingSpyGuess = null;
   lobby.spyGuessTimeLeft = SPY_GUESS_SECONDS;
 
   io.to(code).emit("spyGuessStarted", {
@@ -806,6 +808,7 @@ function resetLobbyToWaiting(lobby) {
   lobby.suspected = [];
   lobby.finalVotes = null;
   lobby.spyGuess = null;
+  lobby.pendingSpyGuess = null;
   lobby.spyGuessTimeLeft = null;
   lobby.submittedThisTurn = false;
   lobby.timeLeft = null;
@@ -837,6 +840,7 @@ function createLobbyState(code, hostId, player) {
     suspected: [],
     finalVotes: null,
     spyGuess: null,
+    pendingSpyGuess: null,
     spyGuessTimeLeft: null,
     submittedThisTurn: false,
     timeLeft: null,
@@ -1021,6 +1025,7 @@ io.on("connection", (socket) => {
     lobby.suspected = [];
     lobby.finalVotes = null;
     lobby.spyGuess = null;
+    lobby.pendingSpyGuess = null;
     lobby.spyGuessTimeLeft = null;
     lobby.submittedThisTurn = false;
     lobby.turnStage = "waiting";
@@ -1092,6 +1097,25 @@ io.on("connection", (socket) => {
     cb({ success: true, timeLeft });
   });
 
+  socket.on("hostAdjustRounds", ({ code, delta }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост может менять раунды" });
+    if (lobby.phase !== "playing") return cb({ error: "Раунды можно менять только во время игры" });
+
+    const normalizedDelta = Math.sign(Number(delta) || 0);
+    if (!normalizedDelta) return cb({ error: "Выбери изменение раундов" });
+    const minRounds = Math.max(1, lobby.round || 1);
+    const nextRounds = Math.max(minRounds, Math.min(8, Number(lobby.settings.rounds || DEFAULT_SETTINGS.rounds) + normalizedDelta));
+    if (nextRounds === lobby.settings.rounds) return cb({ error: normalizedDelta < 0 ? "Нельзя убрать текущий или прошедший раунд" : "Достигнут максимум раундов" });
+
+    lobby.settings.rounds = nextRounds;
+    io.to(lobby.code).emit("hostAction", { message: `Хост изменил число раундов: ${nextRounds}` });
+    cb({ success: true, rounds: nextRounds });
+    emitLobbyUpdate(lobby.code);
+    emitGameState(lobby.code);
+  });
+
   socket.on("hostSetTurn", ({ code, playerId }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
@@ -1102,6 +1126,7 @@ io.on("connection", (socket) => {
 
     const target = lobby.players.find((player) => player.id === playerId);
     lobby.currentTurnIndex = targetIndex;
+    io.to(lobby.code).emit("stopTrack");
     io.to(lobby.code).emit("hostAction", { message: `Хост передал ход: ${target?.name || "игрок"}` });
     cb({ success: true });
     startTurn(lobby.code);
@@ -1113,6 +1138,7 @@ io.on("connection", (socket) => {
     if (lobby.host !== socket.id) return cb({ error: "Только хост может запустить голосование" });
     if (lobby.phase !== "playing") return cb({ error: "Голосование можно запустить только во время игры" });
 
+    io.to(lobby.code).emit("stopTrack");
     io.to(lobby.code).emit("hostAction", { message: "Хост досрочно запустил голосование" });
     cb({ success: true });
     startVoting(lobby.code);
@@ -1203,6 +1229,9 @@ io.on("connection", (socket) => {
     if (!ALLOWED_REACTIONS.includes(reaction)) {
       return cb({ error: "Такой реакции нет" });
     }
+    if (lobby.lastTrack.playerId === socket.id) {
+      return cb({ error: "Нельзя ставить реакции на свой трек" });
+    }
 
     if (lobby.currentTrackReactions[socket.id] === reaction) {
       delete lobby.currentTrackReactions[socket.id];
@@ -1252,12 +1281,30 @@ io.on("connection", (socket) => {
 
     const text = String(guess || "").trim().slice(0, 80);
     if (!text) return cb({ error: "Введи версию темы" });
+    if (lobby.pendingSpyGuess) return cb({ error: "Версия уже отправлена хосту" });
 
-    const correct = normalizeGuess(text) === normalizeGuess(lobby.theme);
+    clearTimer(lobby.code);
     const player = lobby.players.find((item) => item.id === socket.id);
-    const spyGuess = { text, correct, playerId: socket.id, playerName: player?.name || "Шпион", skipped: false };
+    const pendingGuess = { text, playerId: socket.id, playerName: player?.name || "Шпион", skipped: false };
+    lobby.pendingSpyGuess = pendingGuess;
+    lobby.spyGuess = pendingGuess;
+
+    io.to(lobby.host).emit("spyGuessSubmitted", { guess: pendingGuess, spies: lobby.spies });
+    io.to(lobby.code).emit("spyGuessPending", { guess: pendingGuess });
+    cb({ success: true });
+    emitGameState(lobby.code);
+  });
+
+  socket.on("hostResolveSpyGuess", ({ code, correct }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Только хост решает, угадал ли шпион" });
+    if (lobby.phase !== "spyGuess" || !lobby.pendingSpyGuess) return cb({ error: "Нет версии шпиона на рассмотрении" });
+
+    const spyGuess = { ...lobby.pendingSpyGuess, correct: Boolean(correct), skipped: false };
     lobby.spyGuess = spyGuess;
-    cb({ success: true, correct });
+    lobby.pendingSpyGuess = null;
+    cb({ success: true });
     finishGame(lobby.code, lobby.suspected || [], lobby.finalVotes || null, spyGuess);
   });
 
