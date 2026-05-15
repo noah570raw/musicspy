@@ -194,6 +194,18 @@ test("normalizeGuess makes theme guesses forgiving", () => {
   assert.equal(normalizeGuess("Ёдм электронщина"), "едм электронщина");
 });
 
+test("buildThemeGuessOptions returns one correct theme and three decoys", () => {
+  const { buildThemeGuessOptions } = require("../server");
+
+  const options = buildThemeGuessOptions("ру хайперпоп");
+
+  assert.equal(options.length, 4);
+  assert.equal(options.filter((option) => option.correct).length, 1);
+  assert(options.some((option) => option.text === "ру хайперпоп" && option.correct));
+  assert.equal(new Set(options.map((option) => option.id)).size, 4);
+  assert(options.every((option) => typeof option.text === "string" && option.text.length > 0));
+});
+
 test("buildFinalBreakdown exposes vote details and track highlights", () => {
   const { buildFinalBreakdown } = require("../server");
   const lobby = {
