@@ -87,6 +87,9 @@ const state = {
   authGuest: true,
   pendingAvatar: undefined,
   authFormMode: "choice",
+  authResolved: false,
+  pendingInviteCode: "",
+  inviteAutoJoinAttempted: false,
   volumePanelOpen: false,
   lang: "ru"
 };
@@ -248,10 +251,14 @@ const EN_TRANSLATIONS = {
   "Ход пропущен": "Turn skipped",
   "Запускаем голосование...": "Starting the vote...",
   "Игрок удален из комнаты": "Player removed from the room",
-  "Сначала покажи код комнаты кнопкой с глазом": "Show the room code with the eye button first",
+  "Скопировать код комнаты": "Copy room code",
+  "Скопировать код комнаты, не показывая его": "Copy room code without showing it",
+  "Скопировать скрытый код комнаты": "Copy hidden room code",
   "Код скопирован": "Code copied",
   "Не удалось скопировать код автоматически": "Could not copy the code automatically",
   "Ссылка-приглашение скопирована": "Invite link copied",
+  "Подключаем к лобби по ссылке-приглашению...": "Joining lobby from invite link...",
+  "Ты вошел в лобби по ссылке-приглашению": "You joined the lobby from the invite link",
   "Скрыть код комнаты и QR": "Hide room code and QR",
   "Выходим из лобби...": "Leaving lobby...",
   "Ты вышел из лобби": "You left the lobby",
@@ -1441,6 +1448,7 @@ function submitAuthForm() {
 function applyProfile(profileData = { user: null, guest: true }) {
   state.profile = profileData.user || null;
   state.authGuest = Boolean(profileData.guest);
+  state.authResolved = true;
   const user = state.profile;
   const displayName = user?.displayName || $("name").value.trim() || t("Гость");
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
@@ -1458,6 +1466,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   renderProfileStats();
   syncNameInput();
   updateLobbyRenameControls();
+  attemptAutoJoinFromInvite();
 }
 
 function updateAccountToggle(displayName, user) {
@@ -1629,15 +1638,41 @@ function playerAvatarMarkup(player, fallback = "?") {
   return `<span class="avatar">${escapeHtml(fallback)}</span>`;
 }
 
+function normalizeRoomCodeInput(value) {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+}
+
 function getCode() {
-  return $("code").value.trim().toUpperCase();
+  return normalizeRoomCodeInput($("code").value);
 }
 
 function buildInviteLink(code = state.currentCode) {
-  if (!code) return "";
-  const url = new URL(window.location.href);
-  url.searchParams.set("room", code);
+  const roomCode = normalizeRoomCodeInput(code);
+  if (!roomCode) return "";
+  const url = new URL(window.location.pathname || "/", window.location.origin);
+  url.searchParams.set("room", roomCode);
   return url.toString();
+}
+
+function attemptAutoJoinFromInvite() {
+  const code = normalizeRoomCodeInput(state.pendingInviteCode);
+  if (!code || state.inviteAutoJoinAttempted || state.currentCode || !state.authResolved || !socket.connected) return;
+
+  state.inviteAutoJoinAttempted = true;
+  if ($("code")) $("code").value = code;
+  setStatus("menuError", "Подключаем к лобби по ссылке-приглашению...");
+
+  socket.emit("joinLobby", { code, name: getName() }, (res) => {
+    if (res?.error) {
+      state.inviteAutoJoinAttempted = false;
+      return setStatus("menuError", res.error, true);
+    }
+
+    state.currentCode = res.code || code;
+    state.myId = res.playerId || socket.id;
+    showScreen("lobby");
+    setStatus("lobbyStatus", "Ты вошел в лобби по ссылке-приглашению");
+  });
 }
 
 function createLobby() {
@@ -1815,10 +1850,6 @@ function sendReaction(reaction) {
 
 async function copyRoomCode() {
   if (!state.currentCode) return;
-  if (!state.inviteSecretsVisible) {
-    setStatus("lobbyStatus", "Сначала покажи код комнаты кнопкой с глазом", true);
-    return;
-  }
   try {
     await navigator.clipboard.writeText(state.currentCode);
     setStatus("lobbyStatus", "Код скопирован");
@@ -1847,7 +1878,8 @@ function updateInviteSecretsVisibility() {
   if (copyCode) {
     copyCode.textContent = isVisible ? (state.currentCode || "-----") : "•••••";
     copyCode.classList.toggle("secret-blurred", !isVisible);
-    copyCode.setAttribute("aria-label", isVisible ? `Код комнаты ${state.currentCode || ""}` : "Код комнаты скрыт");
+    copyCode.setAttribute("aria-label", isVisible ? `Скопировать код комнаты ${state.currentCode || ""}` : "Скопировать скрытый код комнаты");
+    copyCode.title = isVisible ? "Скопировать код комнаты" : "Скопировать код комнаты, не показывая его";
   }
 
   if (qrWrap) {
@@ -2538,6 +2570,7 @@ function escapeAttribute(value) {
 
 socket.on("connect", () => {
   state.myId = socket.id;
+  state.authResolved = false;
   authenticateWithStoredToken();
 });
 
@@ -2561,10 +2594,12 @@ window.addEventListener("DOMContentLoaded", () => {
     unlockAudio();
     playButtonSound(button);
   });
-  const presetCode = new URL(window.location.href).searchParams.get("room");
+  const presetCode = normalizeRoomCodeInput(new URL(window.location.href).searchParams.get("room"));
   if (presetCode) {
-    $("code").value = presetCode.slice(0, 5).toUpperCase();
-    setStatus("menuError", "Код комнаты подставлен из ссылки. Введи ник и нажми «Войти по коду».");
+    state.pendingInviteCode = presetCode;
+    $("code").value = presetCode;
+    setStatus("menuError", "Подключаем к лобби по ссылке-приглашению...");
+    attemptAutoJoinFromInvite();
   }
 });
 
