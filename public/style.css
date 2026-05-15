@@ -858,6 +858,18 @@ select:disabled {
   text-transform: uppercase;
 }
 
+.sound-toggle {
+  display: inline-grid;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 1rem;
+}
+
 .volume-control input {
   width: 120px;
   padding: 0;

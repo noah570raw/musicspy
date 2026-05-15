@@ -27,11 +27,217 @@ const state = {
   currentTrackId: null,
   trackHistory: [],
   siteVolume: DEFAULT_SITE_VOLUME,
+  musicEnabled: true,
+  audio: null,
   ready: false,
   inviteSecretsVisible: false
 };
 
 const $ = (id) => document.getElementById(id);
+
+const SPY_GROOVE_NOTES = [196, 233.08, 261.63, 311.13, 349.23, 311.13, 261.63, 233.08];
+
+function getAudioContextConstructor() {
+  return window.AudioContext || window.webkitAudioContext;
+}
+
+function createAudioEngine() {
+  if (state.audio) return state.audio;
+  const AudioContextConstructor = getAudioContextConstructor();
+  if (!AudioContextConstructor) return null;
+
+  const context = new AudioContextConstructor();
+  const master = context.createGain();
+  const fxGain = context.createGain();
+  const musicGain = context.createGain();
+
+  master.gain.value = state.siteVolume / 100;
+  fxGain.gain.value = 0.32;
+  musicGain.gain.value = 0.16;
+  fxGain.connect(master);
+  musicGain.connect(master);
+  master.connect(context.destination);
+
+  state.audio = {
+    context,
+    master,
+    fxGain,
+    musicGain,
+    musicTimer: null,
+    step: 0,
+    startedAt: 0
+  };
+  return state.audio;
+}
+
+function setGainValue(gain, value, time = 0.025) {
+  if (!gain) return;
+  const context = state.audio?.context;
+  if (!context) {
+    gain.gain.value = value;
+    return;
+  }
+  gain.gain.cancelScheduledValues(context.currentTime);
+  gain.gain.setTargetAtTime(value, context.currentTime, time);
+}
+
+function syncAudioVolume() {
+  if (!state.audio) return;
+  setGainValue(state.audio.master, state.siteVolume / 100);
+  setGainValue(state.audio.musicGain, state.musicEnabled ? 0.16 : 0);
+}
+
+function unlockAudio({ startMusic = true } = {}) {
+  const audio = createAudioEngine();
+  if (!audio) return null;
+  if (audio.context.state === "suspended") {
+    audio.context.resume().catch(() => {});
+  }
+  syncAudioVolume();
+  if (startMusic && state.musicEnabled) startBackgroundMusic();
+  return audio;
+}
+
+function playTone({ frequency = 440, duration = 0.12, type = "sine", destination, start = 0, gain = 0.16, slideTo = null }) {
+  const audio = unlockAudio({ startMusic: false });
+  if (!audio) return;
+
+  const now = audio.context.currentTime + start;
+  const oscillator = audio.context.createOscillator();
+  const envelope = audio.context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  if (slideTo) oscillator.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+  envelope.gain.setValueAtTime(0.0001, now);
+  envelope.gain.exponentialRampToValueAtTime(gain, now + 0.018);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.connect(envelope);
+  envelope.connect(destination || audio.fxGain);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.03);
+}
+
+function playButtonSound(button) {
+  if (!button || button.disabled) return;
+  if (button.classList.contains("danger")) {
+    playSoundCue("danger");
+  } else if (button.classList.contains("primary")) {
+    playSoundCue("confirm");
+  } else if (button.classList.contains("reaction-btn")) {
+    playSoundCue("reaction");
+  } else if (button.classList.contains("vote-row")) {
+    playSoundCue("vote");
+  } else {
+    playSoundCue("click");
+  }
+}
+
+function playSoundCue(name) {
+  const audio = unlockAudio({ startMusic: false });
+  if (!audio || state.siteVolume === 0) return;
+
+  const cues = {
+    click: () => playTone({ frequency: 520, duration: 0.07, type: "triangle", gain: 0.08, slideTo: 740 }),
+    confirm: () => {
+      playTone({ frequency: 330, duration: 0.09, type: "sine", gain: 0.1 });
+      playTone({ frequency: 660, duration: 0.13, type: "triangle", start: 0.055, gain: 0.11 });
+    },
+    danger: () => playTone({ frequency: 220, duration: 0.18, type: "sawtooth", gain: 0.08, slideTo: 110 }),
+    reaction: () => {
+      playTone({ frequency: 880, duration: 0.05, type: "square", gain: 0.055 });
+      playTone({ frequency: 1174.66, duration: 0.06, type: "triangle", start: 0.035, gain: 0.06 });
+    },
+    vote: () => {
+      playTone({ frequency: 261.63, duration: 0.08, type: "triangle", gain: 0.08 });
+      playTone({ frequency: 392, duration: 0.11, type: "triangle", start: 0.06, gain: 0.08 });
+    },
+    screen: () => {
+      playTone({ frequency: 146.83, duration: 0.22, type: "sine", gain: 0.08, slideTo: 293.66 });
+      playTone({ frequency: 587.33, duration: 0.18, type: "triangle", start: 0.08, gain: 0.055 });
+    },
+    track: () => {
+      playTone({ frequency: 196, duration: 0.12, type: "sine", gain: 0.09 });
+      playTone({ frequency: 392, duration: 0.16, type: "triangle", start: 0.08, gain: 0.09 });
+      playTone({ frequency: 783.99, duration: 0.2, type: "triangle", start: 0.16, gain: 0.07 });
+    },
+    reveal: () => {
+      playTone({ frequency: 174.61, duration: 0.32, type: "sawtooth", gain: 0.045, slideTo: 698.46 });
+      playTone({ frequency: 523.25, duration: 0.22, type: "triangle", start: 0.12, gain: 0.07 });
+    }
+  };
+
+  cues[name]?.();
+}
+
+function scheduleSpyGroove() {
+  const audio = state.audio;
+  if (!audio || !state.musicEnabled || state.siteVolume === 0) return;
+
+  const baseTime = audio.context.currentTime + 0.02;
+  for (let i = 0; i < 4; i += 1) {
+    const index = (audio.step + i) % SPY_GROOVE_NOTES.length;
+    const note = SPY_GROOVE_NOTES[index];
+    playTone({ frequency: note / 2, duration: 0.26, type: "sine", destination: audio.musicGain, start: i * 0.32, gain: 0.07 });
+    if (i % 2 === 0) {
+      playTone({ frequency: note * 2, duration: 0.18, type: "triangle", destination: audio.musicGain, start: i * 0.32 + 0.08, gain: 0.035 });
+    }
+  }
+  audio.step = (audio.step + 4) % SPY_GROOVE_NOTES.length;
+  audio.startedAt = baseTime;
+}
+
+function startBackgroundMusic() {
+  const audio = createAudioEngine();
+  if (!audio || audio.musicTimer || !state.musicEnabled) return;
+  syncAudioVolume();
+  scheduleSpyGroove();
+  audio.musicTimer = window.setInterval(scheduleSpyGroove, 1280);
+}
+
+function stopBackgroundMusic() {
+  if (!state.audio?.musicTimer) return;
+  window.clearInterval(state.audio.musicTimer);
+  state.audio.musicTimer = null;
+}
+
+function updateMusicToggle() {
+  const toggle = $("musicToggle");
+  if (!toggle) return;
+  toggle.textContent = state.musicEnabled ? "🎧" : "🔇";
+  toggle.setAttribute("aria-pressed", String(state.musicEnabled));
+  toggle.title = state.musicEnabled ? "Музыкальное сопровождение включено" : "Музыкальное сопровождение выключено";
+}
+
+function toggleMusic() {
+  state.musicEnabled = !state.musicEnabled;
+  try {
+    window.localStorage.setItem("musicSpyMusicEnabled", String(state.musicEnabled));
+  } catch {
+    // Ignore storage errors in private or restricted browser modes.
+  }
+
+  unlockAudio({ startMusic: state.musicEnabled });
+  if (state.musicEnabled) {
+    startBackgroundMusic();
+    playSoundCue("confirm");
+  } else {
+    stopBackgroundMusic();
+    playSoundCue("click");
+  }
+  syncAudioVolume();
+  updateMusicToggle();
+}
+
+function restoreMusicPreference() {
+  try {
+    const storedMusic = window.localStorage.getItem("musicSpyMusicEnabled");
+    state.musicEnabled = storedMusic === null ? true : storedMusic === "true";
+  } catch {
+    state.musicEnabled = true;
+  }
+  updateMusicToggle();
+  syncAudioVolume();
+}
 
 function showScreen(id) {
   if (id === "lobby" && state.phase !== "lobby") {
@@ -41,8 +247,10 @@ function showScreen(id) {
   for (const screen of document.querySelectorAll(".screen")) {
     screen.classList.toggle("hidden", screen.id !== id);
   }
+  const previousPhase = state.phase;
   state.phase = id;
   updateInviteSecretsVisibility();
+  if (previousPhase !== id) playSoundCue("screen");
 }
 
 function setStatus(id, message = "", isError = false) {
@@ -65,6 +273,7 @@ function updateSiteVolume(value) {
     // Ignore storage errors in private or restricted browser modes.
   }
   applySiteVolume();
+  syncAudioVolume();
 }
 
 function applySiteVolume() {
@@ -89,6 +298,7 @@ function applySiteVolume() {
 }
 
 function restoreSiteVolume() {
+  restoreMusicPreference();
   let savedVolume = DEFAULT_SITE_VOLUME;
   try {
     const storedVolume = window.localStorage.getItem("musicSpyVolume");
@@ -301,6 +511,7 @@ function sendTrack() {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     $("url").value = "";
     setStatus("gameStatus", `Трек принят. Слушаем ${state.settings.listenTime || DEFAULT_LISTEN_TIME} секунд...`);
+    playSoundCue("track");
     state.turnStage = "listening";
     updateSendButton(true);
   });
@@ -310,6 +521,7 @@ function vote(target) {
   socket.emit("vote", { code: state.currentCode, target }, (res) => {
     if (res?.error) return setStatus("voteStatus", res.error, true);
     state.votedTarget = target;
+    playSoundCue("vote");
     setStatus("voteStatus", "Голос учтен");
   });
 }
@@ -658,6 +870,12 @@ socket.on("lobbyUpdate", (lobby) => {
 window.addEventListener("DOMContentLoaded", () => {
   restoreSiteVolume();
   renderReactions();
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    unlockAudio();
+    playButtonSound(button);
+  });
   const presetCode = new URL(window.location.href).searchParams.get("room");
   if (presetCode) {
     $("code").value = presetCode.slice(0, 5).toUpperCase();
@@ -666,6 +884,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 socket.on("gameStarted", (data) => {
+  playSoundCue("reveal");
   state.role = data.role;
   state.theme = data.theme;
   state.hostId = data.host || state.hostId;
@@ -723,6 +942,7 @@ socket.on("roundStarted", ({ round, order }) => {
 });
 
 socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, votingTime }) => {
+  playSoundCue("reveal");
   state.players = players;
   state.votedTarget = null;
   state.anonymousVoting = Boolean(anonymous);
@@ -751,6 +971,7 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
+  playSoundCue("reveal");
   clearPlayer();
   showScreen("results");
   updateVoteTimer(null);
