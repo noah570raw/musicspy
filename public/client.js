@@ -1066,11 +1066,11 @@ function setCinematicOverlay({ eyebrow = "секретное досье", title 
   return overlay;
 }
 
-function hideCinematicOverlay() {
+function hideCinematicOverlay({ runOnClose = true } = {}) {
   clearCinematicTimers();
   const overlay = $("cinematicOverlay");
   if (!overlay) return;
-  const onClose = state.cinematicOnClose;
+  const onClose = runOnClose ? state.cinematicOnClose : null;
   state.cinematicOnClose = null;
   overlay.classList.add("closing");
   document.body.classList.remove("cinematic-open");
@@ -1373,7 +1373,7 @@ function continueAsGuest() {
   socket.emit("auth:guest", { name: getName() }, (res) => {
     applyProfile(res?.profile || { user: null, guest: true });
     hideAuthModal();
-    setAuthStatus("Ок, играем без регистрации");
+    setAuthStatus();
   });
 }
 
@@ -1552,7 +1552,7 @@ function closeSpyReviewModal() {
 }
 
 function closeTransientOverlays() {
-  hideCinematicOverlay();
+  hideCinematicOverlay({ runOnClose: false });
   closeHostPlayersModal();
   closeSpyReviewModal();
   const authModal = $("authModal");
@@ -1687,7 +1687,7 @@ function leaveLobby() {
     if (res?.error) return setStatus("lobbyStatus", res.error, true);
     resetRoomState();
     clearPlayer();
-    hideCinematicOverlay();
+    hideCinematicOverlay({ runOnClose: false });
     showScreen("menu");
     setStatus("menuError", "Ты вышел из лобби");
   });
@@ -2423,7 +2423,7 @@ socket.on("hostAction", ({ message }) => {
 socket.on("kicked", ({ reason }) => {
   resetRoomState();
   clearPlayer();
-  hideCinematicOverlay();
+  hideCinematicOverlay({ runOnClose: false });
   showScreen("menu");
   setStatus("menuError", reason || "Тебя удалили из комнаты", true);
 });
