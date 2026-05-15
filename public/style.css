@@ -1574,3 +1574,62 @@ select:focus-visible {
     max-width: 100%;
   }
 }
+
+.language-switcher {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(12, 13, 20, 0.78);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(18px);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.language-toggle {
+  position: relative;
+  width: 3.1rem;
+  height: 1.55rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(229, 9, 20, 0.95), rgba(255, 179, 71, 0.8));
+  cursor: pointer;
+}
+
+.language-toggle-knob {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.22rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease;
+}
+
+html[lang="en"] .language-toggle-knob {
+  transform: translateX(1.48rem);
+}
+
+html[lang="en"] .language-switcher span:last-child,
+html[lang="ru"] .language-switcher span:first-child {
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .language-switcher {
+    right: 12px;
+    bottom: 12px;
+  }
+}
