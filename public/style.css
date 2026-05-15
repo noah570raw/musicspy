@@ -2204,6 +2204,7 @@ body:not([data-screen="menu"]) .account-corner {
 
 .chat-messages {
   display: grid;
+  justify-items: start;
   gap: 8px;
   max-height: min(220px, 28vh);
   overflow: auto;
@@ -2217,6 +2218,10 @@ body:not([data-screen="menu"]) .account-corner {
 
 .chat-message {
   display: grid;
+  justify-self: start;
+  width: fit-content;
+  min-width: min(160px, 100%);
+  max-width: 92%;
   gap: 5px;
   padding: 10px;
   border: 1px solid var(--line);
@@ -2225,6 +2230,7 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 .chat-message.mine {
+  justify-self: end;
   border-color: rgba(var(--accent-rgb), 0.48);
   background: rgba(var(--accent-rgb), 0.12);
 }
@@ -2258,6 +2264,7 @@ body:not([data-screen="menu"]) .account-corner {
   font-size: 0.9rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .chat-form {
