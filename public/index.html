@@ -177,6 +177,21 @@
         <span id="hostBadge" class="badge">ожидание</span>
       </div>
 
+      <aside class="detached-chat lobby-chat" aria-label="Чат лобби">
+        <div class="game-chat-panel">
+          <div class="panel-title">
+            <strong>Чат лобби</strong>
+            <span>общайся без подсказок</span>
+          </div>
+          <div id="lobbyChatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
+          <div class="chat-form">
+            <input id="lobbyChatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
+            <button id="lobbyChatSendBtn" class="secondary" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение">Отправить</button>
+          </div>
+          <p id="lobbyChatStatus" data-chat-status class="status"></p>
+        </div>
+      </aside>
+
       <div class="lobby-grid">
         <aside class="lobby-column lobby-invite">
           <div class="panel-title">
@@ -188,21 +203,6 @@
             <div id="inviteQrWrap" class="qr-wrap secret-value">
               <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
             </div>
-          </div>
-        </aside>
-
-        <aside class="lobby-column lobby-chat" aria-label="Чат лобби">
-          <div class="game-chat-panel">
-            <div class="panel-title">
-              <strong>Чат лобби</strong>
-              <span>общайся без подсказок</span>
-            </div>
-            <div id="lobbyChatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
-            <div class="chat-form">
-              <input id="lobbyChatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
-              <button id="lobbyChatSendBtn" class="secondary" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение">Отправить</button>
-            </div>
-            <p id="lobbyChatStatus" data-chat-status class="status"></p>
           </div>
         </aside>
 
@@ -311,16 +311,7 @@
     </section>
 
     <section id="game" class="screen game-layout hidden">
-      <aside class="card side-panel role-side-panel">
-        <p class="eyebrow">роль и тема</p>
-        <h2 id="roleTitle">...</h2>
-        <p id="theme" class="theme-text"></p>
-        <div class="round-meter">
-          <span id="roundInfo">Раунд 1/3</span>
-          <div><i id="roundBar"></i></div>
-        </div>
-        <div id="turn" class="turn-card">Ожидаем ход...</div>
-
+      <aside class="detached-chat game-chat" aria-label="Чат игры">
         <div class="game-chat-panel">
           <div class="panel-title">
             <strong>Чат игры</strong>
@@ -333,6 +324,17 @@
           </div>
           <p id="chatStatus" data-chat-status class="status"></p>
         </div>
+      </aside>
+
+      <aside class="card side-panel role-side-panel">
+        <p class="eyebrow">роль и тема</p>
+        <h2 id="roleTitle">...</h2>
+        <p id="theme" class="theme-text"></p>
+        <div class="round-meter">
+          <span id="roundInfo">Раунд 1/3</span>
+          <div><i id="roundBar"></i></div>
+        </div>
+        <div id="turn" class="turn-card">Ожидаем ход...</div>
 
         <div id="hostControls" class="host-controls hidden" aria-label="Пульт хоста">
           <div class="panel-title">
