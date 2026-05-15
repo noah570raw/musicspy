@@ -1,5 +1,8 @@
 const express = require("express");
+const crypto = require("crypto");
+const fs = require("fs");
 const http = require("http");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -8,10 +11,133 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+const DATA_DIR = path.join(__dirname, "data");
+const USERS_FILE = path.join(DATA_DIR, "users.json");
+const PASSWORD_ITERATIONS = 120000;
+const AVATAR_MAX_BYTES = 64 * 1024;
+
 const lobbies = {};
 const timers = {};
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
+
+
+function ensureDataDir() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function readUsersStore() {
+  try {
+    ensureDataDir();
+    if (!fs.existsSync(USERS_FILE)) return { users: [] };
+    const parsed = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+    return { users: Array.isArray(parsed.users) ? parsed.users : [] };
+  } catch (error) {
+    console.error("Failed to read users store", error);
+    return { users: [] };
+  }
+}
+
+let usersStore = readUsersStore();
+
+function saveUsersStore() {
+  ensureDataDir();
+  fs.writeFileSync(USERS_FILE, JSON.stringify(usersStore, null, 2));
+}
+
+function normalizeUsername(username) {
+  return String(username || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+}
+
+function validatePassword(password) {
+  return typeof password === "string" && password.length >= 6 && password.length <= 72;
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const hash = crypto.pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, 32, "sha256").toString("hex");
+  return { salt, hash };
+}
+
+function verifyPassword(password, user) {
+  if (!user?.passwordHash || !user?.salt) return false;
+  const { hash } = hashPassword(password, user.salt);
+  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(user.passwordHash, "hex"));
+}
+
+function createSession(user) {
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  user.sessions = [
+    { tokenHash, createdAt: new Date().toISOString() },
+    ...(user.sessions || []).slice(0, 4)
+  ];
+  user.updatedAt = new Date().toISOString();
+  saveUsersStore();
+  return token;
+}
+
+function findUserByToken(token) {
+  if (!token) return null;
+  const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+  return usersStore.users.find((user) => (user.sessions || []).some((session) => session.tokenHash === tokenHash)) || null;
+}
+
+function publicUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    avatar: user.avatar || "",
+    createdAt: user.createdAt
+  };
+}
+
+function normalizeAvatar(avatar) {
+  const value = String(avatar || "");
+  if (!value) return "";
+  if (!/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\r\n]+$/i.test(value)) {
+    throw new Error("Поддерживаются только PNG, JPG, WEBP или GIF");
+  }
+  const size = Buffer.byteLength(value, "utf8");
+  if (size > AVATAR_MAX_BYTES) {
+    throw new Error("Аватарка слишком большая. Максимум 64 КБ после сжатия");
+  }
+  return value;
+}
+
+function profileForSocket(socket) {
+  const user = socket.data.user;
+  if (user) return { user: publicUser(user), guest: false };
+  return { user: null, guest: true };
+}
+
+function playerFromSocket(socket, rawName, lobby = null) {
+  const user = socket.data.user;
+  const baseName = rawName || user?.displayName || user?.username || "Гость";
+  const name = lobby ? makeUniqueName(lobby, baseName) : normalizeName(baseName);
+  return {
+    id: socket.id,
+    accountId: user?.id || null,
+    guest: !user,
+    name,
+    avatar: user?.avatar || "",
+    ready: false
+  };
+}
+
+function syncUserProfileInLobbies(user) {
+  for (const lobby of Object.values(lobbies)) {
+    let changed = false;
+    for (const player of lobby.players) {
+      if (player.accountId === user.id) {
+        player.avatar = user.avatar || "";
+        changed = true;
+      }
+    }
+    if (changed) emitLobbyUpdate(lobby.code);
+  }
+}
 
 const DEFAULT_SETTINGS = {
   rounds: 3,
@@ -449,9 +575,79 @@ function createLobbyState(code, hostId, player) {
 }
 
 io.on("connection", (socket) => {
+  socket.data.user = null;
+
+  socket.on("auth:session", ({ token } = {}, cb = () => {}) => {
+    const user = findUserByToken(token);
+    if (!user) return cb({ error: "Сессия не найдена" });
+    socket.data.user = user;
+    cb({ success: true, profile: profileForSocket(socket) });
+  });
+
+  socket.on("auth:guest", ({ name } = {}, cb = () => {}) => {
+    socket.data.user = null;
+    cb({ success: true, profile: profileForSocket(socket), name: normalizeName(name || "Гость") });
+  });
+
+  socket.on("auth:register", ({ username, password, displayName } = {}, cb = () => {}) => {
+    const normalizedUsername = normalizeUsername(username);
+    if (normalizedUsername.length < 3) return cb({ error: "Логин должен быть от 3 символов: латиница, цифры, _ или -" });
+    if (!validatePassword(password)) return cb({ error: "Пароль должен быть от 6 до 72 символов" });
+    if (usersStore.users.some((user) => user.username === normalizedUsername)) {
+      return cb({ error: "Такой логин уже занят" });
+    }
+
+    const { salt, hash } = hashPassword(password);
+    const now = new Date().toISOString();
+    const user = {
+      id: crypto.randomUUID(),
+      username: normalizedUsername,
+      displayName: normalizeName(displayName || username),
+      avatar: "",
+      salt,
+      passwordHash: hash,
+      sessions: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    usersStore.users.push(user);
+    socket.data.user = user;
+    const token = createSession(user);
+    cb({ success: true, token, profile: profileForSocket(socket) });
+  });
+
+  socket.on("auth:login", ({ username, password } = {}, cb = () => {}) => {
+    const normalizedUsername = normalizeUsername(username);
+    const user = usersStore.users.find((item) => item.username === normalizedUsername);
+    if (!user || !verifyPassword(password, user)) return cb({ error: "Неверный логин или пароль" });
+    socket.data.user = user;
+    const token = createSession(user);
+    cb({ success: true, token, profile: profileForSocket(socket) });
+  });
+
+  socket.on("auth:logout", (cb = () => {}) => {
+    socket.data.user = null;
+    cb({ success: true, profile: profileForSocket(socket) });
+  });
+
+  socket.on("profile:update", ({ displayName, avatar } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы менять профиль" });
+    try {
+      user.displayName = normalizeName(displayName || user.displayName || user.username);
+      if (avatar !== undefined) user.avatar = normalizeAvatar(avatar);
+      user.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      syncUserProfileInLobbies(user);
+      cb({ success: true, profile: profileForSocket(socket) });
+    } catch (error) {
+      cb({ error: error.message || "Не удалось обновить профиль" });
+    }
+  });
+
   socket.on("createLobby", ({ name }, cb = () => {}) => {
     const code = generateCode();
-    const player = { id: socket.id, name: normalizeName(name), ready: false };
+    const player = playerFromSocket(socket, name);
 
     lobbies[code] = createLobbyState(code, socket.id, player);
 
@@ -470,7 +666,7 @@ io.on("connection", (socket) => {
     }
 
     socket.join(roomCode);
-    lobby.players.push({ id: socket.id, name: makeUniqueName(lobby, name), ready: false });
+    lobby.players.push(playerFromSocket(socket, name, lobby));
 
     cb({ success: true, code: roomCode, playerId: socket.id });
     emitLobbyUpdate(roomCode);
@@ -808,5 +1004,9 @@ module.exports = {
   ALLOWED_REACTIONS,
   countReactions,
   getActiveTurnOrder,
-  removePlayerFromLobby
+  removePlayerFromLobby,
+  normalizeAvatar,
+  normalizeUsername,
+  hashPassword,
+  verifyPassword
 };

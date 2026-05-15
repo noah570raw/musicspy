@@ -88,3 +88,22 @@ test("removePlayerFromLobby removes current track reaction and syncs history", (
   assert.deepEqual(lobby.currentTrackReactions, { host: fire });
   assert.deepEqual(lobby.trackHistory[0].reactions, { [fire]: 1 });
 });
+
+test("account helpers normalize usernames and verify password hashes", () => {
+  const { normalizeUsername, hashPassword, verifyPassword } = require("../server");
+  const user = hashPassword("secret-password");
+
+  assert.equal(normalizeUsername("  User.Name!!__  "), "username__");
+  assert.equal(verifyPassword("secret-password", { salt: user.salt, passwordHash: user.hash }), true);
+  assert.equal(verifyPassword("bad-password", { salt: user.salt, passwordHash: user.hash }), false);
+});
+
+test("normalizeAvatar accepts small image data urls and rejects oversized avatars", () => {
+  const { normalizeAvatar } = require("../server");
+  const avatar = `data:image/png;base64,${Buffer.from("tiny").toString("base64")}`;
+  const oversized = `data:image/png;base64,${"a".repeat(70 * 1024)}`;
+
+  assert.equal(normalizeAvatar(avatar), avatar);
+  assert.throws(() => normalizeAvatar("https://example.com/avatar.png"), /Поддерживаются/);
+  assert.throws(() => normalizeAvatar(oversized), /слишком большая/);
+});
