@@ -27,6 +27,57 @@
     </div>
   </div>
 
+  <div id="authModal" class="auth-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
+    <div class="auth-modal-card">
+      <p class="eyebrow">аккаунт</p>
+      <h2 id="authModalTitle">Как продолжим?</h2>
+      <p id="authModalText" class="auth-modal-text">Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.</p>
+
+      <div id="authChoiceView" class="auth-choice-grid">
+        <button class="primary" type="button" onclick="selectAuthMode('register')">Зарегистрироваться</button>
+        <button class="secondary" type="button" onclick="selectAuthMode('login')">Войти</button>
+        <button class="ghost-button" type="button" onclick="continueAsGuest()">Продолжить как гость</button>
+      </div>
+
+      <div id="authFormView" class="auth-form-view hidden">
+        <div class="auth-grid">
+          <input id="authLogin" maxlength="24" placeholder="логин" autocomplete="username">
+          <input id="authPassword" type="password" maxlength="72" placeholder="пароль" autocomplete="current-password">
+        </div>
+        <div id="authRegisterHint" class="auth-register-hint">
+          Логин: от 3 символов, латиница, цифры, _ или -. Пароль: от 6 символов.
+        </div>
+        <div class="actions two-col auth-actions">
+          <button id="authSubmitBtn" class="primary" type="button" onclick="submitAuthForm()">Создать аккаунт</button>
+          <button class="secondary" type="button" onclick="selectAuthMode('choice')">Назад</button>
+        </div>
+      </div>
+      <p id="authStatus" class="status"></p>
+    </div>
+  </div>
+
+  <div class="account-corner" aria-label="Аккаунт игрока">
+    <div id="guestAccountNotice" class="guest-account-notice hidden">Вы играете как гость</div>
+    <div id="profileView" class="profile-view hidden">
+      <div id="profileAvatar" class="profile-avatar">?</div>
+      <div class="profile-info">
+        <strong id="profileName">Гость</strong>
+        <span id="profileLogin">без аккаунта</span>
+      </div>
+      <button class="secondary" type="button" onclick="toggleProfileEditor()">Профиль</button>
+      <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
+    </div>
+    <div id="profileEditor" class="profile-editor hidden">
+      <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
+      <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
+        <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
+      </div>
+    </div>
+    <p id="accountStatus" class="status"></p>
+  </div>
+
   <div class="volume-control" aria-label="Громкость сайта">
     <span>Звук</span>
     <button id="musicToggle" class="sound-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить музыкальное сопровождение">🎧</button>
@@ -39,42 +90,6 @@
       <p class="eyebrow">Шпион помузыкальски</p>
       <h1>Music Spy</h1>
       <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
-
-      <div class="auth-panel">
-        <div class="panel-title">
-          <strong>Аккаунт</strong>
-          <span id="authModeLabel">можно играть гостем</span>
-        </div>
-        <div id="authGuestView" class="auth-guest">
-          <div class="auth-grid">
-            <input id="authLogin" maxlength="24" placeholder="логин" autocomplete="username">
-            <input id="authPassword" type="password" maxlength="72" placeholder="пароль" autocomplete="current-password">
-          </div>
-          <div class="actions three-col auth-actions">
-            <button class="secondary" type="button" onclick="loginAccount()">Войти</button>
-            <button class="secondary" type="button" onclick="registerAccount()">Регистрация</button>
-            <button class="ghost-button" type="button" onclick="continueAsGuest()">Продолжить как гость</button>
-          </div>
-        </div>
-        <div id="profileView" class="profile-view hidden">
-          <div id="profileAvatar" class="profile-avatar">?</div>
-          <div class="profile-info">
-            <strong id="profileName">Гость</strong>
-            <span id="profileLogin">без аккаунта</span>
-          </div>
-          <button class="secondary" type="button" onclick="toggleProfileEditor()">Профиль</button>
-          <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
-        </div>
-        <div id="profileEditor" class="profile-editor hidden">
-          <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
-          <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
-          <div class="actions two-col">
-            <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
-            <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
-          </div>
-        </div>
-        <p id="authStatus" class="status"></p>
-      </div>
 
       <div class="form-grid">
         <label>
