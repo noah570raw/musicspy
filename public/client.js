@@ -74,6 +74,7 @@ const state = {
   selectedReaction: null,
   currentTrackId: null,
   trackHistory: [],
+  chatMessages: [],
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
   audio: null,
@@ -382,8 +383,74 @@ const EN_TRANSLATIONS = {
   "Сейчас нельзя угадывать тему": "You cannot guess the theme right now",
   "Тему угадывает только шпион": "Only the spy can guess the theme",
   "Введи версию темы": "Enter your theme guess",
-  "Аватарка слишком большая. Максимум 64 КБ после сжатия": "Avatar is too large. Maximum is 64 KB after compression"
+  "Аватарка слишком большая. Максимум 64 КБ после сжатия": "Avatar is too large. Maximum is 64 KB after compression",
+  "Чат игры": "Game chat",
+  "общайся без подсказок": "no spoiler hints",
+  "Пока сообщений нет": "No messages yet",
+  "Сообщение в чат": "Chat message",
+  "Напиши что-нибудь по игре": "Write something about the game",
+  "Отправить сообщение": "Send message",
+  "Отправить": "Send",
+  "Напиши сообщение": "Write a message",
+  "Сообщение отправлено": "Message sent",
+  "Чат доступен только во время игры": "Chat is available only during the game",
+  "На свой трек реакции ставить нельзя": "You cannot react to your own track",
+  "Прослушивание на паузе": "Listening paused",
+  "Прослушивание продолжено": "Listening resumed",
+  "Ход передан игроку": "Turn passed to the player",
+  "Подозреваемый": "Suspect",
+  "подозреваемый игрок": "suspect",
+  "это был мирный игрок": "that was a civilian",
+  "Тебя подозревают. Выбери настоящую тему из четырех близких вариантов.": "You are under suspicion. Choose the real theme from four close options.",
+  "Мирные нашли шпиона. Теперь шпион выбирает тему из четырех близких вариантов.": "Civilians found the spy. Now the spy chooses the theme from four close options.",
+  "Выбрать тему": "Choose theme",
+  "Выбери один из вариантов темы": "Choose one of the theme options",
+  "Ответ принят. Сейчас будет финальное раскрытие.": "Answer accepted. The final reveal is coming now.",
+  "Тема выбрана автоматически": "Theme selected automatically",
+  "Тема выбрана автоматически. Готовим финальное раскрытие...": "Theme selected automatically. Preparing the final reveal...",
+  "Ждем выбор подозреваемого": "Waiting for the suspect's choice",
+  "Ждем финальный выбор": "Waiting for the final choice",
+  "Последний шанс: выбери тему": "Last chance: choose the theme",
+  "Игроки решили, что ты шпион. Тема выбрана автоматически, менять ее нельзя.": "Players decided you are the spy. The theme was selected automatically and cannot be changed.",
+  "Тему угадывает только выбранный шпион": "Only the selected spy can guess the theme",
+  "Тема уже выбрана автоматически": "The theme has already been selected automatically",
+  "Версия уже отправлена": "Guess already sent"
 };
+
+const EN_THEME_TRANSLATIONS = {
+  "ру андер ск": "Russian underground scene",
+  "англ андер ск": "English underground scene",
+  "ру реп новая школа": "Russian rap new school",
+  "олдскул хип хоп": "old-school hip-hop",
+  "бразил фонк тайп": "Brazilian phonk type",
+  "дрилл": "drill",
+  "мемфис фонк тайп": "Memphis phonk type",
+  "ру хайперпоп": "Russian hyperpop",
+  "англ хайперпоп": "English hyperpop",
+  "дрейн": "drain",
+  "классика рока 90-х": "90s rock classics",
+  "ремиксы": "remixes",
+  "кринж": "cringe",
+  "хит прошлого лета": "last summer's hit",
+  "чилловый приятный тречок": "chill pleasant track",
+  "едм электронщина": "EDM/electronic stuff",
+  "мемы/музыка из мемов": "memes / meme music",
+  "ностальгия": "nostalgia",
+  "дотерский трек": "Dota player track",
+  "молодой исполнитель >18": "young artist over 18",
+  "хиты 2021": "2021 hits",
+  "легендарные треки": "legendary tracks",
+  "трепахолик": "trapaholic",
+  "тикток музло": "TikTok music",
+  "умерший исполнитель": "deceased artist",
+  "худший трек в истории мира": "the worst track in world history"
+};
+
+function translateTheme(theme) {
+  const text = String(theme ?? "");
+  if (currentLanguage() === "ru" || !text) return text;
+  return EN_THEME_TRANSLATIONS[text] || text;
+}
 
 function currentLanguage() {
   return state.lang || "ru";
@@ -406,12 +473,15 @@ function translateText(value) {
     .replace(/Ник обновлен: (.+)/g, "Nickname updated: $1")
     .replace(/Трек принят\. Слушаем (\d+) секунд\.\.\./g, "Track accepted. Listening for $1 seconds...")
     .replace(/(.+) поставил трек — слушаем (\d+) секунд/g, "$1 submitted a track — listening for $2 seconds")
-    .replace(/Шпионы: (.+)\. Тема: «(.+)»\. Зачервили: (.+)\./g, "Spies: $1. Theme: “$2”. Suspected: $3.")
+    .replace(/Шпионы: (.+)\. Тема: «(.+)»\. Зачервили: (.+)\./g, (match, spies, theme, suspected) => `Spies: ${spies}. Theme: “${translateTheme(theme)}”. Suspected: ${suspected}.`)
     .replace(/Мирные нашли шпиона: (.+)\. Ждем, сможет ли он назвать тему\./g, "Civilians found the spy: $1. Waiting to see if they can name the theme.")
     .replace(/голосов: (\d+)/g, "votes: $1")
     .replace(/подозрительных реакций: (\d+)/g, "suspicious reactions: $1")
     .replace(/Твоя задача — понять тему по чужим трекам и не выдать себя\. Шпионов в игре: (\d+)\./g, "Your goal is to figure out the theme from other tracks and avoid exposing yourself. Spies in the game: $1.")
-    .replace(/Тема: «(.+)»/g, "Theme: “$1”")
+    .replace(/Тема: «(.+)»/g, (match, theme) => `Theme: “${translateTheme(theme)}”`)
+    .replace(/Последний шанс: выбери тему \((\d+)с\)/g, "Last chance: choose the theme ($1s)")
+    .replace(/Ждем финальный выбор \((\d+)с\)/g, "Waiting for the final choice ($1s)")
+    .replace(/Выбрана тема: «(.+)»/g, (match, theme) => `Selected theme: “${translateTheme(theme)}”`)
     .replace(/Код комнаты (.+)/g, "Room code $1")
     .replace(/Хост пропустил ход: (.+)/g, "Host skipped turn: $1")
     .replace(/Хост передал ход: (.+)/g, "Host passed the turn: $1")
@@ -446,6 +516,7 @@ function setLanguage(lang) {
     renderHostControls();
     renderReactions();
     renderTrackHistory();
+    renderChat();
     updateSendButton();
   }
   if (state.phase === "voting") {
@@ -1119,7 +1190,7 @@ function showRoleReveal(data) {
     : "";
   const meta = isSpy
     ? `<span>${t("Тема скрыта")}</span><strong>${escapeHtml(visibleSpyNames || `${spyCount} ${spyCount === 1 ? t("1 шпион").replace("1 ", "") : t("Шпионы")}`)}</strong>`
-    : `<span>${t("Тема игры")}</span><strong>«${escapeHtml(data.theme)}»</strong>`;
+    : `<span>${t("Тема игры")}</span><strong>«${escapeHtml(translateTheme(data.theme))}»</strong>`;
 
   setCinematicOverlay({
     eyebrow: t("игра началась"),
@@ -1155,7 +1226,7 @@ function showSpyRevealCountdown(data, onDone) {
   const showFinalSpy = () => {
     const meta = $("cinematicMeta");
     if (meta) {
-      meta.innerHTML = `<span>${t(data.spyNames?.length > 1 ? "Шпионы" : "Шпион")}</span><strong>${escapeHtml(spyNames || t("не найден"))}</strong><small>${t(`Тема: «${escapeHtml(data.theme || "?")}»`)}</small>`;
+      meta.innerHTML = `<span>${t(data.spyNames?.length > 1 ? "Шпионы" : "Шпион")}</span><strong>${escapeHtml(spyNames || t("не найден"))}</strong><small>${t(`Тема: «${data.theme || "?"}»`)}</small>`;
     }
     $("cinematicTitle").textContent = data.civiliansWin ? t("Мирные вычислили!") : t("Шпион ускользнул!");
     $("cinematicText").textContent = data.spyGuess?.correct
@@ -1703,7 +1774,7 @@ function renderSpyGuessOptions(options = []) {
   box.innerHTML = options.length
     ? options.map((option) => `
       <button class="spy-guess-option" type="button" role="radio" aria-checked="false" data-option-id="${escapeHtml(option.id)}" onclick="selectSpyGuessOption('${escapeHtml(option.id)}')">
-        ${escapeHtml(option.text)}
+        ${escapeHtml(translateTheme(option.text))}
       </button>
     `).join("")
     : `<div class="spy-guess-auto">${t("Тема выбрана автоматически")}</div>`;
@@ -2002,6 +2073,7 @@ function renderGameState(data) {
   state.voteCandidates = data.voteCandidates || state.voteCandidates;
   state.reactionCounts = data.reactionCounts || state.reactionCounts;
   state.trackHistory = data.trackHistory || state.trackHistory;
+  state.chatMessages = data.chatMessages || state.chatMessages;
   state.pendingSpyGuess = data.pendingSpyGuess || state.pendingSpyGuess;
   if (Array.isArray(data.spyIds)) state.spyIds = data.spyIds;
   const shouldLoadLastTrack = ["listening", "paused"].includes(data.turnStage)
@@ -2017,6 +2089,7 @@ function renderGameState(data) {
   renderHostControls();
   renderReactions();
   renderTrackHistory();
+  renderChat();
   updateSendButton(data.submittedThisTurn);
 
   if (shouldLoadLastTrack) loadTrack(data.lastTrack);
@@ -2135,6 +2208,57 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
       <small>${formatReactions(track.reactions)}</small>
     </div>
   `).join("");
+}
+
+
+function formatChatTime(createdAt) {
+  const date = new Date(Number(createdAt) || Date.now());
+  return date.toLocaleTimeString(currentLanguage() === "en" ? "en-US" : "ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
+function renderChat(messages = state.chatMessages) {
+  const box = $("chatMessages");
+  if (!box) return;
+  const list = Array.isArray(messages) ? messages : [];
+  state.chatMessages = list;
+
+  if (!list.length) {
+    box.classList.add("empty");
+    box.textContent = t("Пока сообщений нет");
+    return;
+  }
+
+  box.classList.remove("empty");
+  box.innerHTML = list.map((message) => {
+    const isMine = message.playerId === socket.id;
+    return `
+      <div class="chat-message ${isMine ? "mine" : ""}">
+        <div class="chat-message-meta">
+          <strong>${escapeHtml(message.playerName || t("Игрок"))}</strong>
+          <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
+        </div>
+        <p>${escapeHtml(message.text || "")}</p>
+      </div>
+    `;
+  }).join("");
+  box.scrollTop = box.scrollHeight;
+}
+
+function handleChatKeydown(event) {
+  if (event.key !== "Enter" || event.shiftKey) return;
+  event.preventDefault();
+  sendChatMessage();
+}
+
+function sendChatMessage() {
+  const input = $("chatInput");
+  const text = input?.value.trim() || "";
+  if (!text) return setStatus("chatStatus", "Напиши сообщение", true);
+  socket.emit("chat:send", { code: state.currentCode, text }, (res) => {
+    if (res?.error) return setStatus("chatStatus", res.error, true);
+    if (input) input.value = "";
+    setStatus("chatStatus", "Сообщение отправлено");
+  });
 }
 
 function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) {
@@ -2306,7 +2430,7 @@ function renderResults(data) {
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
   const guessText = data.spyGuess?.skipped
     ? t("шпион не называл тему")
-    : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(data.spyGuess?.text || "—")}»`;
+    : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(translateTheme(data.spyGuess?.text || "—"))}»`;
   $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион забрал игру");
   $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`);
 
@@ -2433,6 +2557,7 @@ socket.on("gameStarted", (data) => {
   state.selectedReaction = null;
   state.currentTrackId = null;
   state.trackHistory = data.trackHistory || [];
+  state.chatMessages = data.chatMessages || [];
   state.turnStage = "waiting";
   state.timeLeft = null;
   syncAudioVolume({ fadeTime: 0.32 });
@@ -2451,9 +2576,11 @@ socket.on("gameStarted", (data) => {
   renderHostControls();
   renderReactions();
   renderTrackHistory();
+  renderChat();
 });
 
 socket.on("gameState", renderGameState);
+socket.on("chat:update", ({ messages }) => renderChat(messages || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
 });

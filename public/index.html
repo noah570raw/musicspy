@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-screen="menu">
   <div class="noise"></div>
   <div class="orb orb-one"></div>
   <div class="orb orb-two"></div>
@@ -373,6 +373,19 @@
             <span>по раундам</span>
           </div>
           <div id="trackHistory" class="track-history empty">Пока треков нет</div>
+        </div>
+
+        <div class="game-chat-panel">
+          <div class="panel-title">
+            <strong>Чат игры</strong>
+            <span>общайся без подсказок</span>
+          </div>
+          <div id="chatMessages" class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
+          <div class="chat-form">
+            <input id="chatInput" maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
+            <button id="chatSendBtn" class="secondary" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение">Отправить</button>
+          </div>
+          <p id="chatStatus" class="status"></p>
         </div>
 
       </aside>
