@@ -12,36 +12,20 @@ const GAME_MODE_PRESETS = {
     hint: "сбалансированные правила для обычной партии",
     rounds: 3,
     listenTime: 30,
+    spyMode: "auto",
     anonymousVoting: false,
     votingTime: 60,
     runoffOnTie: true
   },
   blitz: {
     label: "Блиц",
-    hint: "короткая партия: 2 круга, 15 секунд на трек и быстрый финал",
-    rounds: 2,
+    hint: "анонимное голосование, автошпионы, 1 раунд, 15 секунд и без второго тура",
+    rounds: 1,
     listenTime: 15,
-    anonymousVoting: false,
-    votingTime: 30,
-    runoffOnTie: false
-  },
-  hardcore: {
-    label: "Хардкор",
-    hint: "анонимные голоса, мало времени и никаких переголосований",
-    rounds: 4,
-    listenTime: 15,
+    spyMode: "auto",
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false
-  },
-  party: {
-    label: "Вечеринка",
-    hint: "больше времени на треки и мягкое голосование для шумной компании",
-    rounds: 3,
-    listenTime: 45,
-    anonymousVoting: false,
-    votingTime: 90,
-    runoffOnTie: true
   }
 };
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
@@ -152,6 +136,9 @@ const EN_TRANSLATIONS = {
   "Сменить ник": "Change nickname",
   "Выйти из лобби": "Leave lobby",
   "Запустить игру": "Start game",
+  "Действия": "Actions",
+  "старт и профиль": "start and profile",
+  "Действия лобби": "Lobby actions",
   "Настройки игры": "Game settings",
   "меняет хост": "host controls",
   "Раунды": "Rounds",
@@ -353,12 +340,8 @@ const EN_TRANSLATIONS = {
   "Режим": "Mode",
   "Классика": "Classic",
   "Блиц": "Blitz",
-  "Хардкор": "Hardcore",
-  "Вечеринка": "Party",
   "сбалансированные правила для обычной партии": "balanced rules for a standard game",
-  "короткая партия: 2 круга, 15 секунд на трек и быстрый финал": "short game: 2 rounds, 15 seconds per track, and a quick finale",
-  "анонимные голоса, мало времени и никаких переголосований": "anonymous votes, little time, and no runoffs",
-  "больше времени на треки и мягкое голосование для шумной компании": "more time for tracks and softer voting for a loud party",
+  "анонимное голосование, автошпионы, 1 раунд, 15 секунд и без второго тура": "anonymous voting, auto spies, 1 round, 15 seconds, and no runoff",
   "последний шанс": "last chance",
   "Шпион угадывает тему": "The spy guesses the theme",
   "Мирные нашли шпиона. Теперь шпион может спасти игру, если назовет точную тему.": "Civilians found the spy. Now the spy can save the game by naming the exact theme.",
@@ -1953,6 +1936,7 @@ function changeGameMode() {
   const preset = GAME_MODE_PRESETS[$("settingGameMode").value] || GAME_MODE_PRESETS.classic;
   $("settingRounds").value = String(preset.rounds);
   $("settingListenTime").value = String(preset.listenTime);
+  if ($("settingSpyMode")) $("settingSpyMode").value = preset.spyMode || "auto";
   $("settingAnonymousVoting").value = String(preset.anonymousVoting);
   $("settingVotingTime").value = String(preset.votingTime);
   $("settingRunoffOnTie").value = String(preset.runoffOnTie);
