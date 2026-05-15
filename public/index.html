@@ -168,6 +168,20 @@
           <div><i id="roundBar"></i></div>
         </div>
         <div id="turn" class="turn-card">Ожидаем ход...</div>
+
+        <div id="hostControls" class="host-controls hidden" aria-label="Пульт хоста">
+          <div class="panel-title">
+            <strong>Пульт хоста</strong>
+            <span>управление игрой</span>
+          </div>
+          <div class="host-action-grid">
+            <button class="secondary" onclick="hostSkipTurn()">Пропустить ход</button>
+            <button class="secondary" onclick="hostStartVoting()">К голосованию</button>
+            <button class="danger" onclick="restartLobby()">Пересоздать лобби</button>
+          </div>
+          <p class="host-control-title">Кикнуть игрока</p>
+          <div id="hostKickList" class="kick-list"></div>
+        </div>
       </aside>
 
       <section class="card player-card">
@@ -210,19 +224,6 @@
           <div id="trackHistory" class="track-history empty">Пока треков нет</div>
         </div>
 
-        <div id="hostControls" class="host-controls hidden">
-          <div class="panel-title">
-            <strong>Пульт хоста</strong>
-            <span>управление игрой</span>
-          </div>
-          <div class="host-action-grid">
-            <button class="secondary" onclick="hostSkipTurn()">Пропустить ход</button>
-            <button class="secondary" onclick="hostStartVoting()">К голосованию</button>
-            <button class="danger" onclick="restartLobby()">Пересоздать лобби</button>
-          </div>
-          <p class="host-control-title">Кикнуть игрока</p>
-          <div id="hostKickList" class="kick-list"></div>
-        </div>
       </aside>
     </section>
 

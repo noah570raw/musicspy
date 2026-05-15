@@ -472,6 +472,15 @@ button:disabled {
   min-height: min(640px, calc(100dvh - 48px));
 }
 
+.side-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-layout .side-panel:first-child .host-controls {
+  margin-top: auto;
+}
+
 .theme-text {
   color: var(--muted);
   line-height: 1.6;
@@ -614,6 +623,12 @@ button:disabled {
 .kick-list {
   display: grid;
   gap: 10px;
+}
+
+.kick-list {
+  max-height: min(190px, 24vh);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .host-action-grid button,
