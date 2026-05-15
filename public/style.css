@@ -1809,7 +1809,7 @@ html[lang="ru"] .language-switcher span:first-child {
   }
 
   body[data-screen="game"] .side-panel {
-    overflow: hidden;
+    overflow: auto;
   }
 
   body[data-screen="game"] .track-history {
@@ -1832,21 +1832,14 @@ html[lang="ru"] .language-switcher span:first-child {
   }
 
   body[data-screen="game"] .host-controls {
-    position: fixed;
-    left: max(12px, calc((100vw - 1400px) / 2 + 12px));
-    top: 50%;
-    z-index: 5;
-    width: min(240px, 18vw);
-    max-height: calc(100dvh - 32px);
-    overflow: auto;
-    margin-top: 0;
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: rgba(14, 14, 14, 0.88);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
-    backdrop-filter: blur(18px);
-    transform: translateY(-50%);
+    position: static;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    transform: none;
   }
 
   body[data-screen="game"] .host-controls .panel-title {
