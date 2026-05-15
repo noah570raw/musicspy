@@ -577,6 +577,7 @@ function showScreen(id) {
   }
   const previousPhase = state.phase;
   state.phase = id;
+  document.body.dataset.screen = id;
   updateInviteSecretsVisibility();
   if (previousPhase !== id) playSoundCue("screen");
 }
