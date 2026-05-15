@@ -397,10 +397,11 @@
     <section id="spyGuess" class="screen card hidden">
       <p class="eyebrow">последний шанс</p>
       <h2>Шпион угадывает тему</h2>
-      <p id="spyGuessText" class="lead small">Мирные нашли шпиона. Теперь шпион может спасти игру, если назовет точную тему.</p>
+      <p id="spyGuessText" class="lead small">Мирные нашли шпиона. Теперь шпион выбирает тему из четырех близких вариантов.</p>
       <div id="spyGuessForm" class="spy-guess-form hidden">
-        <input id="spyGuessInput" maxlength="80" placeholder="Введи тему как можно точнее">
-        <button id="spyGuessSubmitBtn" class="primary" type="button" onclick="submitSpyGuess()">Отправить свои догадки</button>
+        <div id="spyGuessOptions" class="spy-guess-options" role="radiogroup" aria-label="Варианты темы"></div>
+        <input id="spyGuessInput" type="hidden">
+        <button id="spyGuessSubmitBtn" class="primary" type="button" onclick="submitSpyGuess()">Выбрать тему</button>
       </div>
       <p id="spyGuessStatus" class="status"></p>
       <div class="track-history-panel voting-history">

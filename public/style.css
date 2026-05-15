@@ -2001,7 +2001,7 @@ html[lang="ru"] .language-switcher span:first-child {
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: 0;
+  width: 0;
   max-height: 0;
   overflow: hidden;
   padding: 0;
@@ -2010,13 +2010,14 @@ html[lang="ru"] .language-switcher span:first-child {
   opacity: 0;
   transform: translateY(-8px) scale(0.96);
   transform-origin: top right;
-  transition: max-width 0.24s ease, max-height 0.24s ease, padding 0.24s ease, opacity 0.2s ease, transform 0.24s ease, border-color 0.24s ease;
+  transition: width 0.24s ease, max-height 0.24s ease, padding 0.24s ease, opacity 0.2s ease, transform 0.24s ease, border-color 0.24s ease;
 }
 
 .volume-control.open .volume-panel {
-  max-width: min(300px, calc(100vw - 36px));
-  max-height: 64px;
-  padding: 10px 12px;
+  width: 76px;
+  max-height: 260px;
+  padding: 14px 10px;
+  flex-direction: column;
   border-color: var(--line);
   background: rgba(14, 14, 14, 0.78);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32);
@@ -2038,15 +2039,48 @@ html[lang="ru"] .language-switcher span:first-child {
 }
 
 .volume-panel input {
-  width: 128px;
+  width: 160px;
   padding: 0;
   accent-color: var(--accent);
+  transform: rotate(-90deg);
+  transform-origin: center;
+  margin: 66px -54px;
 }
 
 .volume-panel strong {
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 900;
+}
+
+.spy-guess-options {
+  display: grid;
+  gap: 10px;
+}
+
+.spy-guess-option {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-weight: 900;
+  text-align: left;
+}
+
+.spy-guess-option:hover,
+.spy-guess-option.selected {
+  border-color: rgba(var(--accent-rgb), 0.75);
+  background: rgba(var(--accent-rgb), 0.18);
+}
+
+.spy-guess-auto {
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .modal-close {

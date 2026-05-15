@@ -1687,18 +1687,41 @@ function hostKickPlayer(playerId) {
   });
 }
 
+function selectSpyGuessOption(optionId) {
+  const input = $("spyGuessInput");
+  if (input) input.value = optionId;
+  document.querySelectorAll(".spy-guess-option").forEach((button) => {
+    const selected = button.dataset.optionId === optionId;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-checked", selected ? "true" : "false");
+  });
+}
+
+function renderSpyGuessOptions(options = []) {
+  const box = $("spyGuessOptions");
+  if (!box) return;
+  box.innerHTML = options.length
+    ? options.map((option) => `
+      <button class="spy-guess-option" type="button" role="radio" aria-checked="false" data-option-id="${escapeHtml(option.id)}" onclick="selectSpyGuessOption('${escapeHtml(option.id)}')">
+        ${escapeHtml(option.text)}
+      </button>
+    `).join("")
+    : `<div class="spy-guess-auto">${t("Тема выбрана автоматически")}</div>`;
+}
+
 function submitSpyGuess() {
   const input = $("spyGuessInput");
   const button = $("spyGuessSubmitBtn");
-  const guess = input?.value.trim() || "";
-  if (!guess) return setStatus("spyGuessStatus", "Введи версию темы", true);
+  const optionId = input?.value.trim() || "";
+  if (!optionId) return setStatus("spyGuessStatus", "Выбери один из вариантов темы", true);
   if (button) button.disabled = true;
-  socket.emit("submitSpyGuess", { code: state.currentCode, guess }, (res) => {
-    if (button) button.disabled = false;
-    if (res?.error) return setStatus("spyGuessStatus", res.error, true);
-    if (button) button.disabled = true;
-    if (input) input.disabled = true;
-    setStatus("spyGuessStatus", "Версия отправлена хосту. Ждем решения.");
+  socket.emit("submitSpyGuess", { code: state.currentCode, optionId }, (res) => {
+    if (res?.error) {
+      if (button) button.disabled = false;
+      return setStatus("spyGuessStatus", res.error, true);
+    }
+    document.querySelectorAll(".spy-guess-option").forEach((item) => { item.disabled = true; });
+    setStatus("spyGuessStatus", "Ответ принят. Сейчас будет финальное раскрытие.");
   });
 }
 
@@ -2486,7 +2509,7 @@ socket.on("voteUpdate", ({ votes, votedCount, total, anonymous }) => {
   setStatus("voteStatus", `Проголосовало ${votedCount}/${total}`);
 });
 
-socket.on("spyGuessStarted", ({ spies, guesserId, guesserRole, accusedNames, prefillTheme, votes, trackHistory, timeLeft }) => {
+socket.on("spyGuessStarted", ({ spies, guesserId, guesserRole, accusedNames, prefillTheme, guessOptions, votes, trackHistory, timeLeft }) => {
   playSoundCue("danger");
   state.spyGuessActive = true;
   state.pendingSpyGuess = null;
@@ -2499,31 +2522,32 @@ socket.on("spyGuessStarted", ({ spies, guesserId, guesserRole, accusedNames, pre
   $("spyGuessForm").classList.toggle("hidden", !isGuesser);
   $("spyGuessText").textContent = isGuesser
     ? (isDecoy
-      ? t("Игроки решили, что ты шпион. Тема уже введена — жди решения хоста.")
-      : t("Тебя подозревают. Напиши точную тему, чтобы вырвать победу в последнюю секунду."))
-    : t(`Голоса сошлись на игроке: ${accused}. Ждем, какую тему он отправит хосту.`);
-  $("spyGuessInput").value = isDecoy ? (prefillTheme || state.theme || "") : "";
+      ? t("Игроки решили, что ты шпион. Тема выбрана автоматически, менять ее нельзя.")
+      : t("Тебя подозревают. Выбери настоящую тему из четырех близких вариантов."))
+    : t(`Голоса сошлись на игроке: ${accused}. Ждем финальный выбор темы.`);
+  $("spyGuessInput").value = "";
   $("spyGuessInput").disabled = isDecoy;
+  renderSpyGuessOptions(isGuesser && !isDecoy ? (guessOptions || []) : []);
   const submitBtn = $("spyGuessSubmitBtn");
   if (submitBtn) {
     submitBtn.disabled = isDecoy;
-    submitBtn.textContent = isDecoy ? t("Тема отправится автоматически") : t("Отправить свои догадки");
+    submitBtn.textContent = isDecoy ? t("Тема выбрана автоматически") : t("Выбрать тему");
   }
-  const waitingText = isDecoy ? t("Хост проверяет тему") : t("Ждем версию подозреваемого");
-  setStatus("spyGuessStatus", isGuesser && !isDecoy ? `Последний шанс: угадай тему (${timeLeft || 60}с)` : `${waitingText} (${timeLeft || 60}с)`);
+  const waitingText = isDecoy ? t("Тема выбрана автоматически") : t("Ждем выбор подозреваемого");
+  setStatus("spyGuessStatus", isGuesser && !isDecoy ? `Последний шанс: выбери тему (${timeLeft || 60}с)` : `${waitingText} (${timeLeft || 60}с)`);
   renderTrackHistory("spyGuessTrackHistory", state.trackHistory);
 });
 
 socket.on("decoyGuessAutoSubmitted", ({ guess }) => {
   state.pendingSpyGuess = guess || null;
-  setStatus("spyGuessStatus", "Тема отправлена хосту. Хост одобряет версию...");
+  setStatus("spyGuessStatus", "Тема выбрана автоматически. Готовим финальное раскрытие...");
 });
 
 socket.on("spyGuessTimer", ({ timeLeft }) => {
   if (state.phase !== "spyGuess") return;
   const input = $("spyGuessInput");
   const isEditableGuesser = !$("spyGuessForm")?.classList.contains("hidden") && !input?.disabled;
-  setStatus("spyGuessStatus", isEditableGuesser ? `Последний шанс: угадай тему (${timeLeft}с)` : `Ждем версию подозреваемого (${timeLeft}с)`);
+  setStatus("spyGuessStatus", isEditableGuesser ? `Последний шанс: выбери тему (${timeLeft}с)` : `Ждем финальный выбор (${timeLeft}с)`);
 });
 
 socket.on("runoffStarted", () => {
@@ -2548,13 +2572,13 @@ socket.on("stopTrack", () => {
 
 socket.on("spyGuessPending", ({ guess }) => {
   state.pendingSpyGuess = guess || null;
-  setStatus("spyGuessStatus", guess ? `Версия шпиона «${guess.text}» отправлена хосту` : "Ждем решение хоста");
+  setStatus("spyGuessStatus", guess ? `Выбрана тема: «${guess.text}»` : "Ждем финальный выбор");
 });
 
 socket.on("spyGuessSubmitted", ({ guess, decoy }) => {
   state.pendingSpyGuess = guess || null;
   if (decoy || guess?.decoy) {
-    setStatus("spyGuessStatus", "Хост одобрил тему. Готовим финальное раскрытие...");
+    setStatus("spyGuessStatus", "Тема выбрана автоматически. Готовим финальное раскрытие...");
     playSoundCue("confirm");
     return;
   }

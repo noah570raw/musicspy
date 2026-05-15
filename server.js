@@ -32,8 +32,7 @@ const LEGACY_USERS_FILE = path.join(DEFAULT_DATA_DIR, "users.json");
 const PASSWORD_ITERATIONS = 120000;
 const AVATAR_MAX_BYTES = 64 * 1024;
 const SPY_GUESS_SECONDS = 60;
-const DECOY_GUESS_SECONDS = 10;
-const DECOY_HOST_APPROVAL_SECONDS = 2;
+const DECOY_GUESS_SECONDS = 3;
 const HOST_TIMER_STEP_SECONDS = 15;
 const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
@@ -42,6 +41,47 @@ const lobbies = {};
 const timers = {};
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
+
+const THEMES = [
+  "ру андер ск",
+  "англ андер ск",
+  "ру реп новая школа",
+  "олдскул хип хоп",
+  "бразил фонк тайп",
+  "дрилл",
+  "мемфис фонк тайп",
+  "ру хайперпоп",
+  "англ хайперпоп",
+  "дрейн",
+  "классика рока 90-х",
+  "ремиксы",
+  "кринж",
+  "хит прошлого лета",
+  "чилловый приятный тречок",
+  "едм электронщина",
+  "мемы/музыка из мемов",
+  "ностальгия",
+  "дотерский трек",
+  "молодой исполнитель >18",
+  "хиты 2021",
+  "легендарные треки",
+  "трепахолик",
+  "тикток музло",
+  "умерший исполнитель",
+  "худший трек в истории мира"
+];
+
+const SIMILAR_THEME_GROUPS = [
+  ["ру андер ск", "англ андер ск", "ру реп новая школа", "дрилл", "трепахолик"],
+  ["бразил фонк тайп", "мемфис фонк тайп", "дрилл", "трепахолик", "едм электронщина"],
+  ["ру хайперпоп", "англ хайперпоп", "дрейн", "тикток музло", "едм электронщина"],
+  ["классика рока 90-х", "олдскул хип хоп", "ностальгия", "легендарные треки", "хиты 2021"],
+  ["ремиксы", "едм электронщина", "тикток музло", "мемы/музыка из мемов", "хит прошлого лета"],
+  ["кринж", "мемы/музыка из мемов", "дотерский трек", "худший трек в истории мира", "тикток музло"],
+  ["хит прошлого лета", "хиты 2021", "тикток музло", "легендарные треки", "ностальгия"],
+  ["чилловый приятный тречок", "ностальгия", "дрейн", "англ хайперпоп", "легендарные треки"],
+  ["молодой исполнитель >18", "умерший исполнитель", "легендарные треки", "ру реп новая школа", "олдскул хип хоп"]
+];
 
 
 function ensureDataDir() {
@@ -325,6 +365,30 @@ function normalizeGuess(value) {
     .replace(/[«»"'`.,!?;:()\[\]{}_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+
+function buildThemeGuessOptions(theme) {
+  const normalizedTheme = normalizeGuess(theme);
+  const similar = SIMILAR_THEME_GROUPS
+    .filter((group) => group.some((item) => normalizeGuess(item) === normalizedTheme))
+    .flat()
+    .filter((item) => normalizeGuess(item) !== normalizedTheme);
+  const fallback = THEMES.filter((item) => normalizeGuess(item) !== normalizedTheme);
+  const decoys = [];
+
+  for (const candidate of shuffle([...similar, ...fallback])) {
+    if (!decoys.some((item) => normalizeGuess(item) === normalizeGuess(candidate))) {
+      decoys.push(candidate);
+    }
+    if (decoys.length >= 3) break;
+  }
+
+  return shuffle([theme, ...decoys]).map((text) => ({
+    id: crypto.createHash("sha1").update(normalizeGuess(text)).digest("hex").slice(0, 10),
+    text,
+    correct: normalizeGuess(text) === normalizedTheme
+  }));
 }
 
 function buildVoteDetails(lobby) {
@@ -743,6 +807,7 @@ function startSpyGuess(code, suspected, voteTotals) {
   lobby.pendingSpyGuess = null;
   lobby.spyGuessMode = caughtSpy ? "spy" : "decoy";
   lobby.spyGuessTargetId = guesserId || null;
+  lobby.spyGuessOptions = caughtSpy ? buildThemeGuessOptions(lobby.theme) : [];
   lobby.spyGuessTimeLeft = caughtSpy ? SPY_GUESS_SECONDS : DECOY_GUESS_SECONDS;
 
   for (const player of lobby.players) {
@@ -753,6 +818,7 @@ function startSpyGuess(code, suspected, voteTotals) {
       guesserRole: caughtSpy ? (isGuesser ? "spy" : "hidden") : (isGuesser ? "decoy" : "hidden"),
       accusedNames: suspected.map((id) => lobby.players.find((item) => item.id === id)?.name || "Игрок"),
       prefillTheme: !caughtSpy && isGuesser ? lobby.theme : "",
+      guessOptions: caughtSpy && isGuesser ? lobby.spyGuessOptions.map(({ id, text }) => ({ id, text })) : [],
       suspected,
       votes: lobby.finalVotes,
       trackHistory: lobby.trackHistory || [],
@@ -775,13 +841,11 @@ function startSpyGuess(code, suspected, voteTotals) {
         clearTimer(code);
         const player = currentLobby.players.find((item) => item.id === currentLobby.spyGuessTargetId);
         const pendingGuess = { text: currentLobby.theme, playerId: player?.id || "", playerName: player?.name || "Игрок", skipped: false, decoy: true, correct: false };
-        currentLobby.pendingSpyGuess = pendingGuess;
         currentLobby.spyGuess = pendingGuess;
         io.to(code).emit("decoyGuessAutoSubmitted", { guess: pendingGuess });
-        io.to(currentLobby.host).emit("spyGuessSubmitted", { guess: pendingGuess, decoy: true, spies: [] });
         timers[code] = setTimeout(() => {
           finishGame(code, currentLobby.suspected || [], currentLobby.finalVotes || null, pendingGuess);
-        }, DECOY_HOST_APPROVAL_SECONDS * 1000);
+        }, 1000);
       }
     }, 1000);
     return;
@@ -894,6 +958,7 @@ function resetLobbyToWaiting(lobby) {
   lobby.spyGuess = null;
   lobby.pendingSpyGuess = null;
   lobby.spyGuessTimeLeft = null;
+  lobby.spyGuessOptions = [];
   lobby.submittedThisTurn = false;
   lobby.timeLeft = null;
   lobby.turnStage = "waiting";
@@ -926,6 +991,7 @@ function createLobbyState(code, hostId, player) {
     spyGuess: null,
     pendingSpyGuess: null,
     spyGuessTimeLeft: null,
+    spyGuessOptions: [],
     spyGuessMode: null,
     spyGuessTargetId: null,
     submittedThisTurn: false,
@@ -1114,6 +1180,7 @@ io.on("connection", (socket) => {
     lobby.spyGuess = null;
     lobby.pendingSpyGuess = null;
     lobby.spyGuessTimeLeft = null;
+    lobby.spyGuessOptions = [];
     lobby.spyGuessMode = null;
     lobby.spyGuessTargetId = null;
     lobby.submittedThisTurn = false;
@@ -1363,26 +1430,33 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("submitSpyGuess", ({ code, guess }, cb = () => {}) => {
+  socket.on("submitSpyGuess", ({ code, guess, optionId }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby || lobby.phase !== "spyGuess") return cb({ error: "Сейчас нельзя угадывать тему" });
     if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
-    if (!lobby.spies.includes(socket.id)) return cb({ error: "Тему угадывает только шпион" });
+    if (!lobby.spies.includes(socket.id) || lobby.spyGuessTargetId !== socket.id) return cb({ error: "Тему угадывает только выбранный шпион" });
+    if (lobby.spyGuessMode !== "spy") return cb({ error: "Тема уже выбрана автоматически" });
 
-    const text = String(guess || "").trim().slice(0, 80);
-    if (!text) return cb({ error: "Введи версию темы" });
-    if (lobby.pendingSpyGuess) return cb({ error: "Версия уже отправлена хосту" });
+    const selectedOptionId = String(optionId || guess || "").trim();
+    const selectedOption = (lobby.spyGuessOptions || []).find((option) => option.id === selectedOptionId);
+    if (!selectedOption) return cb({ error: "Выбери один из вариантов темы" });
+    if (lobby.spyGuess) return cb({ error: "Версия уже отправлена" });
 
     clearTimer(lobby.code);
     const player = lobby.players.find((item) => item.id === socket.id);
-    const pendingGuess = { text, playerId: socket.id, playerName: player?.name || "Шпион", skipped: false };
-    lobby.pendingSpyGuess = pendingGuess;
-    lobby.spyGuess = pendingGuess;
+    const spyGuess = {
+      text: selectedOption.text,
+      playerId: socket.id,
+      playerName: player?.name || "Шпион",
+      skipped: false,
+      correct: Boolean(selectedOption.correct),
+      optionId: selectedOption.id
+    };
+    lobby.spyGuess = spyGuess;
 
-    io.to(lobby.host).emit("spyGuessSubmitted", { guess: pendingGuess, spies: lobby.spies });
-    io.to(lobby.code).emit("spyGuessPending", { guess: pendingGuess });
-    cb({ success: true });
-    emitGameState(lobby.code);
+    cb({ success: true, correct: spyGuess.correct });
+    io.to(lobby.code).emit("spyGuessPending", { guess: { ...spyGuess, correct: undefined } });
+    finishGame(lobby.code, lobby.suspected || [], lobby.finalVotes || null, spyGuess);
   });
 
   socket.on("hostResolveSpyGuess", ({ code, correct }, cb = () => {}) => {
@@ -1432,36 +1506,7 @@ function isSupportedTrackUrl(url) {
 }
 
 function pickTheme() {
-  const themes = [
-    "ру андер ск",
-    "англ андер ск",
-    "ру реп новая школа",
-    "олдскул хип хоп",
-    "бразил фонк тайп",
-    "дрилл",
-    "мемфис фонк тайп",
-    "ру хайперпоп",
-    "англ хайперпоп",
-    "дрейн",
-    "классика рока 90-х",
-    "ремиксы",
-    "кринж",
-    "хит прошлого лета",
-    "чилловый приятный тречок",
-    "едм электронщина",
-    "мемы/музыка из мемов",
-    "ностальгия",
-    "дотерский трек",
-    "молодой исполнитель >18",
-    "хиты 2021",
-    "легендарные треки",
-    "трепахолик",
-    "тикток музло",
-    "умерший исполнитель",
-    "худший трек в истории мира",
-  ];
-
-  return themes[Math.floor(Math.random() * themes.length)];
+  return THEMES[Math.floor(Math.random() * THEMES.length)];
 }
 
 if (require.main === module) {
@@ -1473,7 +1518,9 @@ if (require.main === module) {
 module.exports = {
   ALLOWED_REACTIONS,
   GAME_MODES,
+  THEMES,
   buildFinalBreakdown,
+  buildThemeGuessOptions,
   normalizeGuess,
   normalizeSettings,
   countReactions,
