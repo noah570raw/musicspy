@@ -478,9 +478,7 @@ button:disabled {
   flex: 1;
 }
 
-.lobby-players .players-list,
-.lobby-players .lobby-actions,
-.lobby-players .status {
+.lobby-players .players-list {
   margin: 0;
 }
 
@@ -500,6 +498,26 @@ button:disabled {
 .lobby-actions {
   display: grid;
   gap: 7px;
+}
+
+.lobby-action-panel {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.lobby-action-panel .status {
+  margin: 0;
+  min-height: 1.1em;
+}
+
+.action-rename-row {
+  grid-template-columns: 1fr;
 }
 
 .lobby-card button,
@@ -2312,11 +2330,13 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 
-.page-chat-column {
+.page-chat-column,
+.page-action-column {
   width: min(100%, 300px);
 }
 
-.page-chat-column .game-chat-panel {
+.page-chat-column .game-chat-panel,
+.page-action-column .lobby-action-panel {
   width: 100%;
   min-height: 0;
   margin-top: 0;
@@ -2338,15 +2358,23 @@ body:not([data-screen="menu"]) .account-corner {
     position: relative;
   }
 
-  .lobby-page-chat {
+  .lobby-page-chat,
+  .lobby-page-actions {
     position: absolute;
     top: 0;
-    right: calc(100% + 14px);
     bottom: 0;
     z-index: 3;
     display: flex;
     width: min(300px, calc((100vw - 1080px) / 2 - 28px));
     min-height: 0;
+  }
+
+  .lobby-page-chat {
+    right: calc(100% + 14px);
+  }
+
+  .lobby-page-actions {
+    left: calc(100% + 14px);
   }
 
   .lobby-page-chat .game-chat-panel {
@@ -2357,6 +2385,12 @@ body:not([data-screen="menu"]) .account-corner {
 
   .lobby-page-chat .chat-messages {
     min-height: 0;
+    max-height: none;
+  }
+
+  .lobby-page-actions .lobby-action-panel {
+    align-content: start;
+    height: 100%;
     max-height: none;
   }
 }
@@ -2390,7 +2424,8 @@ body:not([data-screen="menu"]) .account-corner {
 }
 
 @media (max-width: 1579px) {
-  .page-chat-column {
+  .page-chat-column,
+  .page-action-column {
     margin-top: 12px;
   }
 }

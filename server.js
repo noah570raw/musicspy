@@ -238,33 +238,21 @@ const GAME_MODES = {
     label: "Классика",
     rounds: 3,
     listenTime: 30,
+    spyMode: "auto",
+    spyCount: 1,
     anonymousVoting: false,
     votingTime: 60,
     runoffOnTie: true
   },
   blitz: {
     label: "Блиц",
-    rounds: 2,
+    rounds: 1,
     listenTime: 15,
-    anonymousVoting: false,
-    votingTime: 30,
-    runoffOnTie: false
-  },
-  hardcore: {
-    label: "Хардкор",
-    rounds: 4,
-    listenTime: 15,
+    spyMode: "auto",
+    spyCount: 1,
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false
-  },
-  party: {
-    label: "Вечеринка",
-    rounds: 3,
-    listenTime: 45,
-    anonymousVoting: false,
-    votingTime: 90,
-    runoffOnTie: true
   }
 };
 
@@ -272,8 +260,8 @@ const DEFAULT_SETTINGS = {
   gameMode: "classic",
   rounds: GAME_MODES.classic.rounds,
   listenTime: GAME_MODES.classic.listenTime,
-  spyMode: "auto",
-  spyCount: 1,
+  spyMode: GAME_MODES.classic.spyMode,
+  spyCount: GAME_MODES.classic.spyCount,
   anonymousVoting: GAME_MODES.classic.anonymousVoting,
   votingTime: GAME_MODES.classic.votingTime,
   runoffOnTie: GAME_MODES.classic.runoffOnTie
@@ -311,10 +299,10 @@ function normalizeSettings(input = {}) {
   const requestedMode = GAME_MODES[input.gameMode] ? input.gameMode : DEFAULT_SETTINGS.gameMode;
   const modePreset = GAME_MODES[requestedMode];
   const next = { ...DEFAULT_SETTINGS, gameMode: requestedMode, ...modePreset };
-  next.rounds = clampNumber(input.rounds, [2, 3, 4, 5], next.rounds);
+  next.rounds = clampNumber(input.rounds, [1, 2, 3, 4, 5], next.rounds);
   next.listenTime = clampNumber(input.listenTime, [15, 30, 45, 60], next.listenTime);
-  next.spyMode = input.spyMode === "manual" ? "manual" : "auto";
-  next.spyCount = clampNumber(input.spyCount, [1, 2, 3], DEFAULT_SETTINGS.spyCount);
+  next.spyMode = input.spyMode === undefined ? next.spyMode : (input.spyMode === "manual" ? "manual" : "auto");
+  next.spyCount = clampNumber(input.spyCount, [1, 2, 3], next.spyCount || DEFAULT_SETTINGS.spyCount);
   next.anonymousVoting = input.anonymousVoting === undefined ? next.anonymousVoting : Boolean(input.anonymousVoting);
   next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], next.votingTime);
   next.runoffOnTie = input.runoffOnTie === undefined ? next.runoffOnTie : input.runoffOnTie !== false;

@@ -199,18 +199,6 @@
             <span id="readySummary">Готовы: 0/0</span>
           </div>
           <div id="players" class="players-list"></div>
-          <div class="lobby-actions">
-            <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
-            <div class="rename-row">
-              <input id="renameInput" maxlength="18" placeholder="Новый ник">
-              <button id="renameBtn" class="secondary" data-sound="nickname" onclick="changeNickname()">Сменить ник</button>
-            </div>
-          </div>
-          <div class="lobby-bottom-actions">
-            <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
-            <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
-          </div>
-          <p id="lobbyStatus" class="status"></p>
         </section>
 
         <aside class="lobby-column lobby-settings">
@@ -225,8 +213,6 @@
               <select id="settingGameMode" onchange="changeGameMode()">
                 <option value="classic" selected>Классика</option>
                 <option value="blitz">Блиц</option>
-                <option value="hardcore">Хардкор</option>
-                <option value="party">Вечеринка</option>
               </select>
               <small id="gameModeHint">сбалансированные правила для обычной партии</small>
             </label>
@@ -234,6 +220,7 @@
             <label class="setting-control">
               <span>Раунды</span>
               <select id="settingRounds" onchange="updateLobbySettings()">
+                <option value="1">1</option>
                 <option value="2">2</option>
                 <option value="3" selected>3</option>
                 <option value="4">4</option>
@@ -295,6 +282,24 @@
           </div>
         </aside>
       </div>
+
+
+      <aside class="page-action-column lobby-page-actions" aria-label="Действия лобби">
+        <div class="lobby-action-panel">
+          <div class="panel-title">
+            <strong>Действия</strong>
+            <span>старт и профиль</span>
+          </div>
+          <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
+          <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
+          <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
+          <div class="rename-row action-rename-row">
+            <input id="renameInput" maxlength="18" placeholder="Новый ник">
+            <button id="renameBtn" class="secondary" data-sound="nickname" onclick="changeNickname()">Сменить ник</button>
+          </div>
+          <p id="lobbyStatus" class="status"></p>
+        </div>
+      </aside>
 
       <aside class="page-chat-column lobby-page-chat" aria-label="Чат лобби">
         <div class="game-chat-panel">

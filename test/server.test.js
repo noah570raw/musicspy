@@ -171,20 +171,22 @@ test("handlePlayerDeparture lets a waiting lobby member leave and reassigns host
 });
 
 
-test("normalizeSettings applies game mode presets and keeps manual spy settings", () => {
+test("normalizeSettings applies blitz preset and supports one-round games", () => {
   const { normalizeSettings } = require("../server");
 
-  assert.deepEqual(normalizeSettings({ gameMode: "hardcore", spyMode: "manual", spyCount: 2 }), {
-    gameMode: "hardcore",
-    label: "Хардкор",
-    rounds: 4,
+  assert.deepEqual(normalizeSettings({ gameMode: "blitz" }), {
+    gameMode: "blitz",
+    label: "Блиц",
+    rounds: 1,
     listenTime: 15,
-    spyMode: "manual",
-    spyCount: 2,
+    spyMode: "auto",
+    spyCount: 1,
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false
   });
+
+  assert.equal(normalizeSettings({ rounds: 1 }).rounds, 1);
 });
 
 test("normalizeGuess makes theme guesses forgiving", () => {
