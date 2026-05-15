@@ -751,3 +751,125 @@ select:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.volume-control {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(14, 14, 14, 0.78);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(16px);
+}
+
+.volume-control span,
+.volume-control strong {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.volume-control input {
+  width: 120px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.reaction-panel,
+.track-history-panel {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.reaction-panel .panel-title,
+.track-history-panel .panel-title {
+  margin-bottom: 10px;
+}
+
+.reaction-buttons {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reaction-btn {
+  display: grid;
+  min-height: 54px;
+  place-items: center;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.reaction-btn span {
+  font-size: 1.2rem;
+}
+
+.reaction-btn strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.reaction-btn.selected {
+  border-color: rgba(229, 9, 20, 0.85);
+  background: rgba(229, 9, 20, 0.2);
+  box-shadow: 0 0 22px rgba(229, 9, 20, 0.16);
+}
+
+.track-history {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.track-history.empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.history-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.history-row span,
+.history-row small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.voting-history,
+.result-history {
+  margin: 18px 0;
+}
+
+@media (max-width: 560px) {
+  .volume-control {
+    position: sticky;
+    top: 8px;
+    right: auto;
+    width: calc(100% - 18px);
+    margin: 8px auto 0;
+    justify-content: center;
+  }
+
+  .reaction-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

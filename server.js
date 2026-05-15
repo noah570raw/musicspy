@@ -11,6 +11,8 @@ app.use(express.static("public"));
 const lobbies = {};
 const timers = {};
 
+const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
+
 const DEFAULT_SETTINGS = {
   rounds: 3,
   listenTime: 30,
@@ -81,6 +83,23 @@ function getActiveTurnOrder(lobby) {
 }
 
 
+function countReactions(reactions = {}) {
+  const totals = {};
+  for (const reaction of Object.values(reactions || {})) {
+    if (ALLOWED_REACTIONS.includes(reaction)) {
+      totals[reaction] = (totals[reaction] || 0) + 1;
+    }
+  }
+  return totals;
+}
+
+function syncLastTrackHistory(lobby) {
+  if (!lobby.lastTrack || !Array.isArray(lobby.trackHistory)) return;
+  const entry = lobby.trackHistory.find((item) => item.id === lobby.lastTrack.id);
+  if (!entry) return;
+  entry.reactions = countReactions(lobby.currentTrackReactions);
+}
+
 function removePlayerFromLobby(lobby, playerId) {
   const removedOrderIndex = lobby.order.indexOf(playerId);
 
@@ -90,6 +109,8 @@ function removePlayerFromLobby(lobby, playerId) {
   lobby.spies = lobby.spies.filter((id) => id !== playerId);
   lobby.voteCandidates = lobby.voteCandidates.filter((id) => id !== playerId);
   delete lobby.votes[playerId];
+  if (lobby.currentTrackReactions) delete lobby.currentTrackReactions[playerId];
+  syncLastTrackHistory(lobby);
 
   for (const [voter, target] of Object.entries(lobby.votes)) {
     if (target === playerId) delete lobby.votes[voter];
@@ -153,7 +174,9 @@ function emitGameState(code) {
     settings: lobby.settings,
     voteRound: lobby.voteRound,
     voteCandidates: lobby.voteCandidates,
-    votes: lobby.settings.anonymousVoting && lobby.phase === "voting" ? {} : publicVotes(lobby)
+    votes: lobby.settings.anonymousVoting && lobby.phase === "voting" ? {} : publicVotes(lobby),
+    reactionCounts: countReactions(lobby.currentTrackReactions),
+    trackHistory: lobby.trackHistory || []
   });
 }
 
@@ -352,6 +375,7 @@ function finishGame(code, suspected = [], voteTotals = null) {
   const lobby = lobbies[code];
   if (!lobby) return;
 
+  syncLastTrackHistory(lobby);
   const finalVotes = voteTotals || publicVotes(lobby);
   const spyPlayers = lobby.players.filter((player) => lobby.spies.includes(player.id));
   const civiliansWin = suspected.some((id) => lobby.spies.includes(id));
@@ -368,7 +392,8 @@ function finishGame(code, suspected = [], voteTotals = null) {
     suspected,
     civiliansWin,
     theme: lobby.theme,
-    settings: lobby.settings
+    settings: lobby.settings,
+    trackHistory: lobby.trackHistory || []
   });
   emitLobbyUpdate(code);
 }
@@ -388,6 +413,8 @@ function resetLobbyToWaiting(lobby) {
   lobby.voteCandidates = [];
   lobby.voteTimeLeft = null;
   lobby.lastTrack = null;
+  lobby.currentTrackReactions = {};
+  lobby.trackHistory = [];
   lobby.submittedThisTurn = false;
   lobby.timeLeft = null;
   lobby.turnStage = "waiting";
@@ -412,6 +439,8 @@ function createLobbyState(code, hostId, player) {
     voteCandidates: [],
     voteTimeLeft: null,
     lastTrack: null,
+    currentTrackReactions: {},
+    trackHistory: [],
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
@@ -506,6 +535,8 @@ io.on("connection", (socket) => {
     lobby.voteCandidates = [];
     lobby.voteTimeLeft = null;
     lobby.lastTrack = null;
+    lobby.currentTrackReactions = {};
+    lobby.trackHistory = [];
     lobby.submittedThisTurn = false;
     lobby.turnStage = "waiting";
     lobby.timeLeft = null;
@@ -521,7 +552,8 @@ io.on("connection", (socket) => {
         order: lobby.order,
         players: lobby.players,
         spyCount: lobby.spies.length,
-        settings: lobby.settings
+        settings: lobby.settings,
+        trackHistory: lobby.trackHistory
       });
     }
 
@@ -613,16 +645,49 @@ io.on("connection", (socket) => {
 
     const player = lobby.players.find((item) => item.id === socket.id);
     lobby.submittedThisTurn = true;
+    lobby.currentTrackReactions = {};
     lobby.lastTrack = {
+      id: `${lobby.round}-${lobby.currentTurnIndex + 1}-${Date.now()}`,
       url: trackUrl,
       playerId: socket.id,
       playerName: player?.name || "Игрок",
-      round: lobby.round
+      round: lobby.round,
+      turnNumber: lobby.currentTurnIndex + 1
     };
+    lobby.trackHistory.push({ ...lobby.lastTrack, reactions: {} });
 
-    io.to(lobby.code).emit("newTrack", lobby.lastTrack);
+    io.to(lobby.code).emit("newTrack", { ...lobby.lastTrack, reactionCounts: {} });
     cb({ success: true });
     startListeningTimer(lobby.code);
+  });
+
+  socket.on("trackReaction", ({ code, reaction }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby || lobby.phase !== "playing" || !lobby.lastTrack) {
+      return cb({ error: "Сейчас не на что реагировать" });
+    }
+    if (!lobby.players.some((player) => player.id === socket.id)) {
+      return cb({ error: "Ты не в этой комнате" });
+    }
+    if (!ALLOWED_REACTIONS.includes(reaction)) {
+      return cb({ error: "Такой реакции нет" });
+    }
+
+    if (lobby.currentTrackReactions[socket.id] === reaction) {
+      delete lobby.currentTrackReactions[socket.id];
+    } else {
+      lobby.currentTrackReactions[socket.id] = reaction;
+    }
+
+    syncLastTrackHistory(lobby);
+    const reactionCounts = countReactions(lobby.currentTrackReactions);
+    const selectedReaction = lobby.currentTrackReactions[socket.id] || null;
+    io.to(lobby.code).emit("reactionUpdate", {
+      trackId: lobby.lastTrack.id,
+      reactionCounts,
+      trackHistory: lobby.trackHistory
+    });
+    cb({ success: true, selectedReaction, reactionCounts });
   });
 
   socket.on("vote", ({ code, target }, cb = () => {}) => {
@@ -740,6 +805,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  ALLOWED_REACTIONS,
+  countReactions,
   getActiveTurnOrder,
   removePlayerFromLobby
 };
