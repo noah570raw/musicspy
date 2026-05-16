@@ -216,6 +216,11 @@ const EN_TRANSLATIONS = {
   "Отправить трек": "Send track",
   "очередь": "queue",
   "История треков": "Track history",
+  "Показать историю треков": "Show track history",
+  "Все ходы игроков": "All player turns",
+  "Полный список треков партии: раунд, ход, игрок, реакции и ссылка на трек.": "Full match track list: round, turn, player, reactions, and track link.",
+  "Открыть трек": "Open track",
+  "ссылка на трек": "track link",
   "по раундам": "by rounds",
   "Пока треков нет": "No tracks yet",
   "финальное голосование": "final vote",
@@ -2351,13 +2356,22 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
   }
 
   el.classList.remove("empty");
-  el.innerHTML = history.map((track) => `
-    <div class="history-row">
-      <span>${t(`Раунд ${track.round}, ход ${track.turnNumber || "?"}`)}</span>
-      <strong>${escapeHtml(track.playerName || t("Игрок"))}</strong>
-      <small>${formatReactions(track.reactions)}</small>
-    </div>
-  `).join("");
+  el.innerHTML = history.map((track) => {
+    const trackUrl = String(track.url || "").trim();
+    const safeUrl = escapeHtml(trackUrl);
+    const link = trackUrl
+      ? `<a class="history-track-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${t("Открыть трек")}</a>`
+      : `<em>${t("ссылка на трек")}: —</em>`;
+
+    return `
+      <div class="history-row">
+        <span>${t(`Раунд ${track.round}, ход ${track.turnNumber || "?"}`)}</span>
+        <strong>${escapeHtml(track.playerName || t("Игрок"))}</strong>
+        <small>${formatReactions(track.reactions)}</small>
+        <div class="history-row-link">${link}</div>
+      </div>
+    `;
+  }).join("");
 }
 
 
@@ -2750,6 +2764,20 @@ function showResultShotModal() {
 
 function hideResultShotModal() {
   const modal = $("resultShotModal");
+  modal?.classList.add("hidden");
+  document.body.classList.remove("result-shot-open");
+}
+
+function showTrackHistoryModal() {
+  renderTrackHistory("resultTrackHistory", state.trackHistory);
+  const modal = $("trackHistoryModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  document.body.classList.add("result-shot-open");
+}
+
+function hideTrackHistoryModal() {
+  const modal = $("trackHistoryModal");
   modal?.classList.add("hidden");
   document.body.classList.remove("result-shot-open");
 }
