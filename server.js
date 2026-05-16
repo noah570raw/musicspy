@@ -4,12 +4,14 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 const { Server } = require("socket.io");
+const { registerSocialAssetRoutes } = require("./lib/social-assets");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 app.set("trust proxy", 1);
+registerSocialAssetRoutes(app);
 app.use(express.static("public"));
 
 const DEFAULT_DATA_DIR = path.join(__dirname, "data");

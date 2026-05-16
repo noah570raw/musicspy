@@ -3,26 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Music Spy — музыкальная party-игра для компании: создайте комнату, ставьте YouTube и SoundCloud треки, вычисляйте шпиона и делитесь итогами.">
+  <meta name="description" content="Ставьте треки, обсуждайте, ищите шпиона. Социальная музыкальная игра для друзей.">
   <meta name="theme-color" content="#8b5cf6">
   <meta name="application-name" content="Music Spy">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Music Spy">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="canonical" href="https://musicspy.onrender.com/">
+  <link rel="image_src" href="https://musicspy.onrender.com/social-preview.png">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Music Spy">
-  <meta property="og:title" content="Music Spy — музыкальная игра Кто шпион?">
-  <meta property="og:description" content="Создайте комнату, получите секретную музыкальную тему, ставьте треки и вычисляйте шпиона в компании друзей.">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:title" content="Music Spy — музыкальная игра про шпиона и треки">
+  <meta property="og:description" content="Ставьте треки, обсуждайте, ищите шпиона. Социальная музыкальная игра для друзей.">
   <meta property="og:url" content="https://musicspy.onrender.com/">
-  <meta property="og:image" content="https://musicspy.onrender.com/musicspyicon.ico">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Music Spy — музыкальная игра Кто шпион?">
-  <meta name="twitter:description" content="Party-игра с комнатами, треками, голосованием и шпионом среди игроков.">
-  <meta name="twitter:image" content="https://musicspy.onrender.com/musicspyicon.ico">
-  <title>Music Spy — музыкальная игра Кто шпион?</title>
+  <meta property="og:image" content="https://musicspy.onrender.com/social-preview.png">
+  <meta property="og:image:secure_url" content="https://musicspy.onrender.com/social-preview.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Music Spy — cinematic dark social deduction music game preview">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Music Spy — музыкальная игра про шпиона и треки">
+  <meta name="twitter:description" content="Ставьте треки, обсуждайте, ищите шпиона. Социальная музыкальная игра для друзей.">
+  <meta name="twitter:image" content="https://musicspy.onrender.com/social-preview.png">
+  <meta name="twitter:image:alt" content="Music Spy — cinematic dark social deduction music game preview">
+  <title>Music Spy — музыкальная игра про шпиона и треки</title>
   <link rel="icon" href="/musicspyicon.ico" type="image/x-icon">
   <link rel="shortcut icon" href="/musicspyicon.ico" type="image/x-icon">
+  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +46,8 @@
       "applicationCategory": "GameApplication",
       "operatingSystem": "Any",
       "url": "https://musicspy.onrender.com/",
-      "description": "Музыкальная party-игра для компании, где игроки ставят треки и ищут шпиона."
+      "description": "Ставьте треки, обсуждайте, ищите шпиона. Социальная музыкальная игра для друзей.",
+      "image": "https://musicspy.onrender.com/social-preview.png"
     }
   </script>
 </head>
@@ -197,7 +208,7 @@
         </div>
         <div id="profileEditor" class="profile-editor hidden">
           <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
-          <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
+          <input id="avatarInput" type="file" accept="image/png,image/png,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
           <div class="actions two-col">
             <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
             <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
