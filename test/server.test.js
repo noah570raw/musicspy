@@ -311,3 +311,46 @@ test("host timer helpers pause and clamp an active listening turn", () => {
   assert.equal(lobby.pausedTurnStage, "listening");
   assert.equal(adjustTurnTimer(lobby, 400), 300);
 });
+test("markAllPlayersReady lets host force everybody ready before launch", () => {
+  const { markAllPlayersReady } = require("../server");
+  const lobby = {
+    players: [
+      { id: "host", ready: false },
+      { id: "guest-1", ready: true },
+      { id: "guest-2", ready: false }
+    ]
+  };
+
+  markAllPlayersReady(lobby);
+
+  assert.deepEqual(lobby.players.map((player) => player.ready), [true, true, true]);
+});
+
+test("initializeGame starts immediately after forced readiness", () => {
+  const { initializeGame, markAllPlayersReady } = require("../server");
+  const lobby = {
+    code: "FORCE",
+    players: [
+      { id: "host", ready: false },
+      { id: "guest-1", ready: false },
+      { id: "guest-2", ready: false }
+    ],
+    settings: { rounds: 3, listenTime: 30, spyMode: "auto", spyCount: 1 },
+    votes: { host: "guest-1" },
+    trackHistory: [{ id: "old-track" }],
+    chatMessages: [{ text: "old" }]
+  };
+
+  markAllPlayersReady(lobby);
+  initializeGame(lobby);
+
+  assert.equal(lobby.started, true);
+  assert.equal(lobby.phase, "playing");
+  assert.equal(lobby.round, 1);
+  assert.equal(lobby.spies.length, 1);
+  assert.equal(lobby.order.length, 3);
+  assert.equal(lobby.players.every((player) => player.ready), true);
+  assert.deepEqual(lobby.votes, {});
+  assert.deepEqual(lobby.trackHistory, []);
+  assert.deepEqual(lobby.chatMessages, []);
+});
