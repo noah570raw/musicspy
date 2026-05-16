@@ -1108,11 +1108,34 @@ function focusNicknameInput() {
 }
 
 function showDemoFlow() {
+  const demoMeta = `
+    <div class="demo-sim" aria-label="Кинематичная симуляция хода">
+      <div class="demo-player" aria-hidden="true">
+        <div class="demo-vinyl"><span></span></div>
+        <div class="demo-now-playing">
+          <small>${escapeHtml(t("ход игрока"))}</small>
+          <strong>${escapeHtml(t("Лена ставит трек"))}</strong>
+          <span>${escapeHtml(t("старый хит из школьной дискотеки"))}</span>
+        </div>
+      </div>
+      <div class="demo-reactions" aria-label="Реакции игроков">
+        <span>🔥</span><span>😳</span><span>😭</span><span>🤔</span>
+      </div>
+      <div class="demo-suspicion">
+        <b>${escapeHtml(t("слишком подозрительно..."))}</b>
+        <div><i style="--level: 72%"></i></div>
+      </div>
+      <div class="demo-vote-pulse">
+        <span>🕵️</span>
+        <strong>${escapeHtml(t("голосование начинается"))}</strong>
+      </div>
+    </div>`;
+
   setCinematicOverlay({
-    eyebrow: "демо партия",
-    title: "Тема: ностальгия",
-    text: "Мирные ставят треки из прошлого, шпион слушает подсказки и пытается не выдать себя. После раундов все голосуют, а найденный шпион выбирает настоящую тему.",
-    meta: `<span>${t("пример хода")}</span><strong>${escapeHtml(t("Игрок ставит трек → все реагируют → ищем подозрительного"))}</strong>`,
+    eyebrow: "демо за 30 секунд",
+    title: "Живой раунд: ностальгия",
+    text: "Смотри не правила, а момент игры: трек появляется, реакции вспыхивают, подозрение растёт — и команда выбирает шпиона.",
+    meta: demoMeta,
     mode: "demo",
     closeLabel: "Понял, играем",
     onClose: focusNicknameInput
