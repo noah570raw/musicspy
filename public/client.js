@@ -7,7 +7,6 @@ const BACKGROUND_MUSIC_VOLUME = 0.3;
 const AUTH_TOKEN_KEY = "musicspy_auth_token";
 const RECONNECT_STATE_KEY = "musicspy_reconnect_state";
 const RECONNECT_TOKEN_KEY = "musicspy_reconnect_token";
-const PARTY_HISTORY_KEY = "musicspy_party_history";
 const AVATAR_MAX_BYTES = 64 * 1024;
 const GAME_MODE_PRESETS = {
   classic: {
@@ -2644,30 +2643,6 @@ function renderSharePreview(data = state.latestResult) {
   `;
 }
 
-function savePartyHistory(data) {
-  try {
-    const item = { ...resultSnapshot(data), date: new Date().toLocaleString(), civiliansWin: Boolean(data?.civiliansWin) };
-    const history = JSON.parse(window.localStorage.getItem(PARTY_HISTORY_KEY) || "[]");
-    window.localStorage.setItem(PARTY_HISTORY_KEY, JSON.stringify([item, ...history].slice(0, 8)));
-  } catch {}
-}
-
-function renderPartyHistory() {
-  const box = $("partyHistory");
-  if (!box) return;
-  let history = [];
-  try { history = JSON.parse(window.localStorage.getItem(PARTY_HISTORY_KEY) || "[]"); } catch { history = []; }
-  box.classList.toggle("empty", !history.length);
-  box.innerHTML = history.length ? history.map((item) => `
-    <details class="party-history-row">
-      <summary><strong>${escapeHtml(item.code)}</strong><span>${escapeHtml(item.winners)} · ${escapeHtml(item.date || "")}</span></summary>
-      <small>Шпион: ${escapeHtml(item.spies)} · Тема: «${escapeHtml(translateTheme(item.theme))}»</small>
-      <small>Лучший трек: ${escapeHtml(item.bestTrack)}</small>
-      <em>${escapeHtml(item.nomination)}</em>
-    </details>
-  `).join("") : t("История пока пустая");
-}
-
 function renderFinalComments(comments = state.finalComments) {
   const box = $("finalComments");
   if (!box) return;
@@ -2804,9 +2779,7 @@ async function shareResultCard() {
 function renderResults(data) {
   state.latestResult = data;
   state.finalComments = data.finalComments || [];
-  savePartyHistory(data);
   renderSharePreview(data);
-  renderPartyHistory();
   renderFinalComments(state.finalComments);
   const suspectedNames = (data.breakdown?.suspectedNames?.length ? data.breakdown.suspectedNames : data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || t("Игрок"))).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
