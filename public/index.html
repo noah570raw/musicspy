@@ -386,8 +386,25 @@
           <div id="players" class="players-list"></div>
         </section>
 
-        <aside class="lobby-column lobby-settings">
-          <div class="settings-panel">
+
+      </div>
+
+
+      <aside class="page-action-column lobby-page-actions" aria-label="Действия лобби">
+        <div class="lobby-action-panel">
+          <div class="panel-title">
+            <strong>Действия</strong>
+            <span>старт и профиль</span>
+          </div>
+          <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
+          <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
+          <button id="forceStartBtn" class="danger hidden" onclick="forceStartGame()">FORCE START</button>
+          <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
+          <div class="rename-row action-rename-row">
+            <button id="renameBtn" class="secondary" data-sound="nickname" onclick="changeNickname()">Сменить ник</button>
+            <input id="renameInput" maxlength="18" placeholder="Новый ник">
+          </div>
+          <div class="settings-panel action-settings-panel">
             <div class="settings-title">
               <strong>Настройки лобби</strong>
               <span id="lobbyMetaHint">имя и доступ</span>
@@ -406,6 +423,20 @@
                 <option value="closed">Закрытое</option>
               </select>
               <small>закрытое лобби доступно только по коду или ссылке</small>
+            </label>
+
+            <label class="setting-control setting-control-wide">
+              <span>Игроков в комнате</span>
+              <select id="settingMaxPlayers" onchange="updateLobbySettings()">
+                <option value="6">до 6 игроков</option>
+                <option value="7">до 7 игроков</option>
+                <option value="8">до 8 игроков</option>
+                <option value="9">до 9 игроков</option>
+                <option value="10">до 10 игроков</option>
+                <option value="11">до 11 игроков</option>
+                <option value="12" selected>до 12 игроков</option>
+              </select>
+              <small>лимит входа меняет только хост</small>
             </label>
 
             <button id="saveLobbyMetaBtn" class="secondary" type="button" onclick="updateLobbyMeta()">Сохранить лобби</button>
@@ -499,24 +530,7 @@
               <small>визуальный вайб комнаты выбирает хост</small>
             </label>
           </div>
-        </aside>
-      </div>
 
-
-      <aside class="page-action-column lobby-page-actions" aria-label="Действия лобби">
-        <div class="lobby-action-panel">
-          <div class="panel-title">
-            <strong>Действия</strong>
-            <span>старт и профиль</span>
-          </div>
-          <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
-          <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
-          <button id="forceStartBtn" class="danger hidden" onclick="forceStartGame()">FORCE START</button>
-          <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
-          <div class="rename-row action-rename-row">
-            <button id="renameBtn" class="secondary" data-sound="nickname" onclick="changeNickname()">Сменить ник</button>
-            <input id="renameInput" maxlength="18" placeholder="Новый ник">
-          </div>
           <p id="lobbyStatus" class="status"></p>
         </div>
       </aside>

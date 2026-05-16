@@ -239,7 +239,8 @@ test("normalizeSettings applies blitz preset and supports one-round games", () =
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false,
-    roomTheme: "cyber"
+    roomTheme: "cyber",
+    maxPlayers: 12
   });
 
   assert.equal(normalizeSettings({ rounds: 1 }).rounds, 1);
@@ -355,6 +356,15 @@ test("initializeGame starts immediately after forced readiness", () => {
   assert.deepEqual(lobby.chatMessages, []);
 });
 
+
+test("normalizeSettings clamps lobby max players to host choices", () => {
+  const { normalizeSettings } = require("../server");
+
+  assert.equal(normalizeSettings({ maxPlayers: 6 }).maxPlayers, 6);
+  assert.equal(normalizeSettings({ maxPlayers: 12 }).maxPlayers, 12);
+  assert.equal(normalizeSettings({ maxPlayers: 13 }).maxPlayers, 12);
+});
+
 test("publicOpenLobbies lists only waiting public rooms", () => {
   const { publicOpenLobbies } = require("../server");
   const lobbies = {
@@ -367,7 +377,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
       isOpen: true,
       createdAt: "2026-01-01T10:00:00.000Z",
       players: [{ id: "host-1", name: "Мотя" }, { id: "guest", name: "Лена" }],
-      settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "neon" }
+      settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "neon", maxPlayers: 8 }
     },
     CLOSED1: {
       code: "CLOSED1",
@@ -401,6 +411,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
     rounds: 3,
     listenTime: 30,
     roomTheme: "neon",
+    maxPlayers: 8,
     createdAt: "2026-01-01T10:00:00.000Z"
   }]);
 });

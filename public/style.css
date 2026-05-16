@@ -1,4 +1,5 @@
 :root {
+  --lobby-main-width: 918px;
   --bg: #06040f;
   --panel: rgba(15, 12, 28, 0.86);
   --panel-strong: rgba(22, 18, 38, 0.96);
@@ -135,10 +136,10 @@ button {
 }
 
 .lobby-card {
-  width: min(100%, 1080px);
-  padding: clamp(10px, 1.25vw, 16px);
-  border-radius: 24px;
-  font-size: 0.92rem;
+  width: min(100%, var(--lobby-main-width));
+  padding: clamp(9px, 1.05vw, 14px);
+  border-radius: 22px;
+  font-size: 0.78rem;
 }
 
 .screen {
@@ -884,7 +885,7 @@ button:disabled {
 
 .lobby-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 0.9fr) minmax(290px, 1.1fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(200px, 0.82fr) minmax(300px, 1.18fr);
   gap: clamp(8px, 1vw, 11px);
   align-items: stretch;
   margin-top: clamp(8px, 1vh, 11px);
@@ -893,7 +894,7 @@ button:disabled {
 .lobby-column {
   display: flex;
   min-width: 0;
-  min-height: clamp(250px, 35vh, 320px);
+  min-height: clamp(212px, 30vh, 272px);
   flex-direction: column;
   padding: clamp(9px, 1.05vw, 12px);
   border: 1px solid var(--line);
@@ -942,8 +943,7 @@ button:disabled {
   margin-top: auto;
 }
 
-.lobby-invite .invite-tools,
-.lobby-settings .settings-panel {
+.lobby-invite .invite-tools {
   flex: 1;
 }
 
@@ -984,6 +984,16 @@ button:disabled {
   margin: 0;
   min-height: 1.1em;
 }
+
+.action-settings-panel {
+  max-height: min(48vh, 520px);
+  overflow: auto;
+}
+
+.lobby-action-panel .action-settings-panel {
+  margin-top: 2px;
+}
+
 
 .lobby-action-panel > button,
 .lobby-action-panel input,
@@ -3028,7 +3038,7 @@ body[data-screen="game"] .language-switcher {
     bottom: 0;
     z-index: 3;
     display: flex;
-    width: min(300px, calc((100vw - 1080px) / 2 - 28px));
+    width: min(330px, calc((100vw - var(--lobby-main-width)) / 2 - 28px));
     min-height: 0;
   }
 
@@ -3051,26 +3061,25 @@ body[data-screen="game"] .language-switcher {
   }
 
   .lobby-page-actions .lobby-action-panel {
-    grid-template-rows: auto repeat(4, minmax(0, 1fr)) auto;
-    align-content: stretch;
+    grid-template-rows: auto repeat(4, minmax(38px, auto)) auto minmax(0, 1fr) auto;
+    align-content: start;
     height: 100%;
     max-height: none;
+    overflow: auto;
   }
 
   .lobby-page-actions .lobby-action-panel.no-guest-rename {
-    grid-template-rows: auto repeat(3, minmax(0, 1fr)) auto;
+    grid-template-rows: auto repeat(3, minmax(38px, auto)) minmax(0, 1fr) auto;
   }
 
   .lobby-page-actions .lobby-action-panel > button,
   .lobby-page-actions .lobby-action-panel input,
   .lobby-page-actions .lobby-action-panel .rename-row button {
     min-height: 0;
-    height: 100%;
   }
 
   .lobby-page-actions .lobby-action-panel .rename-row {
     min-height: 0;
-    height: 100%;
   }
 
   .lobby-page-actions .lobby-action-panel .action-rename-row {
