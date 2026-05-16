@@ -7,6 +7,7 @@ const BACKGROUND_MUSIC_VOLUME = 0.12;
 const AUTH_TOKEN_KEY = "musicspy_auth_token";
 const RECONNECT_STATE_KEY = "musicspy_reconnect_state";
 const RECONNECT_TOKEN_KEY = "musicspy_reconnect_token";
+const PARTY_HISTORY_KEY = "musicspy_party_history";
 const AVATAR_MAX_BYTES = 64 * 1024;
 const GAME_MODE_PRESETS = {
   classic: {
@@ -17,7 +18,8 @@ const GAME_MODE_PRESETS = {
     spyMode: "auto",
     anonymousVoting: false,
     votingTime: 60,
-    runoffOnTie: true
+    runoffOnTie: true,
+    roomTheme: "neon"
   },
   blitz: {
     label: "Блиц",
@@ -27,7 +29,8 @@ const GAME_MODE_PRESETS = {
     spyMode: "auto",
     anonymousVoting: true,
     votingTime: 30,
-    runoffOnTie: false
+    runoffOnTie: false,
+    roomTheme: "cyber"
   }
 };
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
@@ -78,7 +81,9 @@ const state = {
   inviteAutoJoinAttempted: false,
   volumePanelOpen: false,
   lang: "ru",
-  oauthRedirectError: ""
+  oauthRedirectError: "",
+  latestResult: null,
+  finalComments: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1120,6 +1125,11 @@ function applyRoleTheme(role = "") {
   delete document.body.dataset.role;
 }
 
+function applyRoomTheme(theme = "neon") {
+  const safeTheme = ["neon", "vinyl", "cyber", "retro", "minimal"].includes(theme) ? theme : "neon";
+  document.body.dataset.visualTheme = safeTheme;
+}
+
 function showScreen(id) {
   if (id === "lobby" && state.phase !== "lobby") {
     state.inviteSecretsVisible = false;
@@ -1767,10 +1777,25 @@ function joinLobby() {
   });
 }
 
+function showStartCinematic() {
+  setCinematicOverlay({
+    eyebrow: "старт шоу",
+    title: "Распределяем роли…",
+    text: "Выбираем тему, перемешиваем очередь и загружаем секретные досье.",
+    meta: `<span>${t("загружаем досье")}</span><strong>ACCESS CHECK</strong>`,
+    mode: "countdown",
+    closable: false
+  });
+}
+
 function startGame() {
+  showStartCinematic();
   setStatus("lobbyStatus", "Запускаем...");
   socket.emit("startGame", { code: state.currentCode }, (res) => {
-    if (res?.error) setStatus("lobbyStatus", res.error, true);
+    if (res?.error) {
+      hideCinematicOverlay({ runOnClose: false });
+      setStatus("lobbyStatus", res.error, true);
+    }
   });
 }
 
@@ -1907,11 +1932,22 @@ function resolveSpyGuess(correct) {
   });
 }
 
+function popReactionEmoji(reaction) {
+  const stage = document.querySelector(".player-stage");
+  if (!stage) return;
+  const burst = document.createElement("span");
+  burst.className = "reaction-burst";
+  burst.textContent = reaction;
+  stage.appendChild(burst);
+  window.setTimeout(() => burst.remove(), 900);
+}
+
 function sendReaction(reaction) {
   socket.emit("trackReaction", { code: state.currentCode, reaction }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     state.selectedReaction = res.selectedReaction || null;
     state.reactionCounts = res.reactionCounts || state.reactionCounts;
+    popReactionEmoji(reaction);
     renderReactions();
   });
 }
@@ -1982,6 +2018,8 @@ function resetRoomState() {
   state.trackHistory = [];
   state.reactionCounts = {};
   state.selectedReaction = null;
+  state.finalComments = [];
+  state.latestResult = null;
   state.inviteSecretsVisible = false;
   clearReconnectState();
 }
@@ -2014,7 +2052,8 @@ function readSettingsFromForm() {
     spyCount: spyModeValue === "auto" ? 1 : Number(spyModeValue),
     anonymousVoting: $("settingAnonymousVoting").value === "true",
     votingTime: Number($("settingVotingTime").value),
-    runoffOnTie: $("settingRunoffOnTie").value === "true"
+    runoffOnTie: $("settingRunoffOnTie").value === "true",
+    roomTheme: $("settingRoomTheme")?.value || "neon"
   };
 }
 
@@ -2026,6 +2065,7 @@ function changeGameMode() {
   $("settingAnonymousVoting").value = String(preset.anonymousVoting);
   $("settingVotingTime").value = String(preset.votingTime);
   $("settingRunoffOnTie").value = String(preset.runoffOnTie);
+  if ($("settingRoomTheme")) $("settingRoomTheme").value = preset.roomTheme || "neon";
   updateGameModeHint(preset);
   updateLobbySettings();
 }
@@ -2079,7 +2119,8 @@ function applySettingsToForm(settings = {}, isHost = false) {
     settingSpyMode: spyValue,
     settingAnonymousVoting: String(Boolean(settings.anonymousVoting)),
     settingVotingTime: settings.votingTime ?? 60,
-    settingRunoffOnTie: String(settings.runoffOnTie !== false)
+    settingRunoffOnTie: String(settings.runoffOnTie !== false),
+    settingRoomTheme: settings.roomTheme || "neon"
   };
 
   for (const [id, value] of Object.entries(fields)) {
@@ -2091,6 +2132,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
 
   updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
   $("settingsHint").textContent = isHost ? t("ты можешь менять") : t("меняет хост");
+  applyRoomTheme(fields.settingRoomTheme);
 }
 
 function sendTrack() {
@@ -2122,6 +2164,8 @@ function renderLobby(lobby) {
   state.currentCode = lobby.code || state.currentCode;
   state.hostId = lobby.host || state.hostId;
   state.chatMessages = lobby.chatMessages || state.chatMessages;
+  state.finalComments = lobby.finalComments || state.finalComments;
+  applyRoomTheme(state.settings.roomTheme || "neon");
 
   updateInviteSecretsVisibility();
   const inviteLink = buildInviteLink();
@@ -2179,6 +2223,8 @@ function renderGameState(data) {
   state.reactionCounts = data.reactionCounts || state.reactionCounts;
   state.trackHistory = data.trackHistory || state.trackHistory;
   state.chatMessages = data.chatMessages || state.chatMessages;
+  state.finalComments = data.finalComments || state.finalComments;
+  applyRoomTheme(state.settings.roomTheme || "neon");
   state.pendingSpyGuess = data.pendingSpyGuess || state.pendingSpyGuess;
   if (Array.isArray(data.spyIds)) state.spyIds = data.spyIds;
   const shouldLoadLastTrack = ["listening", "paused"].includes(data.turnStage)
@@ -2432,6 +2478,13 @@ function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_
   circle.style.strokeDasharray = circumference;
   circle.style.strokeDashoffset = waiting ? circumference : circumference * (1 - Math.max(0, timeLeft) / listenTime);
   circle.classList.toggle("danger", !waiting && timeLeft <= 10);
+  circle.closest(".timer-ring")?.classList.toggle("timer-critical", !waiting && timeLeft <= 5);
+  document.body.classList.toggle("music-playing", stage === "listening");
+  const vinyl = $("vinylDisc");
+  if (vinyl) {
+    vinyl.classList.toggle("spinning", stage === "listening");
+    vinyl.classList.toggle("slowing", stage === "waiting" || stage === "paused");
+  }
 
   if (!waiting && timeLeft > 0 && timeLeft <= 5) {
     playMetronomeTick();
@@ -2457,6 +2510,12 @@ function clearPlayer() {
   });
   embed.className = "embed empty";
   embed.innerHTML = `<span>${t("Ждем трек от текущего игрока")}</span>`;
+  document.body.classList.remove("music-playing");
+  const vinyl = $("vinylDisc");
+  if (vinyl) {
+    vinyl.classList.remove("spinning");
+    vinyl.classList.add("slowing");
+  }
   ["tickSound", "startSound", "revealSound"].forEach((id) => {
     const media = $(id);
     if (media && typeof media.pause === "function") {
@@ -2488,6 +2547,12 @@ function loadTrack(track) {
   const soundCloud = isSoundCloudUrl(url);
 
   embed.classList.remove("empty");
+  document.body.classList.add("music-playing");
+  const vinyl = $("vinylDisc");
+  if (vinyl) {
+    vinyl.classList.add("spinning");
+    vinyl.classList.remove("slowing");
+  }
   if (youtubeId) {
     const origin = encodeURIComponent(window.location.origin);
     embed.innerHTML = `<iframe id="trackFrame" src="https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&enablejsapi=1&origin=${origin}" title="YouTube player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
@@ -2546,7 +2611,7 @@ function renderVoteList(votes = {}) {
     const isMe = player.id === socket.id;
     const countMarkup = state.anonymousVoting ? "<strong>?</strong>" : `<strong>${voteCounts[player.id] || 0}</strong>`;
     return `
-      <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
+      <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""} ${voteCounts[player.id] ? "has-votes" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
         <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
         ${countMarkup}
       </button>
@@ -2554,7 +2619,195 @@ function renderVoteList(votes = {}) {
   }).join("");
 }
 
+function resultBestTrack(data) {
+  return data?.breakdown?.mostReactedTrack || data?.trackHistory?.[0] || state.trackHistory?.[0] || null;
+}
+
+function resultFunnyNomination(data) {
+  const suspicious = data?.breakdown?.mostSuspiciousTrack;
+  const reacted = data?.breakdown?.mostReactedTrack;
+  if (suspicious?.playerName) return `Красная метка вечера: ${suspicious.playerName}`;
+  if (reacted?.playerName) return `Разорвал реакции: ${reacted.playerName}`;
+  return data?.civiliansWin ? "Детективы танцпола" : "Шпион на бис";
+}
+
+function resultSnapshot(data = state.latestResult) {
+  const spyNames = data?.spyNames?.length ? data.spyNames.join(", ") : (data?.spyName || "—");
+  const winners = data?.civiliansWin ? "Мирные" : "Шпион";
+  const bestTrack = resultBestTrack(data);
+  return {
+    code: state.currentCode || data?.code || "-----",
+    winners,
+    spies: spyNames,
+    theme: data?.theme || "—",
+    bestTrack: bestTrack?.playerName ? `${bestTrack.playerName}${bestTrack.reactionCount ? ` · ${bestTrack.reactionCount} реакций` : ""}` : "—",
+    nomination: resultFunnyNomination(data)
+  };
+}
+
+function renderSharePreview(data = state.latestResult) {
+  const box = $("resultSharePreview");
+  if (!box) return;
+  const snap = resultSnapshot(data);
+  box.innerHTML = `
+    <div class="share-card-mini">
+      <span>Music Spy · ${escapeHtml(snap.code)}</span>
+      <strong>${escapeHtml(snap.winners)} победили</strong>
+      <small>Шпион: ${escapeHtml(snap.spies)} · Тема: «${escapeHtml(translateTheme(snap.theme))}»</small>
+      <small>Лучший трек: ${escapeHtml(snap.bestTrack)}</small>
+      <em>${escapeHtml(snap.nomination)}</em>
+    </div>
+  `;
+}
+
+function savePartyHistory(data) {
+  try {
+    const item = { ...resultSnapshot(data), date: new Date().toLocaleString(), civiliansWin: Boolean(data?.civiliansWin) };
+    const history = JSON.parse(window.localStorage.getItem(PARTY_HISTORY_KEY) || "[]");
+    window.localStorage.setItem(PARTY_HISTORY_KEY, JSON.stringify([item, ...history].slice(0, 8)));
+  } catch {}
+}
+
+function renderPartyHistory() {
+  const box = $("partyHistory");
+  if (!box) return;
+  let history = [];
+  try { history = JSON.parse(window.localStorage.getItem(PARTY_HISTORY_KEY) || "[]"); } catch { history = []; }
+  box.classList.toggle("empty", !history.length);
+  box.innerHTML = history.length ? history.map((item) => `
+    <details class="party-history-row">
+      <summary><strong>${escapeHtml(item.code)}</strong><span>${escapeHtml(item.winners)} · ${escapeHtml(item.date || "")}</span></summary>
+      <small>Шпион: ${escapeHtml(item.spies)} · Тема: «${escapeHtml(translateTheme(item.theme))}»</small>
+      <small>Лучший трек: ${escapeHtml(item.bestTrack)}</small>
+      <em>${escapeHtml(item.nomination)}</em>
+    </details>
+  `).join("") : t("История пока пустая");
+}
+
+function renderFinalComments(comments = state.finalComments) {
+  const box = $("finalComments");
+  if (!box) return;
+  state.finalComments = comments || [];
+  box.classList.toggle("empty", !state.finalComments.length);
+  box.innerHTML = state.finalComments.length ? state.finalComments.map((comment) => `
+    <div class="final-comment"><strong>${escapeHtml(comment.playerName || t("Игрок"))}</strong><span>${escapeHtml(comment.text || "")}</span></div>
+  `).join("") : t("Комментариев пока нет");
+}
+
+function sendFinalComment() {
+  const input = $("finalCommentInput");
+  const text = input?.value.trim() || "";
+  if (!text) return;
+  socket.emit("finalComment:send", { code: state.currentCode, text }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    input.value = "";
+    renderFinalComments(res.comments || state.finalComments);
+  });
+}
+
+function drawShareCard(data = state.latestResult) {
+  const canvas = $("shareCanvas");
+  if (!canvas) return null;
+  const ctx = canvas.getContext("2d");
+  const snap = resultSnapshot(data);
+  const w = canvas.width;
+  const h = canvas.height;
+  const gradient = ctx.createLinearGradient(0, 0, w, h);
+  gradient.addColorStop(0, data?.civiliansWin ? "#141b63" : "#250406");
+  gradient.addColorStop(0.55, "#07040f");
+  gradient.addColorStop(1, data?.civiliansWin ? "#8b5cf6" : "#e50914");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  for (let i = 0; i < 36; i += 1) {
+    const x = (i * 97) % w;
+    const barH = 120 + ((i * 53) % 360);
+    ctx.fillRect(x, h - barH - 80, 34, barH);
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.beginPath();
+  ctx.arc(930, 310, 190, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = 22;
+  ctx.beginPath();
+  ctx.arc(930, 310, 105, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "#fff";
+  ctx.font = "900 62px Inter, sans-serif";
+  ctx.fillText("MUSIC SPY", 90, 140);
+  ctx.font = "800 34px Inter, sans-serif";
+  ctx.fillText(`Комната ${snap.code}`, 90, 205);
+  ctx.font = "900 86px Inter, sans-serif";
+  ctx.fillText(`${snap.winners} победили`, 90, 360);
+  const rows = [
+    ["Победители", snap.winners],
+    ["Шпион", snap.spies],
+    ["Тема", `«${translateTheme(snap.theme)}»`],
+    ["Лучший трек", snap.bestTrack],
+    ["Смешная номинация", snap.nomination]
+  ];
+  let y = 520;
+  for (const [label, value] of rows) {
+    ctx.fillStyle = "rgba(255,255,255,0.62)";
+    ctx.font = "800 30px Inter, sans-serif";
+    ctx.fillText(label.toUpperCase(), 90, y);
+    ctx.fillStyle = "#fff";
+    ctx.font = "800 46px Inter, sans-serif";
+    wrapCanvasText(ctx, String(value), 90, y + 58, 970, 56);
+    y += label === "Смешная номинация" ? 170 : 155;
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = "800 30px Inter, sans-serif";
+  ctx.fillText("Сохрани итог и отправь в Telegram / Discord", 90, h - 105);
+  return canvas;
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  if (line) ctx.fillText(line, x, y);
+}
+
+function saveResultCard() {
+  const canvas = drawShareCard();
+  if (!canvas) return;
+  const link = document.createElement("a");
+  link.download = `music-spy-${state.currentCode || "result"}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+async function shareResultCard() {
+  const canvas = drawShareCard();
+  if (!canvas) return saveResultCard();
+  canvas.toBlob(async (blob) => {
+    const file = new File([blob], `music-spy-${state.currentCode || "result"}.png`, { type: "image/png" });
+    if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+      await navigator.share({ title: "Music Spy итог", text: "Финальный отчёт партии Music Spy", files: [file] });
+    } else {
+      saveResultCard();
+    }
+  }, "image/png");
+}
+
 function renderResults(data) {
+  state.latestResult = data;
+  state.finalComments = data.finalComments || [];
+  savePartyHistory(data);
+  renderSharePreview(data);
+  renderPartyHistory();
+  renderFinalComments(state.finalComments);
   const suspectedNames = (data.breakdown?.suspectedNames?.length ? data.breakdown.suspectedNames : data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || t("Игрок"))).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
   const guessText = data.spyGuess?.skipped
@@ -2692,6 +2945,8 @@ socket.on("gameStarted", (data) => {
   state.currentTrackId = null;
   state.trackHistory = data.trackHistory || [];
   state.chatMessages = data.chatMessages || [];
+  state.finalComments = data.finalComments || [];
+  applyRoomTheme(state.settings.roomTheme || "neon");
   state.turnStage = "waiting";
   state.timeLeft = null;
   syncAudioVolume({ fadeTime: 0.32 });
@@ -2715,6 +2970,7 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("chat:update", ({ messages }) => renderChat(messages || []));
+socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
 });

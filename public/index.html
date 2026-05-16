@@ -13,6 +13,9 @@
 </head>
 <body data-screen="menu">
   <div class="noise"></div>
+  <div class="music-equalizer-bg" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
   <div class="orb orb-one"></div>
   <div class="orb orb-two"></div>
 
@@ -280,6 +283,18 @@
               </select>
               <small>переголосование между лидерами</small>
             </label>
+
+            <label class="setting-control setting-control-wide">
+              <span>Тема оформления</span>
+              <select id="settingRoomTheme" onchange="updateLobbySettings()">
+                <option value="neon" selected>Neon Club</option>
+                <option value="vinyl">Dark Vinyl</option>
+                <option value="cyber">Cyber Spy</option>
+                <option value="retro">Retro FM</option>
+                <option value="minimal">Minimal Black</option>
+              </select>
+              <small>визуальный вайб комнаты выбирает хост</small>
+            </label>
           </div>
         </aside>
       </div>
@@ -367,8 +382,11 @@
           <div><strong id="timer">∞</strong><span>сек</span></div>
         </div>
 
-        <div id="embed" class="embed empty">
-          <span>Ждем трек от текущего игрока</span>
+        <div class="player-stage">
+          <div id="vinylDisc" class="vinyl-disc" aria-hidden="true"><span></span></div>
+          <div id="embed" class="embed empty">
+            <span>Ждем трек от текущего игрока</span>
+          </div>
         </div>
 
         <div class="reaction-panel">
@@ -454,7 +472,31 @@
       <p class="eyebrow">результаты</p>
       <h2 id="resultTitle">Игра окончена</h2>
       <p id="resultText" class="lead small"></p>
+      <div class="share-actions">
+        <button id="saveResultBtn" class="primary" type="button" onclick="saveResultCard()">Сохранить итог</button>
+        <button class="secondary" type="button" onclick="shareResultCard()">Отправить в Telegram/Discord</button>
+      </div>
+      <canvas id="shareCanvas" width="1200" height="1600" class="hidden" aria-hidden="true"></canvas>
+      <div id="resultSharePreview" class="share-preview"></div>
       <div id="resultBreakdown" class="result-breakdown"></div>
+      <div class="postgame-panel">
+        <div class="panel-title">
+          <strong>Послеигровой комментарий</strong>
+          <span>одна фраза в финальный отчёт</span>
+        </div>
+        <div class="comment-form">
+          <input id="finalCommentInput" maxlength="90" placeholder="Например: Я с первого раунда знал">
+          <button class="secondary" type="button" onclick="sendFinalComment()">Добавить</button>
+        </div>
+        <div id="finalComments" class="final-comments empty">Комментариев пока нет</div>
+      </div>
+      <div class="postgame-panel">
+        <div class="panel-title">
+          <strong>История вечеринок</strong>
+          <span>последние партии на этом устройстве</span>
+        </div>
+        <div id="partyHistory" class="party-history empty">История пока пустая</div>
+      </div>
       <div class="track-history-panel result-history">
         <div class="panel-title">
           <strong>История треков</strong>

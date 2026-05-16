@@ -238,7 +238,8 @@ test("normalizeSettings applies blitz preset and supports one-round games", () =
     spyCount: 1,
     anonymousVoting: true,
     votingTime: 30,
-    runoffOnTie: false
+    runoffOnTie: false,
+    roomTheme: "cyber"
   });
 
   assert.equal(normalizeSettings({ rounds: 1 }).rounds, 1);
