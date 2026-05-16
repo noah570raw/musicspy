@@ -301,29 +301,51 @@
       <p id="menuError" class="status error"></p>
     </section>
 
-    <section id="playRooms" class="screen card play-rooms-card hidden">
-      <div class="section-header">
-        <div>
+    <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">
+      <div class="play-rooms-ambient" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <button class="play-rooms-back icon-button" type="button" onclick="showScreen('menu')" aria-label="Вернуться в меню" title="Вернуться в меню">←</button>
+
+      <div class="play-rooms-layout">
+        <div class="play-rooms-hero">
           <p class="eyebrow">быстрый старт</p>
-          <h2>Играть</h2>
-          <p class="lead small">Создай новую комнату или залетай в открытое лобби, где уже ждут игроков.</p>
-        </div>
-        <button class="icon-button" type="button" onclick="showScreen('menu')" aria-label="Вернуться в меню" title="Вернуться в меню">←</button>
-      </div>
+          <h2 id="playRoomsTitle">Play Lobby</h2>
+          <p class="lead small">Создай приватную музыкальную комнату или подключись к живому открытому лобби, где уже собирается команда.</p>
+          <div class="play-rooms-signal" aria-hidden="true">
+            <span class="signal-dot"></span>
+            <span>social deduction session</span>
+          </div>
 
-      <div class="play-room-actions">
-        <button class="primary" type="button" onclick="createLobby()">Создать лобби</button>
-        <button class="secondary" type="button" onclick="refreshOpenLobbies()">Обновить список</button>
-      </div>
+          <div class="play-room-actions">
+            <button class="primary play-primary" type="button" onclick="createLobby()">
+              <span>Создать лобби</span>
+              <small>новая комната</small>
+            </button>
+            <button class="secondary play-secondary" type="button" onclick="refreshOpenLobbies()">Обновить список</button>
+          </div>
 
-      <div class="open-lobbies-panel">
-        <div class="panel-title">
-          <strong>Открытые комнаты</strong>
-          <span id="openLobbiesSummary">ищем лобби...</span>
+          <div class="play-rooms-stats" aria-label="Параметры быстрого матча">
+            <div><strong>3+</strong><span>игрока</span></div>
+            <div><strong>30с</strong><span>на трек</span></div>
+            <div><strong>LIVE</strong><span>лобби</span></div>
+          </div>
         </div>
-        <div id="openLobbiesList" class="open-lobbies-list empty">Нажми «Обновить список», чтобы найти открытые комнаты</div>
+
+        <div class="open-lobbies-panel">
+          <div class="panel-title open-lobbies-title">
+            <div>
+              <p class="eyebrow">matchmaking</p>
+              <strong>Открытые комнаты</strong>
+            </div>
+            <span id="openLobbiesSummary">ищем лобби...</span>
+          </div>
+          <div id="openLobbiesList" class="open-lobbies-list empty">Нажми «Обновить список», чтобы найти открытые комнаты</div>
+        </div>
       </div>
-      <p id="playRoomsStatus" class="status"></p>
+      <p id="playRoomsStatus" class="status play-rooms-status"></p>
     </section>
 
     <section id="lobby" class="screen card lobby-card hidden">
