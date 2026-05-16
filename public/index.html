@@ -46,6 +46,22 @@
     </div>
   </div>
 
+  <div id="trackHistoryModal" class="result-shot-modal track-history-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="trackHistoryModalTitle">
+    <div class="result-shot-shell track-history-shell">
+      <div class="result-shot-toolbar track-history-toolbar">
+        <div>
+          <p class="eyebrow">история треков</p>
+          <h2 id="trackHistoryModalTitle">Все ходы игроков</h2>
+          <p>Полный список треков партии: раунд, ход, игрок, реакции и ссылка на трек.</p>
+        </div>
+        <button class="secondary" type="button" onclick="hideTrackHistoryModal()" aria-label="Закрыть историю треков">Закрыть</button>
+      </div>
+      <div class="track-history-fullscreen-card">
+        <div id="resultTrackHistory" class="track-history track-history-fullscreen empty">Пока треков нет</div>
+      </div>
+    </div>
+  </div>
+
   <div id="authModal" class="auth-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
     <div class="auth-modal-card">
       <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть окно аккаунта">×</button>
@@ -487,6 +503,7 @@
       <p id="resultText" class="lead small"></p>
       <div class="share-actions">
         <button id="showResultBtn" class="primary" type="button" onclick="showResultShotModal()">Показать итог игры</button>
+        <button id="showTrackHistoryBtn" class="secondary" type="button" onclick="showTrackHistoryModal()">Показать историю треков</button>
       </div>
       <canvas id="shareCanvas" width="1200" height="1600" class="hidden" aria-hidden="true"></canvas>
       <div id="resultSharePreview" class="share-preview"></div>
@@ -501,13 +518,6 @@
           <button class="secondary" type="button" onclick="sendFinalComment()">Добавить</button>
         </div>
         <div id="finalComments" class="final-comments empty">Комментариев пока нет</div>
-      </div>
-      <div class="track-history-panel result-history result-track-panel">
-        <div class="panel-title">
-          <strong>История треков</strong>
-          <span>итоги реакций</span>
-        </div>
-        <div id="resultTrackHistory" class="track-history empty">Пока треков нет</div>
       </div>
       <div class="track-history-panel result-history result-vote-details-panel">
         <div class="panel-title">

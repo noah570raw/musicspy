@@ -1168,9 +1168,34 @@ select:disabled {
 }
 
 .history-row span,
-.history-row small {
+.history-row small,
+.history-row-link em {
   color: var(--muted);
   font-size: 0.76rem;
+}
+
+.history-row-link {
+  min-width: 0;
+}
+
+.history-track-link {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  color: var(--accent-2);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.history-track-link::before {
+  content: "↗";
+  margin-right: 0.35rem;
+}
+
+.history-track-link:hover {
+  color: var(--text);
+  text-decoration: underline;
 }
 
 .voting-history,
@@ -2869,7 +2894,7 @@ body[data-role="spy"] {
   --accent-2: #ffffff;
 }
 
-/* Full-screen result card for screenshots */
+/* Full-screen result card and track history overlays. */
 .result-shot-open {
   overflow: hidden;
 }
@@ -2929,6 +2954,35 @@ body[data-role="spy"] {
   border-radius: 26px;
   box-shadow: 0 26px 90px rgba(0, 0, 0, 0.58);
   object-fit: contain;
+}
+
+.track-history-shell {
+  align-content: stretch;
+}
+
+.track-history-fullscreen-card {
+  align-self: stretch;
+  width: min(100%, 1040px);
+  min-height: 0;
+  margin-top: clamp(132px, 17vh, 178px);
+  padding: clamp(12px, 2vw, 20px);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)), rgba(10, 10, 14, 0.88);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.58);
+  overflow: hidden;
+}
+
+.track-history-fullscreen {
+  max-height: calc(100dvh - clamp(180px, 24vh, 240px));
+  padding-right: 4px;
+}
+
+.track-history-fullscreen .history-row {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(150px, 1fr) minmax(120px, 0.8fr) minmax(130px, auto);
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
 }
 
 .share-actions {
@@ -3139,6 +3193,26 @@ body[data-screen="results"] #results {
 }
 
 @media (max-width: 680px) {
+  .track-history-toolbar {
+    position: static;
+    flex-direction: column;
+    width: 100%;
+    transform: none;
+  }
+
+  .track-history-fullscreen-card {
+    margin-top: 12px;
+  }
+
+  .track-history-fullscreen {
+    max-height: calc(100dvh - 230px);
+  }
+
+  .track-history-fullscreen .history-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
   .result-shot-image {
     max-height: 58dvh;
     transform: translateY(42px);
