@@ -382,7 +382,7 @@ const EN_TRANSLATIONS = {
   "Ждем версию шпиона": "Waiting for the spy's guess",
   "Шпиона поймали, но он угадал тему и спасся.": "The spy was caught, but guessed the theme and escaped.",
   "Мирные победили": "Civilians win",
-  "Шпион забрал игру": "The spy takes the game",
+  "Шпион победил": "Spy wins",
   "шпион не называл тему": "the spy did not name the theme",
   "угадал тему": "guessed the theme",
   "не угадал тему": "did not guess the theme",
@@ -2814,7 +2814,7 @@ function renderResults(data) {
   const guessText = data.spyGuess?.skipped
     ? t("шпион не называл тему")
     : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(translateTheme(data.spyGuess?.text || "—"))}»`;
-  $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион забрал игру");
+  $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
   $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`);
 
   renderResultBreakdown(data, guessText);

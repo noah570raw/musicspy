@@ -191,6 +191,15 @@ h2 {
   font-size: clamp(2rem, 6vw, 3.5rem);
 }
 
+#resultTitle {
+  line-height: 1.02;
+}
+
+#resultText.lead.small {
+  margin: 6px 0 16px;
+  line-height: 1.38;
+}
+
 .lead {
   margin: 28px auto 24px;
   max-width: 42rem;
@@ -3110,6 +3119,11 @@ body[data-screen="results"] #results {
   body[data-screen="results"] .lead.small {
     margin: 2px 0 0;
     line-height: 1.35;
+  }
+
+  body[data-screen="results"] #resultText.lead.small {
+    margin: 0 0 8px;
+    line-height: 1.3;
   }
 
   body[data-screen="results"] .share-actions,
