@@ -34,12 +34,13 @@
       <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть окно аккаунта">×</button>
       <p class="eyebrow">аккаунт</p>
       <h2 id="authModalTitle">Как продолжим?</h2>
-      <p id="authModalText" class="auth-modal-text">Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.</p>
+      <p id="authModalText" class="auth-modal-text">Войди через Google или Discord, используй существующий логин или продолжи как гость.</p>
 
       <div id="authChoiceView" class="auth-choice-grid">
-        <button class="primary" type="button" onclick="selectAuthMode('register')">Зарегистрироваться</button>
-        <button class="secondary" type="button" onclick="selectAuthMode('login')">Войти</button>
-        <button class="ghost-button" type="button" onclick="continueAsGuest()">Продолжить как гость</button>
+        <button class="oauth-button google" type="button" onclick="loginWithOAuth('google')"><span aria-hidden="true">G</span>Войти через Google</button>
+        <button class="oauth-button discord" type="button" onclick="loginWithOAuth('discord')"><span aria-hidden="true">D</span>Войти через Discord</button>
+        <button class="secondary" type="button" onclick="selectAuthMode('login')">Войти в аккаунт</button>
+        <button class="ghost-button" type="button" onclick="continueAsGuest()">Играть как гость</button>
       </div>
 
       <div id="authFormView" class="auth-form-view hidden">

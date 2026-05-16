@@ -9,6 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.set("trust proxy", 1);
 app.use(express.static("public"));
 
 const DEFAULT_DATA_DIR = path.join(__dirname, "data");
@@ -39,9 +40,11 @@ const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
 const RECONNECT_GRACE_MS = 60_000;
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 const lobbies = {};
 const timers = {};
+const oauthStates = new Map();
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 
@@ -183,6 +186,153 @@ function publicUser(user) {
     avatar: user.avatar || "",
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) }
+  };
+}
+
+function sanitizeDisplayName(value, fallback = "Игрок") {
+  return normalizeName(String(value || fallback).replace(/[#@]/g, " "));
+}
+
+function makeUniqueUsername(base) {
+  const normalizedBase = normalizeUsername(base) || `player_${crypto.randomBytes(3).toString("hex")}`;
+  const root = normalizedBase.slice(0, 20) || "player";
+  const occupied = new Set(usersStore.users.map((user) => user.username));
+  if (!occupied.has(root)) return root;
+
+  for (let index = 2; index < 1000; index += 1) {
+    const suffix = `_${index}`;
+    const candidate = `${root.slice(0, 24 - suffix.length)}${suffix}`;
+    if (!occupied.has(candidate)) return candidate;
+  }
+
+  return `${root.slice(0, 17)}_${crypto.randomBytes(3).toString("hex")}`;
+}
+
+function oauthProviderLabel(provider) {
+  return provider === "google" ? "Google" : "Discord";
+}
+
+function userHasOAuthIdentity(user, provider, providerId) {
+  return (user.oauth || []).some((identity) => identity.provider === provider && identity.providerId === providerId);
+}
+
+function upsertOAuthUser(provider, profile) {
+  const providerId = String(profile.providerId || "").trim();
+  if (!providerId) throw new Error("OAuth profile id is missing");
+
+  const now = new Date().toISOString();
+  const email = String(profile.email || "").trim().toLowerCase();
+  const displayName = sanitizeDisplayName(profile.displayName || email.split("@")[0], oauthProviderLabel(provider));
+  let user = usersStore.users.find((item) => userHasOAuthIdentity(item, provider, providerId));
+
+  if (!user) {
+    const usernameBase = profile.username || email.split("@")[0] || `${provider}_${providerId}`;
+    user = {
+      id: crypto.randomUUID(),
+      username: makeUniqueUsername(usernameBase),
+      displayName,
+      avatar: profile.avatar || "",
+      stats: defaultStats(),
+      oauth: [{ provider, providerId, email, linkedAt: now }],
+      sessions: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    usersStore.users.push(user);
+  } else {
+    user.displayName = user.displayName || displayName;
+    if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
+    const identity = (user.oauth || []).find((item) => item.provider === provider && item.providerId === providerId);
+    if (identity) identity.email = email || identity.email || "";
+    user.updatedAt = now;
+  }
+
+  saveUsersStore();
+  return user;
+}
+
+function getPublicBaseUrl(req) {
+  const configured = String(process.env.PUBLIC_URL || process.env.APP_URL || "").trim().replace(/\/$/, "");
+  if (configured) return configured;
+  return `${req.protocol}://${req.get("host")}`;
+}
+
+function oauthRedirectUri(req, provider) {
+  const envKey = provider === "google" ? "GOOGLE_REDIRECT_URI" : "DISCORD_REDIRECT_URI";
+  return String(process.env[envKey] || "").trim() || `${getPublicBaseUrl(req)}/auth/${provider}/callback`;
+}
+
+function createOAuthState(provider, returnTo = "/") {
+  const state = crypto.randomBytes(24).toString("hex");
+  const safeReturnTo = String(returnTo || "/").startsWith("/") ? String(returnTo || "/") : "/";
+  oauthStates.set(state, { provider, returnTo: safeReturnTo, createdAt: Date.now() });
+  return state;
+}
+
+function consumeOAuthState(state, provider) {
+  const entry = oauthStates.get(String(state || ""));
+  oauthStates.delete(String(state || ""));
+  if (!entry || entry.provider !== provider) return null;
+  if (Date.now() - entry.createdAt > OAUTH_STATE_TTL_MS) return null;
+  return entry;
+}
+
+function buildOAuthErrorRedirect(returnTo = "/", message = "OAuth login failed") {
+  const url = new URL(returnTo, "http://musicspy.local");
+  url.searchParams.set("auth_error", message);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function buildOAuthSuccessRedirect(returnTo = "/", token) {
+  const url = new URL(returnTo, "http://musicspy.local");
+  url.searchParams.set("auth_token", token);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function oauthConfig(provider, req) {
+  if (provider === "google") {
+    return {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri: oauthRedirectUri(req, provider),
+      authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+      tokenUrl: "https://oauth2.googleapis.com/token",
+      userUrl: "https://www.googleapis.com/oauth2/v3/userinfo",
+      scope: "openid email profile"
+    };
+  }
+
+  return {
+    clientId: process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    redirectUri: oauthRedirectUri(req, provider),
+    authorizeUrl: "https://discord.com/oauth2/authorize",
+    tokenUrl: "https://discord.com/api/oauth2/token",
+    userUrl: "https://discord.com/api/users/@me",
+    scope: "identify email"
+  };
+}
+
+function normalizeOAuthProfile(provider, rawProfile = {}) {
+  if (provider === "google") {
+    return {
+      providerId: rawProfile.sub,
+      email: rawProfile.email || "",
+      username: rawProfile.email ? String(rawProfile.email).split("@")[0] : rawProfile.name,
+      displayName: rawProfile.name || rawProfile.email || "Google player",
+      avatar: rawProfile.picture || ""
+    };
+  }
+
+  const avatar = rawProfile.avatar
+    ? `https://cdn.discordapp.com/avatars/${rawProfile.id}/${rawProfile.avatar}.png?size=128`
+    : "";
+  return {
+    providerId: rawProfile.id,
+    email: rawProfile.email || "",
+    username: rawProfile.username || rawProfile.global_name,
+    displayName: rawProfile.global_name || rawProfile.username || "Discord player",
+    avatar
   };
 }
 
@@ -600,6 +750,75 @@ function publicLobby(lobby) {
     chatMessages: lobby.chatMessages || []
   };
 }
+
+
+function redirectToOAuth(provider, req, res) {
+  const config = oauthConfig(provider, req);
+  const returnTo = req.query.returnTo || "/";
+  if (!config.clientId || !config.clientSecret) {
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
+  }
+
+  const state = createOAuthState(provider, returnTo);
+  const authUrl = new URL(config.authorizeUrl);
+  authUrl.searchParams.set("client_id", config.clientId);
+  authUrl.searchParams.set("redirect_uri", config.redirectUri);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("scope", config.scope);
+  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("prompt", "select_account");
+  return res.redirect(authUrl.toString());
+}
+
+async function handleOAuthCallback(provider, req, res) {
+  const stateEntry = consumeOAuthState(req.query.state, provider);
+  const returnTo = stateEntry?.returnTo || "/";
+  if (!stateEntry || !req.query.code) {
+    return res.redirect(buildOAuthErrorRedirect(returnTo, "OAuth-сессия устарела. Попробуй еще раз."));
+  }
+
+  const config = oauthConfig(provider, req);
+  if (!config.clientId || !config.clientSecret) {
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
+  }
+
+  try {
+    const tokenResponse = await fetch(config.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+      body: new URLSearchParams({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        grant_type: "authorization_code",
+        code: String(req.query.code),
+        redirect_uri: config.redirectUri
+      })
+    });
+
+    if (!tokenResponse.ok) throw new Error(`Token exchange failed with ${tokenResponse.status}`);
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) throw new Error("OAuth provider did not return an access token");
+
+    const userResponse = await fetch(config.userUrl, {
+      headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/json" }
+    });
+    if (!userResponse.ok) throw new Error(`Profile request failed with ${userResponse.status}`);
+
+    const rawProfile = await userResponse.json();
+    const profile = normalizeOAuthProfile(provider, rawProfile);
+    const user = upsertOAuthUser(provider, profile);
+    const sessionToken = createSession(user);
+    return res.redirect(buildOAuthSuccessRedirect(returnTo, sessionToken));
+  } catch (error) {
+    console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+  }
+}
+
+app.get("/auth/google", (req, res) => redirectToOAuth("google", req, res));
+app.get("/auth/google/callback", (req, res) => handleOAuthCallback("google", req, res));
+app.get("/auth/discord", (req, res) => redirectToOAuth("discord", req, res));
+app.get("/auth/discord/callback", (req, res) => handleOAuthCallback("discord", req, res));
 
 function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
@@ -1669,6 +1888,9 @@ module.exports = {
   normalizeUsername,
   hashPassword,
   verifyPassword,
+  normalizeOAuthProfile,
+  buildOAuthSuccessRedirect,
+  buildOAuthErrorRedirect,
   resolveDataDir,
   pauseTurnTimer,
   resumeTurnTimer,

@@ -60,3 +60,27 @@ MUSICSPY_DATA_DIR=/var/data/musicspy
 ```
 
 После этого старые токены из `localStorage` продолжат работать между деплоями, а вход по логину и паролю не будет ломаться из-за пересоздания файлов проекта.
+
+
+## 🔐 OAuth-вход через Google и Discord
+
+В окне аккаунта регистрация по логину/паролю заменена на быстрый вход через Google или Discord. Старый вход по логину и паролю оставлен для уже созданных аккаунтов.
+
+Для включения OAuth на сервере задайте переменные окружения:
+
+```bash
+PUBLIC_URL=https://musicspy.onrender.com
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+DISCORD_CLIENT_ID=...
+DISCORD_CLIENT_SECRET=...
+```
+
+Redirect URI в кабинетах провайдеров:
+
+```text
+https://musicspy.onrender.com/auth/google/callback
+https://musicspy.onrender.com/auth/discord/callback
+```
+
+Если `PUBLIC_URL` не задан, сервер соберёт redirect URI из текущего host. Для нестандартных адресов можно явно задать `GOOGLE_REDIRECT_URI` и `DISCORD_REDIRECT_URI`.
