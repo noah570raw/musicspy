@@ -743,7 +743,7 @@ function showScreen(id) {
   const previousPhase = state.phase;
   state.phase = id;
   document.body.dataset.screen = id;
-  if (["menu", "playRooms", "lobby"].includes(id)) applyRoleTheme();
+  if (["menu", "playRooms", "createLobbySetup", "lobby"].includes(id)) applyRoleTheme();
   if (id === "playRooms") refreshOpenLobbies();
   updateInviteSecretsVisibility();
   updateMobileTurnBanner();
@@ -1430,6 +1430,96 @@ function showPlayRooms() {
   showScreen("playRooms");
 }
 
+function showCreateLobbySetup() {
+  setStatus("playRoomsStatus");
+  setStatus("createLobbyStatus");
+  resetCreateLobbyForm();
+  updateCreateLobbyPreview();
+  showScreen("createLobbySetup");
+}
+
+function resetCreateLobbyForm() {
+  const preset = GAME_MODE_PRESETS.classic;
+  const fields = {
+    createLobbyNameInput: "",
+    createLobbyVisibility: "open",
+    createSettingMaxPlayers: preset.maxPlayers || 12,
+    createSettingGameMode: "classic",
+    createSettingRounds: preset.rounds,
+    createSettingListenTime: preset.listenTime,
+    createSettingSpyMode: preset.spyMode || "auto",
+    createSettingAnonymousVoting: String(preset.anonymousVoting),
+    createSettingVotingTime: preset.votingTime,
+    createSettingRunoffOnTie: String(preset.runoffOnTie),
+    createSettingRoomTheme: preset.roomTheme || "neon"
+  };
+
+  for (const [id, value] of Object.entries(fields)) {
+    const el = $(id);
+    if (el) el.value = String(value);
+  }
+  updateCreateGameModeHint(preset);
+}
+
+function readCreateSettingsFromForm() {
+  const spyModeValue = $("createSettingSpyMode")?.value || "auto";
+  return {
+    gameMode: $("createSettingGameMode")?.value || "classic",
+    rounds: Number($("createSettingRounds")?.value || 3),
+    listenTime: Number($("createSettingListenTime")?.value || DEFAULT_LISTEN_TIME),
+    spyMode: spyModeValue === "auto" ? "auto" : "manual",
+    spyCount: spyModeValue === "auto" ? 1 : Number(spyModeValue),
+    anonymousVoting: ($("createSettingAnonymousVoting")?.value || "false") === "true",
+    votingTime: Number($("createSettingVotingTime")?.value ?? 60),
+    runoffOnTie: ($("createSettingRunoffOnTie")?.value || "true") === "true",
+    roomTheme: $("createSettingRoomTheme")?.value || "neon",
+    maxPlayers: Number($("createSettingMaxPlayers")?.value || 12)
+  };
+}
+
+function readCreateLobbyMetaFromForm() {
+  return {
+    lobbyName: $("createLobbyNameInput")?.value || "",
+    isOpen: ($("createLobbyVisibility")?.value || "open") === "open"
+  };
+}
+
+function changeCreateGameMode() {
+  const preset = GAME_MODE_PRESETS[$("createSettingGameMode")?.value] || GAME_MODE_PRESETS.classic;
+  if ($("createSettingRounds")) $("createSettingRounds").value = String(preset.rounds);
+  if ($("createSettingListenTime")) $("createSettingListenTime").value = String(preset.listenTime);
+  if ($("createSettingSpyMode")) $("createSettingSpyMode").value = preset.spyMode || "auto";
+  if ($("createSettingAnonymousVoting")) $("createSettingAnonymousVoting").value = String(preset.anonymousVoting);
+  if ($("createSettingVotingTime")) $("createSettingVotingTime").value = String(preset.votingTime);
+  if ($("createSettingRunoffOnTie")) $("createSettingRunoffOnTie").value = String(preset.runoffOnTie);
+  if ($("createSettingRoomTheme")) $("createSettingRoomTheme").value = preset.roomTheme || "neon";
+  if ($("createSettingMaxPlayers")) $("createSettingMaxPlayers").value = String(preset.maxPlayers || 12);
+  updateCreateGameModeHint(preset);
+  updateCreateLobbyPreview();
+}
+
+function updateCreateGameModeHint(preset = null) {
+  const mode = $("createSettingGameMode")?.value || "classic";
+  const activePreset = preset || GAME_MODE_PRESETS[mode] || GAME_MODE_PRESETS.classic;
+  const hint = $("createGameModeHint");
+  if (hint) hint.textContent = t(activePreset.hint);
+}
+
+function updateCreateLobbyPreview() {
+  updateCreateGameModeHint();
+  const settings = readCreateSettingsFromForm();
+  const meta = readCreateLobbyMetaFromForm();
+  const previewName = $("createLobbyPreviewName");
+  const previewMeta = $("createLobbyPreviewMeta");
+  const fallbackName = `Лобби ${getName() || t("хоста")}`;
+  const mode = GAME_MODE_PRESETS[settings.gameMode]?.label || settings.gameMode || "Классика";
+  if (previewName) previewName.textContent = meta.lobbyName.trim() || fallbackName;
+  if (previewMeta) {
+    const access = meta.isOpen ? t("Открытое") : t("Закрытое");
+    previewMeta.textContent = `${t(mode)} · ${settings.rounds} ${t("раундов")} · ${settings.listenTime}${t("с на трек")} · ${access}`;
+  }
+}
+
 function renderOpenLobbies(lobbies = []) {
   const list = $("openLobbiesList");
   const summary = $("openLobbiesSummary");
@@ -1503,8 +1593,24 @@ function refreshOpenLobbies() {
 function createLobby() {
   setStatus("menuError");
   setStatus("playRoomsStatus");
-  socket.emit("createLobby", { name: getName(), reconnectToken: getReconnectToken() }, (res) => {
-    if (res.error) return setStatus(state.phase === "playRooms" ? "playRoomsStatus" : "menuError", res.error, true);
+  setStatus("createLobbyStatus");
+  const creatingFromSetup = state.phase === "createLobbySetup";
+  const statusId = creatingFromSetup ? "createLobbyStatus" : (state.phase === "playRooms" ? "playRoomsStatus" : "menuError");
+  const payload = {
+    name: getName(),
+    reconnectToken: getReconnectToken()
+  };
+
+  if (creatingFromSetup) {
+    Object.assign(payload, readCreateLobbyMetaFromForm(), { settings: readCreateSettingsFromForm() });
+    const button = $("confirmCreateLobbyBtn");
+    if (button) button.disabled = true;
+  }
+
+  socket.emit("createLobby", payload, (res) => {
+    const button = $("confirmCreateLobbyBtn");
+    if (button) button.disabled = false;
+    if (res.error) return setStatus(statusId, res.error, true);
     state.currentCode = res.code;
     state.myId = res.playerId || socket.id;
     storeReconnectState(state.currentCode);

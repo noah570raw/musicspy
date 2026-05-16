@@ -4861,3 +4861,84 @@ body[data-screen="results"] .result-score-panel:hover {
     padding: 7px;
   }
 }
+
+.create-lobby-card {
+  width: min(100%, 980px);
+  text-align: left;
+}
+
+.create-lobby-header {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.create-lobby-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(320px, 1fr);
+  gap: clamp(16px, 3vw, 28px);
+  margin-top: 22px;
+}
+
+.create-lobby-preview {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 250px;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.24), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,0.105), rgba(255,255,255,0.035));
+  box-shadow: 0 22px 54px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.create-lobby-preview strong {
+  display: block;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.create-lobby-preview span {
+  color: rgba(248, 246, 255, 0.78);
+  font-weight: 800;
+}
+
+.create-lobby-preview small {
+  color: var(--muted);
+}
+
+.create-settings-panel {
+  gap: 10px;
+  padding: clamp(10px, 2vw, 14px);
+}
+
+.create-lobby-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.create-lobby-actions button {
+  width: 100%;
+}
+
+#createLobbyStatus {
+  margin-top: 12px;
+}
+
+@media (max-width: 820px) {
+  .create-lobby-layout,
+  .create-lobby-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .create-lobby-preview {
+    position: static;
+    min-height: 0;
+  }
+}

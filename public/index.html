@@ -320,9 +320,9 @@
           </div>
 
           <div class="play-room-actions">
-            <button class="primary play-primary" type="button" onclick="createLobby()">
+            <button class="primary play-primary" type="button" onclick="showCreateLobbySetup()">
               <span>Создать лобби</span>
-              <small>новая комната</small>
+              <small>сначала настройки</small>
             </button>
             <button class="secondary play-secondary" type="button" onclick="refreshOpenLobbies()">Обновить список</button>
           </div>
@@ -346,6 +346,160 @@
         </div>
       </div>
       <p id="playRoomsStatus" class="status play-rooms-status"></p>
+    </section>
+
+    <section id="createLobbySetup" class="screen card create-lobby-card hidden" aria-labelledby="createLobbySetupTitle">
+      <div class="section-header create-lobby-header">
+        <div>
+          <p class="eyebrow">подготовка комнаты</p>
+          <h2 id="createLobbySetupTitle">Настрой лобби</h2>
+          <p class="lead small">Выбери правила до создания комнаты. Лобби появится в списке только после нажатия «Создать».</p>
+        </div>
+        <button class="icon-button" type="button" onclick="showPlayRooms()" aria-label="Назад к лобби" title="Назад к лобби">←</button>
+      </div>
+
+      <div class="create-lobby-layout">
+        <div class="create-lobby-preview">
+          <p class="eyebrow">будущая комната</p>
+          <strong id="createLobbyPreviewName">Лобби хоста</strong>
+          <span id="createLobbyPreviewMeta">Классика · 3 раунда · 30с на трек</span>
+          <small>Игроки смогут войти только после создания лобби.</small>
+        </div>
+
+        <div class="settings-panel create-settings-panel">
+          <div class="settings-title">
+            <strong>Настройки лобби</strong>
+            <span>до создания</span>
+          </div>
+
+          <label class="setting-control setting-control-wide">
+            <span>Название лобби</span>
+            <input id="createLobbyNameInput" maxlength="32" placeholder="Например, ночной плейлист" oninput="updateCreateLobbyPreview()">
+            <small>видно в списке открытых комнат</small>
+          </label>
+
+          <label class="setting-control setting-control-wide">
+            <span>Доступ</span>
+            <select id="createLobbyVisibility" onchange="updateCreateLobbyPreview()">
+              <option value="open" selected>Открытое</option>
+              <option value="closed">Закрытое</option>
+            </select>
+            <small>закрытое лобби доступно только по коду или ссылке</small>
+          </label>
+
+          <label class="setting-control setting-control-wide">
+            <span>Игроков в комнате</span>
+            <select id="createSettingMaxPlayers" onchange="updateCreateLobbyPreview()">
+              <option value="3">до 3 игроков</option>
+              <option value="4">до 4 игроков</option>
+              <option value="5">до 5 игроков</option>
+              <option value="6">до 6 игроков</option>
+              <option value="7">до 7 игроков</option>
+              <option value="8">до 8 игроков</option>
+              <option value="9">до 9 игроков</option>
+              <option value="10">до 10 игроков</option>
+              <option value="11">до 11 игроков</option>
+              <option value="12" selected>до 12 игроков</option>
+            </select>
+            <small>лимит входа будет применен сразу</small>
+          </label>
+
+          <div class="settings-title game-settings-title">
+            <strong>Настройки игры</strong>
+            <span>выбирает хост</span>
+          </div>
+
+          <label class="setting-control setting-control-wide">
+            <span>Режим</span>
+            <select id="createSettingGameMode" onchange="changeCreateGameMode()">
+              <option value="classic" selected>Классика</option>
+              <option value="blitz">Блиц</option>
+            </select>
+            <small id="createGameModeHint">сбалансированные правила для обычной партии</small>
+          </label>
+
+          <label class="setting-control">
+            <span>Раунды</span>
+            <select id="createSettingRounds" onchange="updateCreateLobbyPreview()">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+            <small>сколько кругов сыграет каждый</small>
+          </label>
+
+          <label class="setting-control">
+            <span>Время трека</span>
+            <select id="createSettingListenTime" onchange="updateCreateLobbyPreview()">
+              <option value="15">15 секунд</option>
+              <option value="30" selected>30 секунд</option>
+              <option value="45">45 секунд</option>
+              <option value="60">60 секунд</option>
+            </select>
+            <small>пауза на прослушивание</small>
+          </label>
+
+          <label class="setting-control setting-control-wide">
+            <span>Шпионы</span>
+            <select id="createSettingSpyMode" onchange="updateCreateLobbyPreview()">
+              <option value="auto" selected>Авто по игрокам</option>
+              <option value="1">1 шпион</option>
+              <option value="2">2 шпиона</option>
+              <option value="3">3 шпиона</option>
+            </select>
+            <small>авто добавляет шпионов в больших компаниях</small>
+          </label>
+
+          <label class="setting-control">
+            <span>Голосование</span>
+            <select id="createSettingAnonymousVoting" onchange="updateCreateLobbyPreview()">
+              <option value="false" selected>Открытое</option>
+              <option value="true">Анонимное</option>
+            </select>
+            <small>виден ли счет во время выбора</small>
+          </label>
+
+          <label class="setting-control">
+            <span>Таймер голосования</span>
+            <select id="createSettingVotingTime" onchange="updateCreateLobbyPreview()">
+              <option value="0">Без таймера</option>
+              <option value="30">30 секунд</option>
+              <option value="60" selected>60 секунд</option>
+              <option value="90">90 секунд</option>
+            </select>
+            <small>давление для финального решения</small>
+          </label>
+
+          <label class="setting-control setting-control-wide">
+            <span>Ничья</span>
+            <select id="createSettingRunoffOnTie" onchange="updateCreateLobbyPreview()">
+              <option value="true" selected>Второй тур</option>
+              <option value="false">Без второго тура</option>
+            </select>
+            <small>переголосование между лидерами</small>
+          </label>
+
+          <label class="setting-control setting-control-wide">
+            <span>Тема оформления</span>
+            <select id="createSettingRoomTheme" onchange="updateCreateLobbyPreview()">
+              <option value="neon" selected>Neon Club</option>
+              <option value="vinyl">Dark Vinyl</option>
+              <option value="cyber">Cyber Spy</option>
+              <option value="retro">Retro FM</option>
+              <option value="minimal">Minimal Black</option>
+            </select>
+            <small>визуальный вайб комнаты выбирает хост</small>
+          </label>
+        </div>
+      </div>
+
+      <div class="create-lobby-actions">
+        <button class="secondary" type="button" onclick="showPlayRooms()">Назад</button>
+        <button id="confirmCreateLobbyBtn" class="primary" type="button" onclick="createLobby()">Создать</button>
+      </div>
+      <p id="createLobbyStatus" class="status"></p>
     </section>
 
     <section id="lobby" class="screen card lobby-card hidden">

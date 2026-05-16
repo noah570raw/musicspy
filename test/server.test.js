@@ -366,6 +366,39 @@ test("normalizeSettings clamps lobby max players to host choices", () => {
   assert.equal(normalizeSettings({ maxPlayers: 13 }).maxPlayers, 12);
 });
 
+test("createLobbyState applies host settings before players can join", () => {
+  const { createLobbyState } = require("../server");
+
+  const lobby = createLobbyState("SETUP", "host", { id: "host", name: "Мотя" }, {
+    name: "Ночной сет",
+    isOpen: false,
+    settings: {
+      gameMode: "blitz",
+      rounds: 5,
+      listenTime: 60,
+      spyMode: "manual",
+      spyCount: 2,
+      anonymousVoting: false,
+      votingTime: 90,
+      runoffOnTie: true,
+      roomTheme: "vinyl",
+      maxPlayers: 5
+    }
+  });
+
+  assert.equal(lobby.name, "Ночной сет");
+  assert.equal(lobby.isOpen, false);
+  assert.equal(lobby.phase, "lobby");
+  assert.equal(lobby.settings.gameMode, "blitz");
+  assert.equal(lobby.settings.rounds, 5);
+  assert.equal(lobby.settings.listenTime, 60);
+  assert.equal(lobby.settings.spyMode, "manual");
+  assert.equal(lobby.settings.spyCount, 2);
+  assert.equal(lobby.settings.votingTime, 90);
+  assert.equal(lobby.settings.roomTheme, "vinyl");
+  assert.equal(lobby.settings.maxPlayers, 5);
+});
+
 test("publicOpenLobbies lists only waiting public rooms", () => {
   const { publicOpenLobbies } = require("../server");
   const lobbies = {
