@@ -64,20 +64,58 @@
   <div id="howToPlayModal" class="auth-modal how-to-play-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="howToPlayTitle">
     <div class="auth-modal-card how-to-play-card">
       <button class="modal-close" type="button" onclick="hideHowToPlay()" aria-label="Закрыть правила">×</button>
-      <p class="eyebrow">быстрый старт</p>
-      <h2 id="howToPlayTitle">Как играть?</h2>
-      <p class="auth-modal-text">За минуту разберись в правилах и запускай партию даже с новичками.</p>
-      <div class="how-to-steps">
-        <article><span>1</span><strong>Создайте комнату</strong><p>Один игрок становится хостом, остальные заходят по коду, ссылке или QR.</p></article>
-        <article><span>2</span><strong>Получите роли</strong><p>Мирные видят общую музыкальную тему, шпион пытается понять её по чужим трекам.</p></article>
-        <article><span>3</span><strong>Ставьте треки</strong><p>В свой ход вставьте YouTube или SoundCloud ссылку, которая подходит к вашей версии темы.</p></article>
-        <article><span>4</span><strong>Обсуждайте и голосуйте</strong><p>После раундов выбирайте игрока, чьи треки хуже всего попали в тему.</p></article>
-        <article><span>5</span><strong>Последний шанс шпиона</strong><p>Если шпиона нашли, он может спастись, выбрав настоящую тему из близких вариантов.</p></article>
+      <div class="how-to-hero">
+        <div>
+          <p class="eyebrow">быстрый старт</p>
+          <h2 id="howToPlayTitle">Как играть?</h2>
+          <p class="auth-modal-text">Пять фаз партии: соберите комнату, включите треки и вычислите шпиона по музыкальным уликам.</p>
+        </div>
+        <div class="how-to-hero-orb" aria-hidden="true">
+          <span>🎧</span>
+          <b>LIVE ROUND</b>
+        </div>
       </div>
-      <div class="demo-flow" aria-label="Пример партии">
+      <div class="how-to-board" aria-label="Путь партии">
+        <article class="how-step step-room">
+          <span class="step-index">01</span>
+          <span class="step-icon" aria-hidden="true">🚪</span>
+          <strong>Создать комнату</strong>
+          <p>Хост кидает код — команда заходит за секунды.</p>
+        </article>
+        <i class="flow-link flow-link-one" aria-hidden="true"></i>
+        <article class="how-step step-role">
+          <span class="step-index">02</span>
+          <span class="step-icon" aria-hidden="true">🎭</span>
+          <strong>Получить роли</strong>
+          <p>Мирные знают тему. Шпион читает зал.</p>
+        </article>
+        <i class="flow-link flow-link-two" aria-hidden="true"></i>
+        <article class="how-step step-track is-focus">
+          <span class="step-index">03</span>
+          <span class="step-icon" aria-hidden="true">💿</span>
+          <strong>Поставить трек</strong>
+          <p>YouTube или SoundCloud становится главной уликой раунда.</p>
+          <div class="track-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        </article>
+        <i class="flow-link flow-link-three" aria-hidden="true"></i>
+        <article class="how-step step-discuss">
+          <span class="step-index">04</span>
+          <span class="step-icon" aria-hidden="true">💬</span>
+          <strong>Обсудить реакции</strong>
+          <p>Лайки, сомнения и аргументы собирают подозрения.</p>
+        </article>
+        <i class="flow-link flow-link-four" aria-hidden="true"></i>
+        <article class="how-step step-spy">
+          <span class="step-index">05</span>
+          <span class="step-icon" aria-hidden="true">🎯</span>
+          <strong>Найти шпиона</strong>
+          <p>Голосование запускает финальный шанс угадать тему.</p>
+        </article>
+      </div>
+      <div class="how-to-intel" aria-label="Мини-пример партии">
         <div><b>Тема</b><span>ностальгия</span></div>
-        <div><b>Мирные</b><span>ставят треки из прошлого</span></div>
-        <div><b>Шпион</b><span>маскируется и угадывает</span></div>
+        <div><b>Улика</b><span>трек слишком идеально маскируется</span></div>
+        <div><b>Финал</b><span>команда давит голосованием</span></div>
       </div>
       <div class="actions two-col">
         <button class="primary" type="button" onclick="hideHowToPlay(); focusNicknameInput();">Создать комнату</button>
