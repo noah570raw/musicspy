@@ -2876,3 +2876,107 @@ body[data-role="spy"] {
   --accent-rgb: 229, 9, 20;
   --accent-2: #ffffff;
 }
+
+/* Full-screen result card for screenshots */
+.result-shot-open {
+  overflow: hidden;
+}
+
+.result-shot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2.5vw, 28px);
+  background: radial-gradient(circle at 50% 20%, rgba(var(--accent-rgb), 0.28), transparent 26rem), rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.result-shot-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+  width: min(100%, 1040px);
+  height: min(100%, 96dvh);
+}
+
+.result-shot-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(14px, 2vw, 20px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(10, 10, 14, 0.82);
+}
+
+.result-shot-toolbar h2 {
+  font-size: clamp(1.6rem, 4vw, 3rem);
+}
+
+.result-shot-toolbar p:last-child {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.result-shot-image {
+  justify-self: center;
+  align-self: center;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 26px;
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.58);
+  object-fit: contain;
+}
+
+.share-actions {
+  grid-template-columns: 1fr;
+}
+
+/* Keep the sound button compact after moving detailed controls into the panel. */
+.volume-control .sound-toggle {
+  min-height: 35px;
+  padding: 6px 10px;
+  gap: 0.44rem;
+  font-size: 0.8rem;
+}
+
+.volume-control .sound-toggle strong {
+  font-size: 0.59rem;
+}
+
+/* Return to the plain embedded music player: no decorative vinyl or scan glare. */
+.vinyl-disc,
+.player-card .embed:not(.empty)::before,
+.cinematic-card::before {
+  display: none;
+  animation: none;
+}
+
+/* Remove the red vote marker and keep voting rows neutral. */
+.vote-row.has-votes {
+  border-color: var(--line);
+}
+
+.vote-row.has-votes::after {
+  content: none;
+}
+
+/* Softer final-five-seconds timer movement. */
+.timer-ring.timer-critical {
+  animation: timerShake 0.7s ease-in-out infinite;
+}
+
+@keyframes timerShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-0.75px); }
+  75% { transform: translateX(0.75px); }
+}
+
+@media (max-width: 680px) {
+  .result-shot-toolbar {
+    display: grid;
+  }
+}

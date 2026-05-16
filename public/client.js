@@ -2,8 +2,8 @@ const socket = io();
 
 const DEFAULT_LISTEN_TIME = 30;
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
-const DEFAULT_SITE_VOLUME = 70;
-const BACKGROUND_MUSIC_VOLUME = 0.12;
+const DEFAULT_SITE_VOLUME = 100;
+const BACKGROUND_MUSIC_VOLUME = 0.3;
 const AUTH_TOKEN_KEY = "musicspy_auth_token";
 const RECONNECT_STATE_KEY = "musicspy_reconnect_state";
 const RECONNECT_TOKEN_KEY = "musicspy_reconnect_token";
@@ -33,7 +33,7 @@ const GAME_MODE_PRESETS = {
     roomTheme: "cyber"
   }
 };
-const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.012;
+const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.04;
 const UI_CUE_FADE_SECONDS = 0.045;
 const state = {
   currentCode: "",
@@ -640,7 +640,7 @@ function createAudioEngine() {
   const delayGain = context.createGain();
 
   master.gain.value = state.siteVolume / 100;
-  fxGain.gain.value = 0.28;
+  fxGain.gain.value = 0.9;
   musicGain.gain.value = getBackgroundMusicVolume();
   fxFilter.type = "lowpass";
   fxFilter.frequency.value = 2300;
@@ -2480,12 +2480,6 @@ function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_
   circle.classList.toggle("danger", !waiting && timeLeft <= 10);
   circle.closest(".timer-ring")?.classList.toggle("timer-critical", !waiting && timeLeft <= 5);
   document.body.classList.toggle("music-playing", stage === "listening");
-  const vinyl = $("vinylDisc");
-  if (vinyl) {
-    vinyl.classList.toggle("spinning", stage === "listening");
-    vinyl.classList.toggle("slowing", stage === "waiting" || stage === "paused");
-  }
-
   if (!waiting && timeLeft > 0 && timeLeft <= 5) {
     playMetronomeTick();
   }
@@ -2511,11 +2505,6 @@ function clearPlayer() {
   embed.className = "embed empty";
   embed.innerHTML = `<span>${t("Ждем трек от текущего игрока")}</span>`;
   document.body.classList.remove("music-playing");
-  const vinyl = $("vinylDisc");
-  if (vinyl) {
-    vinyl.classList.remove("spinning");
-    vinyl.classList.add("slowing");
-  }
   ["tickSound", "startSound", "revealSound"].forEach((id) => {
     const media = $(id);
     if (media && typeof media.pause === "function") {
@@ -2548,11 +2537,6 @@ function loadTrack(track) {
 
   embed.classList.remove("empty");
   document.body.classList.add("music-playing");
-  const vinyl = $("vinylDisc");
-  if (vinyl) {
-    vinyl.classList.add("spinning");
-    vinyl.classList.remove("slowing");
-  }
   if (youtubeId) {
     const origin = encodeURIComponent(window.location.origin);
     embed.innerHTML = `<iframe id="trackFrame" src="https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&enablejsapi=1&origin=${origin}" title="YouTube player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
@@ -2611,7 +2595,7 @@ function renderVoteList(votes = {}) {
     const isMe = player.id === socket.id;
     const countMarkup = state.anonymousVoting ? "<strong>?</strong>" : `<strong>${voteCounts[player.id] || 0}</strong>`;
     return `
-      <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""} ${voteCounts[player.id] ? "has-votes" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
+      <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
         <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
         ${countMarkup}
       </button>
@@ -2759,7 +2743,7 @@ function drawShareCard(data = state.latestResult) {
   }
   ctx.fillStyle = "rgba(255,255,255,0.72)";
   ctx.font = "800 30px Inter, sans-serif";
-  ctx.fillText("Сохрани итог и отправь в Telegram / Discord", 90, h - 105);
+  ctx.fillText("Открой итог игры на весь экран и сделай скриншот", 90, h - 105);
   return canvas;
 }
 
@@ -2777,6 +2761,22 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
     }
   }
   if (line) ctx.fillText(line, x, y);
+}
+
+function showResultShotModal() {
+  const canvas = drawShareCard();
+  const modal = $("resultShotModal");
+  const image = $("resultShotImage");
+  if (!canvas || !modal || !image) return;
+  image.src = canvas.toDataURL("image/png");
+  modal.classList.remove("hidden");
+  document.body.classList.add("result-shot-open");
+}
+
+function hideResultShotModal() {
+  const modal = $("resultShotModal");
+  modal?.classList.add("hidden");
+  document.body.classList.remove("result-shot-open");
 }
 
 function saveResultCard() {
