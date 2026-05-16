@@ -349,16 +349,20 @@
 
       <aside class="page-chat-column lobby-page-chat" aria-label="Чат лобби">
         <div class="game-chat-panel">
-          <div class="panel-title">
+          <div class="chat-header panel-title">
             <strong>Чат лобби</strong>
             <span>общайся без подсказок</span>
           </div>
-          <div id="lobbyChatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
-          <div class="chat-form">
-            <input id="lobbyChatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
-            <button id="lobbyChatSendBtn" class="secondary chat-send-button" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
+          <div class="chat-messages-area" data-chat-scroll>
+            <div id="lobbyChatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
           </div>
-          <p id="lobbyChatStatus" data-chat-status class="status"></p>
+          <div class="chat-input-area">
+            <div class="chat-form">
+              <input id="lobbyChatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
+              <button id="lobbyChatSendBtn" class="secondary chat-send-button" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
+            </div>
+            <p id="lobbyChatStatus" data-chat-status class="status"></p>
+          </div>
         </div>
       </aside>
     </section>
@@ -448,16 +452,20 @@
 
       <aside class="page-chat-column game-page-chat" aria-label="Чат игры">
         <div class="game-chat-panel">
-          <div class="panel-title">
+          <div class="chat-header panel-title">
             <strong>Чат игры</strong>
             <span>общайся без подсказок</span>
           </div>
-          <div id="chatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
-          <div class="chat-form">
-            <input id="chatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
-            <button id="chatSendBtn" class="secondary chat-send-button" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
+          <div class="chat-messages-area" data-chat-scroll>
+            <div id="chatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
           </div>
-          <p id="chatStatus" data-chat-status class="status"></p>
+          <div class="chat-input-area">
+            <div class="chat-form">
+              <input id="chatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
+              <button id="chatSendBtn" class="secondary chat-send-button" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
+            </div>
+            <p id="chatStatus" data-chat-status class="status"></p>
+          </div>
         </div>
       </aside>
     </section>

@@ -2399,15 +2399,17 @@ function renderChat(messages = state.chatMessages) {
   }).join("");
 
   for (const box of boxes) {
+    const scrollArea = box.closest("[data-chat-scroll]") || box;
     if (!list.length) {
       box.classList.add("empty");
       box.textContent = t("Пока сообщений нет");
+      scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "auto" });
       continue;
     }
     const hadMessages = box.children.length > 0;
     box.classList.remove("empty");
     box.innerHTML = markup;
-    box.scrollTo({ top: box.scrollHeight, behavior: hadMessages ? "smooth" : "auto" });
+    scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: hadMessages ? "smooth" : "auto" });
   }
 }
 
