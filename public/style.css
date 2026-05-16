@@ -3069,16 +3069,16 @@ body[data-screen="results"] .noise {
 }
 
 body[data-screen="results"] .app-shell {
-  width: min(1260px, calc(100% - 40px));
-  padding: 12px 0;
+  width: min(1180px, calc(100% - 40px));
+  padding: 14px 0;
 }
 
 body[data-screen="results"] #results {
   position: relative;
   display: grid;
   width: 100%;
-  gap: 16px;
-  padding: clamp(14px, 1.45vw, 22px);
+  gap: 18px;
+  padding: clamp(16px, 1.55vw, 24px);
   border-color: var(--result-line);
   border-radius: 26px;
   background:
@@ -3118,8 +3118,8 @@ body[data-screen="results"] #results > * {
 .results-hero {
   display: grid;
   align-content: start;
-  gap: 12px;
-  padding: clamp(18px, 2.1vw, 28px);
+  gap: 10px;
+  padding: clamp(18px, 1.9vw, 24px);
   border: 1px solid rgba(var(--accent-rgb), 0.12);
   border-radius: 22px;
   background:
@@ -3134,10 +3134,10 @@ body[data-screen="results"] .eyebrow {
 }
 
 body[data-screen="results"] #resultTitle {
-  max-width: 9ch;
-  font-size: clamp(3rem, 6.2vw, 5.9rem);
-  line-height: 0.9;
-  letter-spacing: -0.075em;
+  max-width: 11ch;
+  font-size: clamp(2.85rem, 4.6vw, 5rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
   text-wrap: balance;
   background: linear-gradient(108deg, #ffffff 8%, #fff3f3 28%, var(--accent) 66%, #ffffff 100%);
   -webkit-background-clip: text;
@@ -3147,7 +3147,7 @@ body[data-screen="results"] #resultTitle {
 }
 
 body[data-screen="results"] #resultText.lead.small {
-  max-width: 26rem;
+  max-width: 27rem;
   margin: 0;
   color: rgba(248, 246, 255, 0.74);
   font-size: clamp(0.9rem, 1vw, 0.98rem);
@@ -3169,7 +3169,7 @@ body[data-screen="results"] #restartBtn {
 .results-main {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 14px;
 }
 
 body[data-screen="results"] .share-preview,
@@ -3195,8 +3195,8 @@ body[data-screen="results"] .result-score-panel {
 }
 
 body[data-screen="results"] .share-card-mini {
-  gap: 6px;
-  padding: 18px;
+  gap: 7px;
+  padding: 16px;
   border-color: rgba(var(--accent-rgb), 0.13);
   background:
     radial-gradient(circle at 86% 12%, rgba(var(--accent-rgb), 0.12), transparent 16rem),
@@ -3219,7 +3219,7 @@ body[data-screen="results"] .share-card-mini strong {
 body[data-screen="results"] .result-breakdown {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(112px, auto);
+  grid-auto-rows: minmax(106px, auto);
   gap: 12px;
 }
 
@@ -3227,8 +3227,8 @@ body[data-screen="results"] .breakdown-card {
   grid-template-rows: auto minmax(2.4em, 1fr) auto;
   align-items: start;
   gap: 6px;
-  min-height: 112px;
-  padding: 16px;
+  min-height: 106px;
+  padding: 15px;
 }
 
 
@@ -3261,7 +3261,7 @@ body[data-screen="results"] .comment-form input {
 
 body[data-screen="results"] .breakdown-card:first-child {
   grid-column: 1 / -1;
-  min-height: 112px;
+  min-height: 110px;
   border-color: rgba(var(--accent-rgb), 0.14);
   background:
     radial-gradient(circle at 92% 0%, rgba(var(--accent-rgb), 0.13), transparent 16rem),
@@ -3286,14 +3286,14 @@ body[data-screen="results"] .breakdown-card:first-child strong {
 .results-side {
   display: grid;
   align-content: start;
-  gap: 16px;
+  gap: 14px;
 }
 
 body[data-screen="results"] .results-side .postgame-panel,
 body[data-screen="results"] .results-side .result-history,
 body[data-screen="results"] .results-side .result-score-panel {
-  padding: 14px;
-  opacity: 0.9;
+  padding: 15px;
+  opacity: 0.92;
 }
 
 body[data-screen="results"] .results-side .panel-title {
@@ -3388,22 +3388,22 @@ body[data-screen="results"] .result-score-panel:hover {
 
 @media (min-width: 940px) {
   body[data-screen="results"] #results {
-    grid-template-columns: minmax(250px, 2.7fr) minmax(390px, 5fr) minmax(330px, 4.3fr);
-    align-items: stretch;
-    gap: 16px;
-    max-height: min(86dvh, 780px);
+    grid-template-columns: minmax(310px, 3.2fr) minmax(360px, 4.15fr) minmax(300px, 3.15fr);
+    align-items: start;
+    gap: 18px;
+    max-height: min(89dvh, 820px);
     overflow: auto;
   }
 
-  .results-hero,
   .results-main,
   .results-side {
-    min-height: min(74dvh, 660px);
+    min-height: min(76dvh, 700px);
   }
 
   .results-hero {
     position: sticky;
     top: 0;
+    min-height: 0;
   }
 
   body[data-screen="results"] .share-actions {
@@ -3413,7 +3413,7 @@ body[data-screen="results"] .result-score-panel:hover {
 
 @media (max-width: 1120px) and (min-width: 940px) {
   body[data-screen="results"] #results {
-    grid-template-columns: minmax(230px, 2.8fr) minmax(330px, 4.8fr) minmax(300px, 4.4fr);
+    grid-template-columns: minmax(290px, 3.15fr) minmax(330px, 4.1fr) minmax(280px, 3.05fr);
   }
 
   body[data-screen="results"] .result-breakdown {
