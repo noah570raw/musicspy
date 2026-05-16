@@ -51,7 +51,8 @@ const state = {
   oauthRedirectError: "",
   latestResult: null,
   finalComments: [],
-  mobileTurnLabel: ""
+  mobileTurnLabel: "",
+  openLobbies: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -75,6 +76,7 @@ function translateText(value) {
     .replace(/Раунд (\d+), ход (\?|\d+)/g, "Round $1, turn $2")
     .replace(/ход (\d+)\/(\d+)/g, "turn $1/$2")
     .replace(/Готовы: (\d+)\/(\d+)/g, "Ready: $1/$2")
+    .replace(/доступно: (\d+)/g, "available: $1")
     .replace(/хост: (.+)/g, "host: $1")
     .replace(/Проголосовало (\d+)\/(\d+)/g, "Voted $1/$2")
     .replace(/Последний шанс: угадай тему \((\d+)с\)/g, "Last chance: guess the theme ($1s)")
@@ -739,7 +741,8 @@ function showScreen(id) {
   const previousPhase = state.phase;
   state.phase = id;
   document.body.dataset.screen = id;
-  if (["menu", "lobby"].includes(id)) applyRoleTheme();
+  if (["menu", "playRooms", "lobby"].includes(id)) applyRoleTheme();
+  if (id === "playRooms") refreshOpenLobbies();
   updateInviteSecretsVisibility();
   updateMobileTurnBanner();
   if (previousPhase !== id) playSoundCue("screen");
@@ -1173,7 +1176,7 @@ function selectAuthMode(mode) {
   $("authModalText").textContent = isProfile
     ? t("Твоя музыкальная легенда, аватар и статистика партий.")
     : isChoice
-      ? t("Войди через соцсети, старый логин или останься гостем на одну партию.")
+      ? t("Войди через соцсети или останься гостем на одну партию.")
       : t("Войди, если уже регистрировался раньше.");
   $("authSubmitBtn").textContent = t("Войти");
   if (isProfile) renderProfileStats();
@@ -1419,10 +1422,67 @@ function attemptAutoJoinFromInvite() {
   });
 }
 
+function showPlayRooms() {
+  setStatus("menuError");
+  setStatus("playRoomsStatus");
+  showScreen("playRooms");
+}
+
+function renderOpenLobbies(lobbies = []) {
+  const list = $("openLobbiesList");
+  const summary = $("openLobbiesSummary");
+  if (!list || !summary) return;
+
+  state.openLobbies = Array.isArray(lobbies) ? lobbies : [];
+  summary.textContent = state.openLobbies.length
+    ? t(`доступно: ${state.openLobbies.length}`)
+    : t("свободных лобби нет");
+
+  if (!state.openLobbies.length) {
+    list.classList.add("empty");
+    list.textContent = t("Открытых комнат пока нет. Создай лобби и позови друзей!");
+    return;
+  }
+
+  list.classList.remove("empty");
+  list.innerHTML = state.openLobbies.map((lobby) => {
+    const code = escapeAttribute(lobby.code || "");
+    const hostName = escapeHtml(lobby.hostName || t("хост"));
+    const mode = escapeHtml(t(lobby.modeLabel || lobby.gameMode || "Классика"));
+    const players = Number(lobby.playerCount || 0);
+    const rounds = Number(lobby.rounds || 0);
+    const listenTime = Number(lobby.listenTime || DEFAULT_LISTEN_TIME);
+    return `
+      <article class="open-lobby-row">
+        <div>
+          <strong>${hostName} · ${escapeHtml(lobby.code || "-----")}</strong>
+          <small>${mode} · ${players} ${escapeHtml(t("игроков"))} · ${rounds} ${escapeHtml(t("раундов"))} · ${listenTime}${escapeHtml(t("с на трек"))}</small>
+        </div>
+        <button class="secondary" type="button" onclick="joinOpenLobby('${code}')">${escapeHtml(t("Войти в комнату"))}</button>
+      </article>
+    `;
+  }).join("");
+}
+
+function refreshOpenLobbies() {
+  if (!socket.connected) {
+    renderOpenLobbies([]);
+    return setStatus("playRoomsStatus", "Нет соединения с сервером", true);
+  }
+
+  setStatus("playRoomsStatus", "Обновляем список комнат...");
+  socket.emit("getOpenLobbies", (res = {}) => {
+    if (res.error) return setStatus("playRoomsStatus", res.error, true);
+    renderOpenLobbies(res.lobbies || []);
+    setStatus("playRoomsStatus", res.lobbies?.length ? "Выбери комнату или создай новую" : "Свободных лобби пока нет");
+  });
+}
+
 function createLobby() {
   setStatus("menuError");
+  setStatus("playRoomsStatus");
   socket.emit("createLobby", { name: getName(), reconnectToken: getReconnectToken() }, (res) => {
-    if (res.error) return setStatus("menuError", res.error, true);
+    if (res.error) return setStatus(state.phase === "playRooms" ? "playRoomsStatus" : "menuError", res.error, true);
     state.currentCode = res.code;
     state.myId = res.playerId || socket.id;
     storeReconnectState(state.currentCode);
@@ -1431,18 +1491,27 @@ function createLobby() {
   });
 }
 
-function joinLobby() {
-  setStatus("menuError");
-  const code = getCode();
-  if (!code) return setStatus("menuError", "Введи код комнаты", true);
+function joinLobbyByCode(code, statusId = "menuError") {
+  const roomCode = normalizeRoomCodeInput(code);
+  setStatus(statusId);
+  if (!roomCode) return setStatus(statusId, "Введи код комнаты", true);
 
-  socket.emit("joinLobby", { code, name: getName(), reconnectToken: getReconnectToken() }, (res) => {
-    if (res.error) return setStatus("menuError", res.error, true);
-    state.currentCode = res.code || code;
+  socket.emit("joinLobby", { code: roomCode, name: getName(), reconnectToken: getReconnectToken() }, (res) => {
+    if (res.error) return setStatus(statusId, res.error, true);
+    state.currentCode = res.code || roomCode;
     state.myId = res.playerId || socket.id;
     storeReconnectState(state.currentCode);
+    $("code").value = state.currentCode;
     showScreen("lobby");
   });
+}
+
+function joinOpenLobby(code) {
+  joinLobbyByCode(code, "playRoomsStatus");
+}
+
+function joinLobby() {
+  joinLobbyByCode(getCode(), "menuError");
 }
 
 function showStartCinematic() {

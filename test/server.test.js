@@ -354,3 +354,39 @@ test("initializeGame starts immediately after forced readiness", () => {
   assert.deepEqual(lobby.trackHistory, []);
   assert.deepEqual(lobby.chatMessages, []);
 });
+
+test("publicOpenLobbies lists only waiting public rooms", () => {
+  const { publicOpenLobbies } = require("../server");
+  const lobbies = {
+    OPEN1: {
+      code: "OPEN1",
+      host: "host-1",
+      phase: "lobby",
+      started: false,
+      createdAt: "2026-01-01T10:00:00.000Z",
+      players: [{ id: "host-1", name: "Мотя" }, { id: "guest", name: "Лена" }],
+      settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "neon" }
+    },
+    PLAY1: {
+      code: "PLAY1",
+      host: "host-2",
+      phase: "playing",
+      started: true,
+      createdAt: "2026-01-01T11:00:00.000Z",
+      players: [{ id: "host-2", name: "Играет" }],
+      settings: { gameMode: "blitz", rounds: 1, listenTime: 15, roomTheme: "cyber" }
+    }
+  };
+
+  assert.deepEqual(publicOpenLobbies(lobbies), [{
+    code: "OPEN1",
+    hostName: "Мотя",
+    playerCount: 2,
+    gameMode: "classic",
+    modeLabel: "Классика",
+    rounds: 3,
+    listenTime: 30,
+    roomTheme: "neon",
+    createdAt: "2026-01-01T10:00:00.000Z"
+  }]);
+});
