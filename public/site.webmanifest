@@ -1,0 +1,17 @@
+{
+  "name": "Music Spy",
+  "short_name": "Music Spy",
+  "description": "Музыкальная party-игра: создайте комнату, ставьте треки и вычисляйте шпиона.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#06040f",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    {
+      "src": "/musicspyicon.ico",
+      "sizes": "48x48 64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

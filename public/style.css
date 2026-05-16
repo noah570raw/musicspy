@@ -3582,3 +3582,165 @@ body[data-screen="results"] .result-score-panel:hover {
     transform: translateY(42px);
   }
 }
+
+/* Onboarding and mobile game navigation */
+.how-to-play-card {
+  width: min(100%, 760px);
+}
+
+.how-to-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.how-to-steps article,
+.demo-flow div {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.16), transparent 55%), rgba(255, 255, 255, 0.045);
+}
+
+.how-to-steps article {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+}
+
+.how-to-steps article span {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: var(--text);
+  font-weight: 900;
+}
+
+.how-to-steps article strong,
+.demo-flow b {
+  color: var(--accent-2);
+  font-size: 0.86rem;
+  text-transform: uppercase;
+}
+
+.how-to-steps article p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.demo-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.demo-flow div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.demo-flow span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mobile-game-nav,
+.mobile-turn-banner {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .how-to-steps,
+  .demo-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .how-to-play-card {
+    max-height: calc(100dvh - 28px);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 920px) {
+  body[data-screen="game"] {
+    padding-bottom: 88px;
+    scroll-padding-top: 14px;
+    scroll-padding-bottom: 110px;
+  }
+
+  body[data-screen="game"] .track-form {
+    position: sticky;
+    bottom: 78px;
+    z-index: 9;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(7, 6, 14, 0.88);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(18px);
+  }
+
+  body[data-screen="game"] .player-card {
+    order: -1;
+  }
+
+  body[data-screen="game"] .mobile-game-nav {
+    position: fixed;
+    right: 12px;
+    bottom: 10px;
+    left: 12px;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: rgba(7, 6, 14, 0.88);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48);
+    backdrop-filter: blur(20px);
+  }
+
+  .mobile-game-nav button {
+    display: grid;
+    min-height: 50px;
+    gap: 2px;
+    place-items: center;
+    padding: 6px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .mobile-game-nav button span {
+    font-size: 1.1rem;
+  }
+
+  body[data-screen="game"] .mobile-turn-banner:not(.hidden) {
+    position: fixed;
+    right: 16px;
+    bottom: 84px;
+    left: 16px;
+    z-index: 21;
+    display: block;
+    min-height: 48px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark) 60%, var(--accent-2));
+    box-shadow: 0 18px 48px rgba(var(--accent-rgb), 0.35);
+    color: var(--text);
+    font-weight: 900;
+    text-align: center;
+  }
+}
