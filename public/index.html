@@ -32,6 +32,20 @@
     </div>
   </div>
 
+  <div id="resultShotModal" class="result-shot-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="resultShotTitle">
+    <div class="result-shot-shell">
+      <div class="result-shot-toolbar">
+        <div>
+          <p class="eyebrow">финальный скрин</p>
+          <h2 id="resultShotTitle">Итог игры</h2>
+          <p>Открой на весь экран и сделай скриншот, если хочешь сохранить результат.</p>
+        </div>
+        <button class="secondary" type="button" onclick="hideResultShotModal()" aria-label="Закрыть итог игры">Закрыть</button>
+      </div>
+      <img id="resultShotImage" class="result-shot-image" alt="Итоговая карточка Music Spy для скриншота">
+    </div>
+  </div>
+
   <div id="authModal" class="auth-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
     <div class="auth-modal-card">
       <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть окно аккаунта">×</button>
@@ -383,7 +397,6 @@
         </div>
 
         <div class="player-stage">
-          <div id="vinylDisc" class="vinyl-disc" aria-hidden="true"><span></span></div>
           <div id="embed" class="embed empty">
             <span>Ждем трек от текущего игрока</span>
           </div>
@@ -473,8 +486,7 @@
       <h2 id="resultTitle">Игра окончена</h2>
       <p id="resultText" class="lead small"></p>
       <div class="share-actions">
-        <button id="saveResultBtn" class="primary" type="button" onclick="saveResultCard()">Сохранить итог</button>
-        <button class="secondary" type="button" onclick="shareResultCard()">Отправить в Telegram/Discord</button>
+        <button id="showResultBtn" class="primary" type="button" onclick="showResultShotModal()">Показать итог игры</button>
       </div>
       <canvas id="shareCanvas" width="1200" height="1600" class="hidden" aria-hidden="true"></canvas>
       <div id="resultSharePreview" class="share-preview"></div>
