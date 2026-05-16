@@ -3005,3 +3005,161 @@ body[data-role="spy"] {
     max-height: 64dvh;
   }
 }
+
+/* Results-only equalizer: keep the animated bars out of setup/game screens. */
+.music-equalizer-bg {
+  display: none;
+}
+
+body[data-screen="results"] .music-equalizer-bg {
+  display: flex;
+}
+
+body[data-screen="results"] .app-shell {
+  width: min(1440px, calc(100% - 20px));
+  padding: 8px 0;
+}
+
+body[data-screen="results"] #results {
+  width: 100%;
+}
+
+@media (min-width: 940px) {
+  body[data-screen="results"] #results {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.78fr) minmax(300px, 1fr) minmax(290px, 0.95fr);
+    grid-auto-flow: row dense;
+    align-items: start;
+    gap: 10px 12px;
+    max-height: calc(100dvh - 16px);
+    overflow: auto;
+    padding: clamp(12px, 1.35vw, 18px);
+    border-radius: 22px;
+  }
+
+  body[data-screen="results"] #results > .eyebrow,
+  body[data-screen="results"] #resultTitle,
+  body[data-screen="results"] #resultText,
+  body[data-screen="results"] #results > .share-actions,
+  body[data-screen="results"] #resultSharePreview,
+  body[data-screen="results"] #restartBtn {
+    grid-column: 1;
+  }
+
+  body[data-screen="results"] #resultBreakdown {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+  }
+
+  body[data-screen="results"] .final-comment-panel,
+  body[data-screen="results"] .party-history-panel,
+  body[data-screen="results"] .result-vote-details-panel,
+  body[data-screen="results"] #resultVotes {
+    grid-column: 3;
+  }
+
+  body[data-screen="results"] .result-track-panel {
+    grid-column: 2;
+  }
+
+  body[data-screen="results"] h2 {
+    font-size: clamp(1.8rem, 3.2vw, 3rem);
+  }
+
+  body[data-screen="results"] .eyebrow {
+    margin-bottom: 4px;
+  }
+
+  body[data-screen="results"] .lead.small {
+    margin: 2px 0 0;
+    line-height: 1.35;
+  }
+
+  body[data-screen="results"] .share-actions,
+  body[data-screen="results"] .share-preview,
+  body[data-screen="results"] .postgame-panel,
+  body[data-screen="results"] .result-history,
+  body[data-screen="results"] .result-breakdown,
+  body[data-screen="results"] .vote-list,
+  body[data-screen="results"] .status {
+    margin: 0;
+  }
+
+  body[data-screen="results"] .result-breakdown {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  body[data-screen="results"] .breakdown-card,
+  body[data-screen="results"] .postgame-panel,
+  body[data-screen="results"] .share-card-mini,
+  body[data-screen="results"] .history-row,
+  body[data-screen="results"] .vote-row,
+  body[data-screen="results"] .final-comment,
+  body[data-screen="results"] .party-history-row {
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+
+  body[data-screen="results"] .breakdown-card {
+    gap: 3px;
+  }
+
+  body[data-screen="results"] .breakdown-card strong {
+    font-size: 0.92rem;
+  }
+
+  body[data-screen="results"] .share-card-mini {
+    gap: 5px;
+  }
+
+  body[data-screen="results"] .share-card-mini strong {
+    font-size: clamp(1.05rem, 2vw, 1.45rem);
+  }
+
+  body[data-screen="results"] .comment-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  body[data-screen="results"] input,
+  body[data-screen="results"] button {
+    min-height: 38px;
+  }
+
+  body[data-screen="results"] input {
+    padding: 9px 10px;
+  }
+
+  body[data-screen="results"] button {
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+
+  body[data-screen="results"] .track-history,
+  body[data-screen="results"] #resultVoteDetails,
+  body[data-screen="results"] #resultVotes,
+  body[data-screen="results"] .final-comments,
+  body[data-screen="results"] .party-history {
+    gap: 6px;
+    max-height: 22vh;
+    overflow: auto;
+  }
+
+  body[data-screen="results"] .result-track-panel .track-history {
+    max-height: 28vh;
+  }
+}
+
+.result-shot-image {
+  max-height: min(66dvh, 860px);
+  transform: translateY(clamp(30px, 5vh, 72px));
+}
+
+@media (max-width: 680px) {
+  .result-shot-image {
+    max-height: 58dvh;
+    transform: translateY(42px);
+  }
+}
