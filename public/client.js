@@ -311,23 +311,6 @@ const EN_TRANSLATIONS = {
   "Ничья — запускаем второй тур": "Tie — starting a runoff",
   "Тебя удалили из комнаты": "You were removed from the room",
   "игра началась": "game started",
-  "старт шоу": "show start",
-  "Закрываем лобби…": "Closing the lobby…",
-  "Занавес опускается: фиксируем состав, готовим сцену и запускаем секретное интро.": "Curtain down: locking the lineup, preparing the stage, and launching the secret intro.",
-  "лобби закрыто": "lobby closed",
-  "готовим отсчет": "preparing countdown",
-  "Лобби закрывается": "Lobby is closing",
-  "Все игроки на месте. Двери закрываются, свет гаснет — партия начинается.": "Everyone is in. Doors close, lights go down — the game begins.",
-  "старт через": "starts in",
-  "Поехали": "Let's go",
-  "Лобби закрыто. Сейчас узнаем, какие карты раздала музыка.": "Lobby closed. Time to see what cards the music dealt.",
-  "игра начинается": "game starts",
-  "GO": "GO",
-  "Итак, давай посмотрим…": "Now, let's see…",
-  "Какая тебе выпала роль? Какая тема спрятана в этой партии? Открываем досье под бит.": "Which role did you get? What theme is hidden in this match? Opening the dossier to the beat.",
-  "сканируем роль": "scanning role",
-  "роль и тема": "role and theme",
-  "не показывай экран другим игрокам": "do not show your screen to other players",
   "Тема скрыта": "Theme hidden",
   "Тема игры": "Game theme",
   "Слушай чужие треки, лови вайб темы и не выдавай себя. Тема тебе не показывается.": "Listen to other tracks, catch the theme's vibe, and don't expose yourself. You won't see the theme.",
@@ -1803,77 +1786,11 @@ function joinLobby() {
 function showStartCinematic() {
   setCinematicOverlay({
     eyebrow: "старт шоу",
-    title: "Закрываем лобби…",
-    text: "Занавес опускается: фиксируем состав, готовим сцену и запускаем секретное интро.",
-    meta: `<span>${t("лобби закрыто")}</span><strong>${t("готовим отсчет")}</strong>`,
-    mode: "launch",
+    title: "Распределяем роли…",
+    text: "Выбираем тему, перемешиваем очередь и загружаем секретные досье.",
+    meta: `<span>${t("загружаем досье")}</span><strong>ACCESS CHECK</strong>`,
+    mode: "countdown",
     closable: false
-  });
-  playSoundCue("reveal");
-}
-
-function updateCinematicContent({ eyebrow, title, text, meta } = {}) {
-  if (eyebrow !== undefined && $("cinematicEyebrow")) $("cinematicEyebrow").textContent = t(eyebrow);
-  if (title !== undefined && $("cinematicTitle")) $("cinematicTitle").textContent = t(title);
-  if (text !== undefined && $("cinematicText")) $("cinematicText").textContent = t(text);
-  if (meta !== undefined && $("cinematicMeta")) $("cinematicMeta").innerHTML = meta;
-}
-
-function showGameLaunchSequence(data) {
-  clearCinematicTimers();
-  setCinematicOverlay({
-    eyebrow: "старт шоу",
-    title: "Лобби закрывается",
-    text: "Все игроки на месте. Двери закрываются, свет гаснет — партия начинается.",
-    meta: `<span>${t("старт через")}</span><strong class="countdown-number">3</strong>`,
-    mode: "launch",
-    closable: false
-  });
-  playSoundCue("reveal");
-
-  const steps = [
-    { delay: 900, count: 2 },
-    { delay: 1800, count: 1 },
-    { delay: 2700, count: null },
-    { delay: 3600, prelude: true },
-    { delay: 5900, reveal: true }
-  ];
-
-  steps.forEach((step) => {
-    state.cinematicIntervals.push(window.setTimeout(() => {
-      if (step.count) {
-        updateCinematicContent({
-          meta: `<span>${t("старт через")}</span><strong class="countdown-number pulse-pop">${step.count}</strong>`
-        });
-        playMetronomeTick();
-        return;
-      }
-
-      if (step.count === null) {
-        updateCinematicContent({
-          title: "Поехали",
-          text: "Лобби закрыто. Сейчас узнаем, какие карты раздала музыка.",
-          meta: `<span>${t("игра начинается")}</span><strong class="launch-go pulse-pop">${t("GO")}</strong>`
-        });
-        playSoundCue("screen");
-        return;
-      }
-
-      if (step.prelude) {
-        updateCinematicContent({
-          eyebrow: "секретное досье",
-          title: "Итак, давай посмотрим…",
-          text: "Какая тебе выпала роль? Какая тема спрятана в этой партии? Открываем досье под бит.",
-          meta: `<span>${t("сканируем роль")}</span><strong>${t("роль и тема")}</strong><small>${t("не показывай экран другим игрокам")}</small>`
-        });
-        playSoundCue("reveal");
-        return;
-      }
-
-      if (step.reveal) {
-        showRoleReveal(data);
-      }
-    }, step.delay));
   });
 }
 
@@ -3079,7 +2996,7 @@ socket.on("gameStarted", (data) => {
   $("embed").innerHTML = `<span>${t("Здесь появится YouTube/SoundCloud плеер")}</span>`;
 
   showScreen("game");
-  showGameLaunchSequence(data);
+  showRoleReveal(data);
   renderOrder();
   renderHostControls();
   renderReactions();
