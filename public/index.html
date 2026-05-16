@@ -170,12 +170,11 @@
       <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть окно аккаунта">×</button>
       <p class="eyebrow">аккаунт</p>
       <h2 id="authModalTitle">Как продолжим?</h2>
-      <p id="authModalText" class="auth-modal-text">Войди через Google или Discord, используй существующий логин или продолжи как гость.</p>
+      <p id="authModalText" class="auth-modal-text">Войди через Google или Discord или продолжи как гость.</p>
 
       <div id="authChoiceView" class="auth-choice-grid">
         <button class="oauth-button google" type="button" onclick="loginWithOAuth('google')"><span aria-hidden="true">G</span>Войти через Google</button>
         <button class="oauth-button discord" type="button" onclick="loginWithOAuth('discord')"><span aria-hidden="true">D</span>Войти через Discord</button>
-        <button class="secondary" type="button" onclick="selectAuthMode('login')">Войти в аккаунт</button>
         <button class="ghost-button" type="button" onclick="continueAsGuest()">Играть как гость</button>
       </div>
 
@@ -288,7 +287,7 @@
       </div>
 
       <div class="actions two-col">
-        <button class="primary" onclick="createLobby()">Создать лобби</button>
+        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
         <button class="secondary" onclick="joinLobby()">Войти по коду</button>
         <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
         <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
@@ -300,6 +299,31 @@
         <div><strong>3</strong><span>круга</span></div>
       </div>
       <p id="menuError" class="status error"></p>
+    </section>
+
+    <section id="playRooms" class="screen card play-rooms-card hidden">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">быстрый старт</p>
+          <h2>Играть</h2>
+          <p class="lead small">Создай новую комнату или залетай в открытое лобби, где уже ждут игроков.</p>
+        </div>
+        <button class="icon-button" type="button" onclick="showScreen('menu')" aria-label="Вернуться в меню" title="Вернуться в меню">←</button>
+      </div>
+
+      <div class="play-room-actions">
+        <button class="primary" type="button" onclick="createLobby()">Создать лобби</button>
+        <button class="secondary" type="button" onclick="refreshOpenLobbies()">Обновить список</button>
+      </div>
+
+      <div class="open-lobbies-panel">
+        <div class="panel-title">
+          <strong>Открытые комнаты</strong>
+          <span id="openLobbiesSummary">ищем лобби...</span>
+        </div>
+        <div id="openLobbiesList" class="open-lobbies-list empty">Нажми «Обновить список», чтобы найти открытые комнаты</div>
+      </div>
+      <p id="playRoomsStatus" class="status"></p>
     </section>
 
     <section id="lobby" class="screen card lobby-card hidden">

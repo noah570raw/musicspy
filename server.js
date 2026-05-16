@@ -1386,10 +1386,34 @@ function startLobbyGame(lobby) {
   startTurn(lobby.code);
 }
 
+
+function publicOpenLobbies(allLobbies = lobbies) {
+  return Object.values(allLobbies)
+    .filter((lobby) => lobby && lobby.phase === "lobby" && !lobby.started)
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .map((lobby) => {
+      const hostPlayer = lobby.players.find((player) => player.id === lobby.host) || lobby.players[0];
+      const settings = lobby.settings || DEFAULT_SETTINGS;
+      const mode = GAME_MODES[settings.gameMode] || GAME_MODES.classic;
+      return {
+        code: lobby.code,
+        hostName: hostPlayer?.name || "Хост",
+        playerCount: lobby.players.length,
+        gameMode: settings.gameMode || "classic",
+        modeLabel: mode.label,
+        rounds: settings.rounds || DEFAULT_SETTINGS.rounds,
+        listenTime: settings.listenTime || DEFAULT_SETTINGS.listenTime,
+        roomTheme: settings.roomTheme || DEFAULT_SETTINGS.roomTheme,
+        createdAt: lobby.createdAt || ""
+      };
+    });
+}
+
 function createLobbyState(code, hostId, player) {
   return {
     code,
     host: hostId,
+    createdAt: new Date().toISOString(),
     players: [player],
     started: false,
     phase: "lobby",
@@ -1495,6 +1519,10 @@ io.on("connection", (socket) => {
     } catch (error) {
       cb({ error: error.message || "Не удалось обновить профиль" });
     }
+  });
+
+  socket.on("getOpenLobbies", (cb = () => {}) => {
+    cb({ success: true, lobbies: publicOpenLobbies() });
   });
 
   socket.on("createLobby", ({ name, reconnectToken }, cb = () => {}) => {
@@ -1985,5 +2013,6 @@ module.exports = {
   resolveDataDir,
   pauseTurnTimer,
   resumeTurnTimer,
-  adjustTurnTimer
+  adjustTurnTimer,
+  publicOpenLobbies
 };

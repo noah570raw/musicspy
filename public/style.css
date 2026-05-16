@@ -321,6 +321,73 @@ button:disabled {
   font-size: 1.3rem;
 }
 
+.play-rooms-card {
+  width: min(100%, 760px);
+}
+
+.play-room-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.open-lobbies-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+}
+
+.open-lobbies-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.open-lobbies-list.empty {
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.open-lobby-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.open-lobby-row strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.open-lobby-row small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.open-lobby-row button {
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+@media (max-width: 620px) {
+  .play-room-actions,
+  .open-lobby-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .rules span,
 .status,
 .turn-card span,
