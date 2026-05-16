@@ -2347,6 +2347,52 @@ body[data-screen="game"] .language-switcher {
   overscroll-behavior: contain;
   padding: 4px 2px 12px;
   scroll-behavior: smooth;
+  scrollbar-color: rgba(var(--accent-rgb), 0.18) rgba(255, 255, 255, 0.025);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  transition: scrollbar-color 0.25s ease;
+}
+
+.chat-messages-area:hover,
+.chat-messages-area:focus-within,
+.chat-messages-area.is-scrolling {
+  scrollbar-color: rgba(var(--accent-rgb), 0.38) rgba(255, 255, 255, 0.035);
+}
+
+.chat-messages-area::-webkit-scrollbar {
+  width: 7px;
+}
+
+.chat-messages-area::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.chat-messages-area::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04)) padding-box,
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.1)) border-box;
+  box-shadow: inset 0 0 8px rgba(var(--accent-rgb), 0.12), 0 0 10px rgba(var(--accent-rgb), 0);
+  opacity: 0.28;
+  transition: background 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+.chat-messages-area:hover::-webkit-scrollbar-thumb,
+.chat-messages-area:focus-within::-webkit-scrollbar-thumb,
+.chat-messages-area.is-scrolling::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.07)) padding-box,
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.46), rgba(var(--accent-rgb), 0.18)) border-box;
+  box-shadow: inset 0 0 8px rgba(var(--accent-rgb), 0.22), 0 0 12px rgba(var(--accent-rgb), 0.2);
+  opacity: 0.62;
+}
+
+.chat-messages-area::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.1)) padding-box,
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.62), rgba(var(--accent-rgb), 0.26)) border-box;
 }
 
 .chat-messages {

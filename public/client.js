@@ -2380,6 +2380,19 @@ function formatChatTime(createdAt) {
   return date.toLocaleTimeString(currentLanguage() === "en" ? "en-US" : "ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
+function initChatScrollbarFeedback() {
+  for (const scrollArea of document.querySelectorAll("[data-chat-scroll]")) {
+    let scrollFeedbackTimer = null;
+    scrollArea.addEventListener("scroll", () => {
+      scrollArea.classList.add("is-scrolling");
+      window.clearTimeout(scrollFeedbackTimer);
+      scrollFeedbackTimer = window.setTimeout(() => {
+        scrollArea.classList.remove("is-scrolling");
+      }, 700);
+    }, { passive: true });
+  }
+}
+
 function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
@@ -2916,6 +2929,7 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreLanguagePreference();
   restoreSiteVolume();
   renderReactions();
+  initChatScrollbarFeedback();
   document.addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (!button) return;
