@@ -43,6 +43,7 @@ const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
+const MAX_LOBBY_NAME_LENGTH = 32;
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -520,6 +521,19 @@ function normalizeSettings(input = {}) {
   return next;
 }
 
+function defaultLobbyName(hostName) {
+  return `Лобби ${normalizeName(hostName || "хоста")}`.slice(0, MAX_LOBBY_NAME_LENGTH);
+}
+
+function normalizeLobbyName(name, fallback = "Музыкальное лобби") {
+  const normalized = String(name || "")
+    .replace(/[#@]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_LOBBY_NAME_LENGTH);
+  return normalized || String(fallback || "Музыкальное лобби").slice(0, MAX_LOBBY_NAME_LENGTH);
+}
+
 function getSpyCount(lobby) {
   const playerCount = lobby.players.length;
   const maxSpies = Math.max(1, Math.min(3, playerCount - 1));
@@ -783,6 +797,8 @@ function removePlayerFromLobby(lobby, playerId) {
 function publicLobby(lobby) {
   return {
     code: lobby.code,
+    name: lobby.name || defaultLobbyName(lobby.players.find((player) => player.id === lobby.host)?.name),
+    isOpen: lobby.isOpen !== false,
     host: lobby.host,
     players: publicPlayers(lobby.players),
     started: lobby.started,
@@ -1389,7 +1405,7 @@ function startLobbyGame(lobby) {
 
 function publicOpenLobbies(allLobbies = lobbies) {
   return Object.values(allLobbies)
-    .filter((lobby) => lobby && lobby.phase === "lobby" && !lobby.started)
+    .filter((lobby) => lobby && lobby.phase === "lobby" && !lobby.started && lobby.isOpen !== false)
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
     .map((lobby) => {
       const hostPlayer = lobby.players.find((player) => player.id === lobby.host) || lobby.players[0];
@@ -1397,6 +1413,7 @@ function publicOpenLobbies(allLobbies = lobbies) {
       const mode = GAME_MODES[settings.gameMode] || GAME_MODES.classic;
       return {
         code: lobby.code,
+        name: lobby.name || defaultLobbyName(hostPlayer?.name),
         hostName: hostPlayer?.name || "Хост",
         playerCount: lobby.players.length,
         gameMode: settings.gameMode || "classic",
@@ -1412,6 +1429,8 @@ function publicOpenLobbies(allLobbies = lobbies) {
 function createLobbyState(code, hostId, player) {
   return {
     code,
+    name: defaultLobbyName(player?.name),
+    isOpen: true,
     host: hostId,
     createdAt: new Date().toISOString(),
     players: [player],
@@ -1570,6 +1589,23 @@ io.on("connection", (socket) => {
 
     lobby.settings = normalizeSettings({ ...lobby.settings, ...settings });
     cb({ success: true, settings: lobby.settings });
+    emitLobbyUpdate(lobby.code);
+  });
+
+  socket.on("updateLobbyMeta", ({ code, name, isOpen }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "Название и открытость меняет только хост" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+
+    if (name !== undefined) {
+      lobby.name = normalizeLobbyName(name, defaultLobbyName(lobby.players.find((player) => player.id === lobby.host)?.name));
+    }
+    if (isOpen !== undefined) {
+      lobby.isOpen = Boolean(isOpen);
+    }
+
+    cb({ success: true, name: lobby.name, isOpen: lobby.isOpen !== false });
     emitLobbyUpdate(lobby.code);
   });
 
