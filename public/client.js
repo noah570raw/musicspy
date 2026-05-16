@@ -1456,6 +1456,7 @@ function renderOpenLobbies(lobbies = []) {
     const lobbyName = escapeHtml(lobbyNameText);
     const mode = escapeHtml(t(lobby.modeLabel || lobby.gameMode || "Классика"));
     const players = Number(lobby.playerCount || 0);
+    const maxPlayers = Number(lobby.maxPlayers || 12);
     const rounds = Number(lobby.rounds || 0);
     const listenTime = Number(lobby.listenTime || DEFAULT_LISTEN_TIME);
     const avatarCount = Math.max(1, Math.min(players || 1, 4));
@@ -1476,7 +1477,7 @@ function renderOpenLobbies(lobbies = []) {
           <small class="open-lobby-meta">${escapeHtml(t("хост"))}: ${hostName} · ${mode} · ${rounds} ${escapeHtml(t("раундов"))} · ${listenTime}${escapeHtml(t("с на трек"))}</small>
           <div class="open-lobby-footer">
             <div class="open-lobby-avatars" aria-hidden="true">${avatars}</div>
-            <small>${players} ${escapeHtml(t("игроков онлайн"))}</small>
+            <small>${players}/${maxPlayers} ${escapeHtml(t("игроков онлайн"))}</small>
           </div>
         </div>
         <button class="secondary" type="button" onclick="joinOpenLobby('${code}')">${escapeHtml(t("Войти в комнату"))}</button>
@@ -1877,7 +1878,8 @@ function readSettingsFromForm() {
     anonymousVoting: $("settingAnonymousVoting").value === "true",
     votingTime: Number($("settingVotingTime").value),
     runoffOnTie: $("settingRunoffOnTie").value === "true",
-    roomTheme: $("settingRoomTheme")?.value || "neon"
+    roomTheme: $("settingRoomTheme")?.value || "neon",
+    maxPlayers: Number($("settingMaxPlayers")?.value || state.settings.maxPlayers || 12)
   };
 }
 
@@ -1890,6 +1892,7 @@ function changeGameMode() {
   $("settingVotingTime").value = String(preset.votingTime);
   $("settingRunoffOnTie").value = String(preset.runoffOnTie);
   if ($("settingRoomTheme")) $("settingRoomTheme").value = preset.roomTheme || "neon";
+  if ($("settingMaxPlayers")) $("settingMaxPlayers").value = String(state.settings.maxPlayers || preset.maxPlayers || 12);
   updateGameModeHint(preset);
   updateLobbySettings();
 }
@@ -1904,7 +1907,10 @@ function updateGameModeHint(preset = null) {
 function updateLobbySettings() {
   if (!state.currentCode || state.lobby?.host !== socket.id) return;
   socket.emit("updateSettings", { code: state.currentCode, settings: readSettingsFromForm() }, (res) => {
-    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    if (res?.error) {
+      applySettingsToForm(state.settings, true);
+      return setStatus("lobbyStatus", res.error, true);
+    }
     setStatus("lobbyStatus", "Настройки обновлены");
   });
 }
@@ -1944,7 +1950,8 @@ function applySettingsToForm(settings = {}, isHost = false) {
     settingAnonymousVoting: String(Boolean(settings.anonymousVoting)),
     settingVotingTime: settings.votingTime ?? 60,
     settingRunoffOnTie: String(settings.runoffOnTie !== false),
-    settingRoomTheme: settings.roomTheme || "neon"
+    settingRoomTheme: settings.roomTheme || "neon",
+    settingMaxPlayers: settings.maxPlayers || 12
   };
 
   for (const [id, value] of Object.entries(fields)) {
@@ -1952,6 +1959,14 @@ function applySettingsToForm(settings = {}, isHost = false) {
     if (!el) continue;
     el.value = String(value);
     el.disabled = !isHost;
+  }
+
+  const maxPlayersSelect = $("settingMaxPlayers");
+  if (maxPlayersSelect) {
+    const currentPlayers = state.players.length || 0;
+    for (const option of maxPlayersSelect.options) {
+      option.disabled = !isHost || Number(option.value) < currentPlayers;
+    }
   }
 
   updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
@@ -2021,7 +2036,8 @@ function renderLobby(lobby) {
   forceStartBtn.textContent = t("FORCE START");
   $("readyBtn").textContent = state.ready ? t("Не готов") : t("Я готов");
   $("readyBtn").classList.toggle("ready", state.ready);
-  $("readySummary").textContent = t(`Готовы: ${readyCount}/${state.players.length}`);
+  const maxPlayers = state.settings.maxPlayers || lobby.maxPlayers || 12;
+  $("readySummary").textContent = t(`Готовы: ${readyCount}/${state.players.length}`) + ` · ${state.players.length}/${maxPlayers}`;
   applyLobbyMetaToForm(lobby, isHost);
   applySettingsToForm(state.settings, isHost);
   updateLobbyRenameControls();

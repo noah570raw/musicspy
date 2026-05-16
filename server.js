@@ -44,6 +44,9 @@ const MAX_CHAT_MESSAGE_LENGTH = 240;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
 const MAX_LOBBY_NAME_LENGTH = 32;
+const MIN_LOBBY_PLAYERS = 3;
+const DEFAULT_MAX_PLAYERS = 12;
+const ALLOWED_MAX_PLAYERS = [6, 7, 8, 9, 10, 11, 12];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -451,7 +454,8 @@ const GAME_MODES = {
     anonymousVoting: false,
     votingTime: 60,
     runoffOnTie: true,
-    roomTheme: "neon"
+    roomTheme: "neon",
+    maxPlayers: DEFAULT_MAX_PLAYERS
   },
   blitz: {
     label: "Блиц",
@@ -462,7 +466,8 @@ const GAME_MODES = {
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false,
-    roomTheme: "cyber"
+    roomTheme: "cyber",
+    maxPlayers: DEFAULT_MAX_PLAYERS
   }
 };
 
@@ -475,7 +480,8 @@ const DEFAULT_SETTINGS = {
   anonymousVoting: GAME_MODES.classic.anonymousVoting,
   votingTime: GAME_MODES.classic.votingTime,
   runoffOnTie: GAME_MODES.classic.runoffOnTie,
-  roomTheme: GAME_MODES.classic.roomTheme
+  roomTheme: GAME_MODES.classic.roomTheme,
+  maxPlayers: GAME_MODES.classic.maxPlayers
 };
 
 function generateCode() {
@@ -518,6 +524,7 @@ function normalizeSettings(input = {}) {
   next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], next.votingTime);
   next.runoffOnTie = input.runoffOnTie === undefined ? next.runoffOnTie : input.runoffOnTie !== false;
   next.roomTheme = ["neon", "vinyl", "cyber", "retro", "minimal"].includes(input.roomTheme) ? input.roomTheme : next.roomTheme;
+  next.maxPlayers = clampNumber(input.maxPlayers, ALLOWED_MAX_PLAYERS, next.maxPlayers || DEFAULT_MAX_PLAYERS);
   return next;
 }
 
@@ -803,7 +810,8 @@ function publicLobby(lobby) {
     players: publicPlayers(lobby.players),
     started: lobby.started,
     phase: lobby.phase,
-    minPlayers: 3,
+    minPlayers: MIN_LOBBY_PLAYERS,
+    maxPlayers: lobby.settings.maxPlayers || DEFAULT_SETTINGS.maxPlayers,
     totalRounds: lobby.settings.rounds,
     settings: lobby.settings,
     chatMessages: lobby.chatMessages || [],
@@ -1421,6 +1429,7 @@ function publicOpenLobbies(allLobbies = lobbies) {
         rounds: settings.rounds || DEFAULT_SETTINGS.rounds,
         listenTime: settings.listenTime || DEFAULT_SETTINGS.listenTime,
         roomTheme: settings.roomTheme || DEFAULT_SETTINGS.roomTheme,
+        maxPlayers: settings.maxPlayers || DEFAULT_SETTINGS.maxPlayers,
         createdAt: lobby.createdAt || ""
       };
     });
@@ -1563,6 +1572,7 @@ io.on("connection", (socket) => {
     if (lobby.players.some((player) => player.id === socket.id)) {
       return cb({ success: true, code: roomCode, playerId: socket.id });
     }
+    if (lobby.players.length >= (lobby.settings.maxPlayers || DEFAULT_MAX_PLAYERS)) return cb({ error: "Комната заполнена" });
 
     socket.join(roomCode);
     lobby.players.push(playerFromSocket(socket, name, lobby, reconnectToken));
@@ -1587,7 +1597,12 @@ io.on("connection", (socket) => {
     if (lobby.host !== socket.id) return cb({ error: "Настройки может менять только хост" });
     if (lobby.started) return cb({ error: "Игра уже началась" });
 
-    lobby.settings = normalizeSettings({ ...lobby.settings, ...settings });
+    const nextSettings = normalizeSettings({ ...lobby.settings, ...settings });
+    if (nextSettings.maxPlayers < lobby.players.length) {
+      return cb({ error: `В лобби уже ${lobby.players.length} игроков — выбери лимит выше` });
+    }
+
+    lobby.settings = nextSettings;
     cb({ success: true, settings: lobby.settings });
     emitLobbyUpdate(lobby.code);
   });
@@ -1638,7 +1653,7 @@ io.on("connection", (socket) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "Начать игру может только хост" });
-    if (lobby.players.length < 3) return cb({ error: "Нужно минимум 3 игрока" });
+    if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Нужно минимум 3 игрока" });
     if (lobby.players.some((player) => !player.ready)) {
       return cb({ error: "Все игроки должны нажать «Готов»" });
     }
@@ -1652,7 +1667,7 @@ io.on("connection", (socket) => {
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "FORCE START доступен только хосту" });
     if (lobby.started) return cb({ error: "Игра уже началась" });
-    if (lobby.players.length < 3) return cb({ error: "Нужно минимум 3 игрока" });
+    if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Нужно минимум 3 игрока" });
 
     markAllPlayersReady(lobby);
     startLobbyGame(lobby);
