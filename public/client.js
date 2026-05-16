@@ -77,7 +77,8 @@ const state = {
   pendingInviteCode: "",
   inviteAutoJoinAttempted: false,
   volumePanelOpen: false,
-  lang: "ru"
+  lang: "ru",
+  oauthRedirectError: ""
 };
 
 const $ = (id) => document.getElementById(id);
@@ -88,14 +89,22 @@ const EN_TRANSLATIONS = {
   "Понял, играем": "Got it, let's play",
   "аккаунт": "account",
   "Как продолжим?": "How should we continue?",
-  "Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.": "Sign up, log in to an existing account, or continue as a guest.",
-  "Зарегистрироваться": "Sign up",
+  "Войди через Google или Discord, используй существующий логин или продолжи как гость.": "Sign in with Google or Discord, use an existing login, or continue as a guest.",
+  "Войти через Google": "Sign in with Google",
+  "Войти через Discord": "Sign in with Discord",
+  "Войти в аккаунт": "Log in to account",
+  "Играть как гость": "Play as guest",
   "Войти": "Log in",
   "Продолжить как гость": "Continue as guest",
   "логин": "username",
   "пароль": "password",
   "Логин: от 3 символов, латиница, цифры, _ или -. Пароль: от 6 символов.": "Username: 3+ characters, Latin letters, digits, _ or -. Password: 6+ characters.",
   "Создать аккаунт": "Create account",
+  "Войди через соцсети, старый логин или останься гостем на одну партию.": "Sign in with social accounts, use an old login, or stay as a guest for one match.",
+  "Перекидываем на Google...": "Redirecting to Google...",
+  "Перекидываем в Discord...": "Redirecting to Discord...",
+  "Вход через соцсеть выполнен": "Social login complete",
+  "Не удалось войти через соцсеть": "Could not sign in with social account",
   "Назад": "Back",
   "Аккаунт игрока": "Player account",
   "Вы играете как гость": "You are playing as a guest",
@@ -307,6 +316,11 @@ const EN_TRANSLATIONS = {
   "Показать результаты": "Show results",
   "Переключатель языка": "Language switcher",
   "Сессия не найдена": "Session not found",
+  "Вход через Google не настроен": "Google login is not configured",
+  "Вход через Discord не настроен": "Discord login is not configured",
+  "OAuth-сессия устарела. Попробуй еще раз.": "OAuth session expired. Try again.",
+  "Не удалось войти через Google": "Could not sign in with Google",
+  "Не удалось войти через Discord": "Could not sign in with Discord",
   "Логин должен быть от 3 символов: латиница, цифры, _ или -": "Username must be at least 3 characters: Latin letters, digits, _ or -",
   "Пароль должен быть от 6 до 72 символов": "Password must be 6 to 72 characters",
   "Такой логин уже занят": "This username is already taken",
@@ -1384,6 +1398,24 @@ function clearStoredAuthToken() {
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
+function consumeOAuthRedirectParams() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("auth_token");
+  const error = params.get("auth_error");
+  if (!token && !error) return;
+
+  if (token) storeAuthToken(token);
+  params.delete("auth_token");
+  params.delete("auth_error");
+  const nextSearch = params.toString();
+  const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+  window.history.replaceState({}, document.title, nextUrl || "/");
+
+  state.oauthRedirectError = error || "";
+  if (error) setAuthStatus(error || "Не удалось войти через соцсеть", true);
+  if (token) setAuthStatus("Вход через соцсеть выполнен");
+}
+
 function getReconnectToken() {
   let token = window.localStorage.getItem(RECONNECT_TOKEN_KEY) || "";
   if (!token) {
@@ -1451,29 +1483,35 @@ function selectAuthMode(mode) {
   state.authFormMode = mode;
   const isProfile = mode === "profile" && state.profile;
   const isChoice = mode === "choice" || (mode === "profile" && !state.profile);
-  const isRegister = mode === "register";
-  const isForm = !isChoice && !isProfile;
+  const isRegister = false;
+  const isForm = mode === "login";
   $("authChoiceView").classList.toggle("hidden", !isChoice);
   $("authFormView").classList.toggle("hidden", !isForm);
   $("accountProfileView").classList.toggle("hidden", !isProfile);
   $("authRegisterHint").classList.toggle("hidden", !isRegister);
   $("authModalTitle").textContent = isProfile
     ? t("Профиль игрока")
-    : isChoice ? t("Как продолжим?") : (isRegister ? t("Регистрация") : t("Вход в аккаунт"));
+    : isChoice ? t("Как продолжим?") : t("Вход в аккаунт");
   $("authModalText").textContent = isProfile
     ? t("Твоя музыкальная легенда, аватар и статистика партий.")
     : isChoice
-      ? t("Зарегистрируйся, войди в существующий аккаунт или продолжи как гость.")
-      : (isRegister ? t("Создай аккаунт, чтобы сайт узнавал тебя на этом устройстве.") : t("Войди, если уже регистрировался раньше."));
-  $("authSubmitBtn").textContent = isRegister ? t("Создать аккаунт") : t("Войти");
+      ? t("Войди через соцсети, старый логин или останься гостем на одну партию.")
+      : t("Войди, если уже регистрировался раньше.");
+  $("authSubmitBtn").textContent = t("Войти");
   if (isProfile) renderProfileStats();
   setAuthStatus();
   if (isForm) $("authLogin").focus();
 }
 
 function submitAuthForm() {
-  if (state.authFormMode === "register") return registerAccount();
   return loginAccount();
+}
+
+function loginWithOAuth(provider) {
+  const normalizedProvider = provider === "discord" ? "discord" : "google";
+  setAuthStatus(normalizedProvider === "google" ? "Перекидываем на Google..." : "Перекидываем в Discord...");
+  const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.location.href = `/auth/${normalizedProvider}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 function applyProfile(profileData = { user: null, guest: true }) {
@@ -1582,23 +1620,18 @@ function loginAccount() {
   });
 }
 
-function registerAccount() {
-  setAuthStatus();
-  socket.emit("auth:register", authPayload(), (res) => {
-    if (res?.error) return setAuthStatus(res.error, true);
-    storeAuthToken(res.token);
-    applyProfile(res.profile);
-    hideAuthModal();
-    setAuthStatus("Аккаунт создан");
-  });
-}
 
 function continueAsGuest({ silent = false } = {}) {
   clearStoredAuthToken();
   socket.emit("auth:guest", { name: getName() }, (res) => {
     applyProfile(res?.profile || { user: null, guest: true });
     if (!silent) hideAuthModal();
-    setAuthStatus();
+    if (silent && state.oauthRedirectError) {
+      setAuthStatus(state.oauthRedirectError, true);
+      state.oauthRedirectError = "";
+    } else {
+      setAuthStatus();
+    }
   });
 }
 
@@ -2608,6 +2641,7 @@ function escapeAttribute(value) {
 socket.on("connect", () => {
   state.myId = socket.id;
   state.authResolved = false;
+  consumeOAuthRedirectParams();
   authenticateWithStoredToken();
 });
 

@@ -121,6 +121,32 @@ test("normalizeAvatar accepts small image data urls and rejects oversized avatar
   assert.throws(() => normalizeAvatar(oversized), /слишком большая/);
 });
 
+
+test("OAuth helpers normalize provider profiles and preserve return URLs", () => {
+  const { normalizeOAuthProfile, buildOAuthSuccessRedirect, buildOAuthErrorRedirect } = require("../server");
+
+  assert.deepEqual(normalizeOAuthProfile("google", {
+    sub: "google-1",
+    email: "Player@Example.com",
+    name: "Google Player",
+    picture: "https://example.com/avatar.png"
+  }), {
+    providerId: "google-1",
+    email: "Player@Example.com",
+    username: "Player",
+    displayName: "Google Player",
+    avatar: "https://example.com/avatar.png"
+  });
+
+  const discord = normalizeOAuthProfile("discord", { id: "42", username: "beatspy", global_name: "Beat Spy", avatar: "abc" });
+  assert.equal(discord.providerId, "42");
+  assert.equal(discord.displayName, "Beat Spy");
+  assert.equal(discord.avatar, "https://cdn.discordapp.com/avatars/42/abc.png?size=128");
+
+  assert.equal(buildOAuthSuccessRedirect("/room?code=ABC", "token-1"), "/room?code=ABC&auth_token=token-1");
+  assert.equal(buildOAuthErrorRedirect("https://evil.example/path", "nope"), "/path?auth_error=nope");
+});
+
 test("playerFromSocket uses fixed account display name over submitted nickname", () => {
   const { playerFromSocket } = require("../server");
   const socket = {

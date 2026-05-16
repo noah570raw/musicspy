@@ -1579,6 +1579,43 @@ select:focus-visible {
   gap: 12px;
 }
 
+.oauth-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 3.15rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: #111827;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.oauth-button span {
+  display: inline-grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: 900;
+}
+
+.oauth-button.discord {
+  color: #ffffff;
+  background: linear-gradient(135deg, #5865f2, #7c3aed);
+}
+
+.oauth-button.google:hover,
+.oauth-button.discord:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+}
+
 .auth-form-view {
   display: grid;
   gap: 0.75rem;
