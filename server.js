@@ -298,7 +298,9 @@ function oauthConfig(provider, req) {
       authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
       tokenUrl: "https://oauth2.googleapis.com/token",
       userUrl: "https://www.googleapis.com/oauth2/v3/userinfo",
-      scope: "openid email profile"
+      scope: "openid email profile",
+      prompt: "select_account",
+      tokenAuthStyle: "body"
     };
   }
 
@@ -307,10 +309,42 @@ function oauthConfig(provider, req) {
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
     redirectUri: oauthRedirectUri(req, provider),
     authorizeUrl: "https://discord.com/oauth2/authorize",
-    tokenUrl: "https://discord.com/api/oauth2/token",
-    userUrl: "https://discord.com/api/users/@me",
-    scope: "identify email"
+    tokenUrl: "https://discord.com/api/v10/oauth2/token",
+    userUrl: "https://discord.com/api/v10/users/@me",
+    scope: "identify email",
+    prompt: "consent",
+    tokenAuthStyle: "basic"
   };
+}
+
+function buildOAuthTokenRequest(config, code) {
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: String(code),
+    redirect_uri: config.redirectUri
+  });
+  const headers = { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" };
+
+  if (config.tokenAuthStyle === "basic") {
+    const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64");
+    headers.Authorization = `Basic ${credentials}`;
+  } else {
+    body.set("client_id", config.clientId);
+    body.set("client_secret", config.clientSecret);
+  }
+
+  return { method: "POST", headers, body };
+}
+
+async function parseOAuthResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) return response.json();
+  return { raw: await response.text() };
+}
+
+function oauthError(provider, step, response, payload) {
+  const details = payload?.error_description || payload?.error || payload?.message || payload?.raw || "empty response";
+  return new Error(`${oauthProviderLabel(provider)} ${step} failed with ${response.status}: ${details}`);
 }
 
 function normalizeOAuthProfile(provider, rawProfile = {}) {
@@ -766,7 +800,7 @@ function redirectToOAuth(provider, req, res) {
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", config.scope);
   authUrl.searchParams.set("state", state);
-  authUrl.searchParams.set("prompt", "select_account");
+  if (config.prompt) authUrl.searchParams.set("prompt", config.prompt);
   return res.redirect(authUrl.toString());
 }
 
@@ -783,28 +817,16 @@ async function handleOAuthCallback(provider, req, res) {
   }
 
   try {
-    const tokenResponse = await fetch(config.tokenUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-      body: new URLSearchParams({
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: "authorization_code",
-        code: String(req.query.code),
-        redirect_uri: config.redirectUri
-      })
-    });
-
-    if (!tokenResponse.ok) throw new Error(`Token exchange failed with ${tokenResponse.status}`);
-    const tokenData = await tokenResponse.json();
+    const tokenResponse = await fetch(config.tokenUrl, buildOAuthTokenRequest(config, req.query.code));
+    const tokenData = await parseOAuthResponse(tokenResponse);
+    if (!tokenResponse.ok) throw oauthError(provider, "token exchange", tokenResponse, tokenData);
     if (!tokenData.access_token) throw new Error("OAuth provider did not return an access token");
 
     const userResponse = await fetch(config.userUrl, {
-      headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/json" }
+      headers: { Authorization: `${tokenData.token_type || "Bearer"} ${tokenData.access_token}`, Accept: "application/json" }
     });
-    if (!userResponse.ok) throw new Error(`Profile request failed with ${userResponse.status}`);
-
-    const rawProfile = await userResponse.json();
+    const rawProfile = await parseOAuthResponse(userResponse);
+    if (!userResponse.ok) throw oauthError(provider, "profile request", userResponse, rawProfile);
     const profile = normalizeOAuthProfile(provider, rawProfile);
     const user = upsertOAuthUser(provider, profile);
     const sessionToken = createSession(user);
@@ -1889,6 +1911,7 @@ module.exports = {
   hashPassword,
   verifyPassword,
   normalizeOAuthProfile,
+  buildOAuthTokenRequest,
   buildOAuthSuccessRedirect,
   buildOAuthErrorRedirect,
   resolveDataDir,

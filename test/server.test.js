@@ -147,6 +147,35 @@ test("OAuth helpers normalize provider profiles and preserve return URLs", () =>
   assert.equal(buildOAuthErrorRedirect("https://evil.example/path", "nope"), "/path?auth_error=nope");
 });
 
+test("OAuth token requests use provider-specific client authentication", () => {
+  const { buildOAuthTokenRequest } = require("../server");
+
+  const discordRequest = buildOAuthTokenRequest({
+    clientId: "discord-client",
+    clientSecret: "discord-secret",
+    redirectUri: "https://musicspy.onrender.com/auth/discord/callback",
+    tokenAuthStyle: "basic"
+  }, "discord-code");
+
+  assert.equal(discordRequest.method, "POST");
+  assert.equal(discordRequest.headers.Authorization, `Basic ${Buffer.from("discord-client:discord-secret").toString("base64")}`);
+  assert.equal(discordRequest.body.get("grant_type"), "authorization_code");
+  assert.equal(discordRequest.body.get("code"), "discord-code");
+  assert.equal(discordRequest.body.get("client_id"), null);
+  assert.equal(discordRequest.body.get("client_secret"), null);
+
+  const googleRequest = buildOAuthTokenRequest({
+    clientId: "google-client",
+    clientSecret: "google-secret",
+    redirectUri: "https://musicspy.onrender.com/auth/google/callback",
+    tokenAuthStyle: "body"
+  }, "google-code");
+
+  assert.equal(googleRequest.headers.Authorization, undefined);
+  assert.equal(googleRequest.body.get("client_id"), "google-client");
+  assert.equal(googleRequest.body.get("client_secret"), "google-secret");
+});
+
 test("playerFromSocket uses fixed account display name over submitted nickname", () => {
   const { playerFromSocket } = require("../server");
   const socket = {
