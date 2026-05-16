@@ -363,9 +363,22 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
       host: "host-1",
       phase: "lobby",
       started: false,
+      name: "Ночной плейлист",
+      isOpen: true,
       createdAt: "2026-01-01T10:00:00.000Z",
       players: [{ id: "host-1", name: "Мотя" }, { id: "guest", name: "Лена" }],
       settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "neon" }
+    },
+    CLOSED1: {
+      code: "CLOSED1",
+      name: "Закрытая",
+      isOpen: false,
+      host: "host-3",
+      phase: "lobby",
+      started: false,
+      createdAt: "2026-01-01T12:00:00.000Z",
+      players: [{ id: "host-3", name: "Тихо" }],
+      settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "minimal" }
     },
     PLAY1: {
       code: "PLAY1",
@@ -380,6 +393,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
 
   assert.deepEqual(publicOpenLobbies(lobbies), [{
     code: "OPEN1",
+    name: "Ночной плейлист",
     hostName: "Мотя",
     playerCount: 2,
     gameMode: "classic",

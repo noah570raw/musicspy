@@ -52,7 +52,9 @@ const state = {
   latestResult: null,
   finalComments: [],
   mobileTurnLabel: "",
-  openLobbies: []
+  openLobbies: [],
+  lobbyName: "",
+  lobbyIsOpen: true
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1449,7 +1451,9 @@ function renderOpenLobbies(lobbies = []) {
     const code = escapeAttribute(lobby.code || "");
     const safeCode = escapeHtml(lobby.code || "-----");
     const hostNameText = lobby.hostName || t("хост");
+    const lobbyNameText = lobby.name || hostNameText || t("Комната");
     const hostName = escapeHtml(hostNameText);
+    const lobbyName = escapeHtml(lobbyNameText);
     const mode = escapeHtml(t(lobby.modeLabel || lobby.gameMode || "Классика"));
     const players = Number(lobby.playerCount || 0);
     const rounds = Number(lobby.rounds || 0);
@@ -1465,11 +1469,11 @@ function renderOpenLobbies(lobbies = []) {
         <div class="open-lobby-main">
           <div class="open-lobby-topline">
             <span class="open-lobby-status-dot" aria-hidden="true"></span>
-            <strong>${hostName}</strong>
+            <strong>${lobbyName}</strong>
             <span class="open-lobby-code">${safeCode}</span>
             <span class="open-lobby-live">${escapeHtml(t("WAITING"))}</span>
           </div>
-          <small class="open-lobby-meta">${mode} · ${rounds} ${escapeHtml(t("раундов"))} · ${listenTime}${escapeHtml(t("с на трек"))}</small>
+          <small class="open-lobby-meta">${escapeHtml(t("хост"))}: ${hostName} · ${mode} · ${rounds} ${escapeHtml(t("раундов"))} · ${listenTime}${escapeHtml(t("с на трек"))}</small>
           <div class="open-lobby-footer">
             <div class="open-lobby-avatars" aria-hidden="true">${avatars}</div>
             <small>${players} ${escapeHtml(t("игроков онлайн"))}</small>
@@ -1787,6 +1791,8 @@ function resetRoomState() {
   state.finalComments = [];
   state.latestResult = null;
   state.inviteSecretsVisible = false;
+  state.lobbyName = "";
+  state.lobbyIsOpen = true;
   clearReconnectState();
 }
 
@@ -1806,6 +1812,58 @@ function leaveLobby() {
     showScreen("menu");
     setStatus("menuError", "Ты вышел из лобби");
   });
+}
+
+function applyLobbyMetaToForm(lobby = {}, isHost = false) {
+  const name = lobby.name || "";
+  const isOpen = lobby.isOpen !== false;
+  state.lobbyName = name;
+  state.lobbyIsOpen = isOpen;
+
+  const title = $("lobbyNameTitle");
+  if (title) title.textContent = name || t("Комната");
+
+  const nameInput = $("lobbyNameInput");
+  if (nameInput) {
+    if (document.activeElement !== nameInput) nameInput.value = name;
+    nameInput.disabled = !isHost;
+  }
+
+  const visibility = $("lobbyVisibility");
+  if (visibility) {
+    visibility.value = isOpen ? "open" : "closed";
+    visibility.disabled = !isHost;
+  }
+
+  const saveBtn = $("saveLobbyMetaBtn");
+  if (saveBtn) saveBtn.disabled = !isHost;
+
+  const hint = $("lobbyMetaHint");
+  if (hint) hint.textContent = isHost ? t("ты можешь менять") : (isOpen ? t("открытое") : t("закрытое"));
+}
+
+function readLobbyMetaFromForm() {
+  return {
+    name: $("lobbyNameInput")?.value || state.lobbyName || "",
+    isOpen: ($("lobbyVisibility")?.value || "open") === "open"
+  };
+}
+
+function updateLobbyMeta() {
+  if (!state.currentCode || state.lobby?.host !== socket.id) return;
+  socket.emit("updateLobbyMeta", { code: state.currentCode, ...readLobbyMetaFromForm() }, (res) => {
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    state.lobbyName = res.name || state.lobbyName;
+    state.lobbyIsOpen = res.isOpen !== false;
+    setStatus("lobbyStatus", state.lobbyIsOpen ? "Лобби открыто для списка комнат" : "Лобби закрыто — вход только по коду");
+  });
+}
+
+function handleLobbyNameKeydown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    updateLobbyMeta();
+  }
 }
 
 function readSettingsFromForm() {
@@ -1929,6 +1987,8 @@ function renderLobby(lobby) {
   state.players = lobby.players || [];
   state.settings = lobby.settings || state.settings;
   state.currentCode = lobby.code || state.currentCode;
+  state.lobbyName = lobby.name || state.lobbyName;
+  state.lobbyIsOpen = lobby.isOpen !== false;
   state.hostId = lobby.host || state.hostId;
   state.chatMessages = lobby.chatMessages || state.chatMessages;
   state.finalComments = lobby.finalComments || state.finalComments;
@@ -1962,6 +2022,7 @@ function renderLobby(lobby) {
   $("readyBtn").textContent = state.ready ? t("Не готов") : t("Я готов");
   $("readyBtn").classList.toggle("ready", state.ready);
   $("readySummary").textContent = t(`Готовы: ${readyCount}/${state.players.length}`);
+  applyLobbyMetaToForm(lobby, isHost);
   applySettingsToForm(state.settings, isHost);
   updateLobbyRenameControls();
 
