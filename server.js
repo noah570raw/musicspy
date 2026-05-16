@@ -1331,6 +1331,59 @@ function resetLobbyToWaiting(lobby) {
   lobby.pausedTurnStage = null;
 }
 
+function markAllPlayersReady(lobby) {
+  for (const player of lobby.players || []) {
+    player.ready = true;
+  }
+}
+
+function initializeGame(lobby) {
+  const spyCount = getSpyCount(lobby);
+  const spies = shuffle(lobby.players.map((player) => player.id)).slice(0, spyCount);
+
+  lobby.started = true;
+  lobby.phase = "playing";
+  lobby.round = 1;
+  lobby.theme = pickTheme();
+  lobby.spies = spies;
+  lobby.spy = spies[0] || null;
+  lobby.baseOrder = shuffle(lobby.players.map((player) => player.id));
+  lobby.order = [...lobby.baseOrder];
+  lobby.currentTurnIndex = 0;
+  lobby.votes = {};
+  lobby.voteRound = 1;
+  lobby.voteCandidates = [];
+  lobby.voteTimeLeft = null;
+  lobby.lastTrack = null;
+  lobby.currentTrackReactions = {};
+  lobby.trackHistory = [];
+  lobby.suspected = [];
+  lobby.finalVotes = null;
+  lobby.spyGuess = null;
+  lobby.pendingSpyGuess = null;
+  lobby.spyGuessTimeLeft = null;
+  lobby.spyGuessOptions = [];
+  lobby.spyGuessMode = null;
+  lobby.spyGuessTargetId = null;
+  lobby.submittedThisTurn = false;
+  lobby.turnStage = "waiting";
+  lobby.timeLeft = null;
+  lobby.pausedTurnStage = null;
+  lobby.chatMessages = [];
+  lobby.finalComments = [];
+}
+
+function startLobbyGame(lobby) {
+  initializeGame(lobby);
+
+  for (const player of lobby.players) {
+    sendPrivateGameStart(lobby, io.sockets.sockets.get(player.id) || { id: player.id, emit: (event, payload) => io.to(player.id).emit(event, payload) });
+  }
+
+  emitLobbyUpdate(lobby.code);
+  startTurn(lobby.code);
+}
+
 function createLobbyState(code, hostId, player) {
   return {
     code,
@@ -1524,47 +1577,20 @@ io.on("connection", (socket) => {
       return cb({ error: "Все игроки должны нажать «Готов»" });
     }
 
-    const spyCount = getSpyCount(lobby);
-    const spies = shuffle(lobby.players.map((player) => player.id)).slice(0, spyCount);
-
-    lobby.started = true;
-    lobby.phase = "playing";
-    lobby.round = 1;
-    lobby.theme = pickTheme();
-    lobby.spies = spies;
-    lobby.spy = spies[0] || null;
-    lobby.baseOrder = shuffle(lobby.players.map((player) => player.id));
-    lobby.order = [...lobby.baseOrder];
-    lobby.currentTurnIndex = 0;
-    lobby.votes = {};
-    lobby.voteRound = 1;
-    lobby.voteCandidates = [];
-    lobby.voteTimeLeft = null;
-    lobby.lastTrack = null;
-    lobby.currentTrackReactions = {};
-    lobby.trackHistory = [];
-    lobby.suspected = [];
-    lobby.finalVotes = null;
-    lobby.spyGuess = null;
-    lobby.pendingSpyGuess = null;
-    lobby.spyGuessTimeLeft = null;
-    lobby.spyGuessOptions = [];
-    lobby.spyGuessMode = null;
-    lobby.spyGuessTargetId = null;
-    lobby.submittedThisTurn = false;
-    lobby.turnStage = "waiting";
-    lobby.timeLeft = null;
-    lobby.pausedTurnStage = null;
-    lobby.chatMessages = [];
-    lobby.finalComments = [];
-
-    for (const player of lobby.players) {
-      sendPrivateGameStart(lobby, io.sockets.sockets.get(player.id) || { id: player.id, emit: (event, payload) => io.to(player.id).emit(event, payload) });
-    }
-
+    startLobbyGame(lobby);
     cb({ success: true });
-    emitLobbyUpdate(lobby.code);
-    startTurn(lobby.code);
+  });
+
+  socket.on("forceStartGame", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.host !== socket.id) return cb({ error: "FORCE START доступен только хосту" });
+    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.players.length < 3) return cb({ error: "Нужно минимум 3 игрока" });
+
+    markAllPlayersReady(lobby);
+    startLobbyGame(lobby);
+    cb({ success: true, forced: true });
   });
 
 
@@ -1939,6 +1965,8 @@ module.exports = {
   buildThemeGuessOptions,
   normalizeGuess,
   normalizeSettings,
+  markAllPlayersReady,
+  initializeGame,
   countReactions,
   getActiveTurnOrder,
   removePlayerFromLobby,

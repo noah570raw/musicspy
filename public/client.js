@@ -151,6 +151,7 @@ const EN_TRANSLATIONS = {
   "Сменить ник": "Change nickname",
   "Выйти из лобби": "Leave lobby",
   "Запустить игру": "Start game",
+  "FORCE START": "FORCE START",
   "Действия": "Actions",
   "старт и профиль": "start and profile",
   "Действия лобби": "Lobby actions",
@@ -255,6 +256,7 @@ const EN_TRANSLATIONS = {
   "Профиль обновлен. Ник на сайте обновлен из профиля": "Profile updated. Site nickname now comes from your profile",
   "Введи код комнаты": "Enter a room code",
   "Запускаем...": "Starting...",
+  "FORCE START: отмечаем всех готовыми и запускаем...": "FORCE START: marking everyone ready and starting...",
   "Ход пропущен": "Turn skipped",
   "Запускаем голосование...": "Starting the vote...",
   "Игрок удален из комнаты": "Player removed from the room",
@@ -1803,6 +1805,17 @@ function startGame() {
   });
 }
 
+function forceStartGame() {
+  showStartCinematic();
+  setStatus("lobbyStatus", "FORCE START: отмечаем всех готовыми и запускаем...");
+  socket.emit("forceStartGame", { code: state.currentCode }, (res) => {
+    if (res?.error) {
+      hideCinematicOverlay({ runOnClose: false });
+      setStatus("lobbyStatus", res.error, true);
+    }
+  });
+}
+
 function restartLobby() {
   socket.emit("restartLobby", { code: state.currentCode }, (res) => {
     if (res?.error) {
@@ -2192,6 +2205,10 @@ function renderLobby(lobby) {
     : readyCount !== state.players.length
       ? t("Ждем готовность всех игроков")
       : t("Запустить игру");
+  const forceStartBtn = $("forceStartBtn");
+  forceStartBtn.disabled = !isHost || state.players.length < 3;
+  forceStartBtn.classList.toggle("hidden", !isHost);
+  forceStartBtn.textContent = t("FORCE START");
   $("readyBtn").textContent = state.ready ? t("Не готов") : t("Я готов");
   $("readyBtn").classList.toggle("ready", state.ready);
   $("readySummary").textContent = t(`Готовы: ${readyCount}/${state.players.length}`);
