@@ -3,13 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Music Spy</title>
+  <meta name="description" content="Music Spy — музыкальная party-игра для компании: создайте комнату, ставьте YouTube и SoundCloud треки, вычисляйте шпиона и делитесь итогами.">
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="application-name" content="Music Spy">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Music Spy">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="canonical" href="https://musicspy.onrender.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Music Spy">
+  <meta property="og:title" content="Music Spy — музыкальная игра Кто шпион?">
+  <meta property="og:description" content="Создайте комнату, получите секретную музыкальную тему, ставьте треки и вычисляйте шпиона в компании друзей.">
+  <meta property="og:url" content="https://musicspy.onrender.com/">
+  <meta property="og:image" content="https://musicspy.onrender.com/musicspyicon.ico">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Music Spy — музыкальная игра Кто шпион?">
+  <meta name="twitter:description" content="Party-игра с комнатами, треками, голосованием и шпионом среди игроков.">
+  <meta name="twitter:image" content="https://musicspy.onrender.com/musicspyicon.ico">
+  <title>Music Spy — музыкальная игра Кто шпион?</title>
   <link rel="icon" href="/musicspyicon.ico" type="image/x-icon">
   <link rel="shortcut icon" href="/musicspyicon.ico" type="image/x-icon">
+  <link rel="manifest" href="/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Music Spy",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Any",
+      "url": "https://musicspy.onrender.com/",
+      "description": "Музыкальная party-игра для компании, где игроки ставят треки и ищут шпиона."
+    }
+  </script>
 </head>
 <body data-screen="menu">
   <div class="noise"></div>
@@ -29,6 +58,31 @@
       <p id="cinematicText" class="cinematic-text"></p>
       <div id="cinematicMeta" class="cinematic-meta"></div>
       <button id="cinematicClose" class="secondary cinematic-close" type="button" onclick="hideCinematicOverlay()">Понял, играем</button>
+    </div>
+  </div>
+
+  <div id="howToPlayModal" class="auth-modal how-to-play-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="howToPlayTitle">
+    <div class="auth-modal-card how-to-play-card">
+      <button class="modal-close" type="button" onclick="hideHowToPlay()" aria-label="Закрыть правила">×</button>
+      <p class="eyebrow">быстрый старт</p>
+      <h2 id="howToPlayTitle">Как играть?</h2>
+      <p class="auth-modal-text">За минуту разберись в правилах и запускай партию даже с новичками.</p>
+      <div class="how-to-steps">
+        <article><span>1</span><strong>Создайте комнату</strong><p>Один игрок становится хостом, остальные заходят по коду, ссылке или QR.</p></article>
+        <article><span>2</span><strong>Получите роли</strong><p>Мирные видят общую музыкальную тему, шпион пытается понять её по чужим трекам.</p></article>
+        <article><span>3</span><strong>Ставьте треки</strong><p>В свой ход вставьте YouTube или SoundCloud ссылку, которая подходит к вашей версии темы.</p></article>
+        <article><span>4</span><strong>Обсуждайте и голосуйте</strong><p>После раундов выбирайте игрока, чьи треки хуже всего попали в тему.</p></article>
+        <article><span>5</span><strong>Последний шанс шпиона</strong><p>Если шпиона нашли, он может спастись, выбрав настоящую тему из близких вариантов.</p></article>
+      </div>
+      <div class="demo-flow" aria-label="Пример партии">
+        <div><b>Тема</b><span>ностальгия</span></div>
+        <div><b>Мирные</b><span>ставят треки из прошлого</span></div>
+        <div><b>Шпион</b><span>маскируется и угадывает</span></div>
+      </div>
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="hideHowToPlay(); focusNicknameInput();">Создать комнату</button>
+        <button class="secondary" type="button" onclick="hideHowToPlay()">Понятно</button>
+      </div>
     </div>
   </div>
 
@@ -187,6 +241,8 @@
       <div class="actions two-col">
         <button class="primary" onclick="createLobby()">Создать лобби</button>
         <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
+        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
       </div>
 
       <div class="rules">
@@ -369,7 +425,7 @@
     </section>
 
     <section id="game" class="screen game-layout hidden">
-      <aside class="card side-panel">
+      <aside id="gameInfoPanel" class="card side-panel">
         <p class="eyebrow">роль и тема</p>
         <h2 id="roleTitle">...</h2>
         <p id="theme" class="theme-text"></p>
@@ -408,7 +464,7 @@
         </div>
       </aside>
 
-      <section class="card player-card">
+      <section id="gamePlayerPanel" class="card player-card">
         <div class="timer-ring">
           <svg viewBox="0 0 120 120" aria-hidden="true">
             <circle class="track" cx="60" cy="60" r="54"></circle>
@@ -438,7 +494,7 @@
         <p id="gameStatus" class="status"></p>
       </section>
 
-      <aside class="card side-panel">
+      <aside id="gameQueuePanel" class="card side-panel">
         <p class="eyebrow">очередь</p>
         <div id="order" class="order-list"></div>
 
@@ -451,7 +507,7 @@
         </div>
       </aside>
 
-      <aside class="page-chat-column game-page-chat" aria-label="Чат игры">
+      <aside id="gameChatPanel" class="page-chat-column game-page-chat" aria-label="Чат игры">
         <div class="game-chat-panel">
           <div class="chat-header panel-title">
             <strong>Чат игры</strong>
@@ -552,8 +608,18 @@
     </section>
   </main>
 
+  <nav id="mobileGameNav" class="mobile-game-nav" aria-label="Навигация по игре">
+    <button type="button" onclick="scrollMobilePanel('gameInfoPanel')"><span>🎭</span>Роль</button>
+    <button type="button" onclick="scrollMobilePanel('gamePlayerPanel')"><span>▶️</span>Трек</button>
+    <button type="button" onclick="scrollMobilePanel('gameQueuePanel')"><span>📜</span>Очередь</button>
+    <button type="button" onclick="scrollMobilePanel('gameChatPanel')"><span>💬</span>Чат</button>
+  </nav>
+  <button id="mobileTurnBanner" class="mobile-turn-banner hidden" type="button" onclick="scrollMobilePanel('gamePlayerPanel')">Твой ход — вставь трек</button>
+
   <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="client-config.js"></script>
+  <script src="i18n-data.js"></script>
   <script src="client.js"></script>
 </body>
 </html>
