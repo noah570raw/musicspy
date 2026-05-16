@@ -3582,3 +3582,75 @@ body[data-screen="results"] .result-score-panel:hover {
     transform: translateY(42px);
   }
 }
+
+/* Start-of-game cinematic: lobby shutters + countdown before role reveal. */
+.cinematic-launch {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(var(--accent-rgb), 0.34), transparent 26rem),
+    rgba(0, 0, 0, 0.84);
+}
+
+.cinematic-launch::before,
+.cinematic-launch::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  height: 50%;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(var(--accent-rgb),0.22), rgba(0,0,0,0.96));
+  background-size: 72px 100%, 100% 100%;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.76);
+  animation: lobby-shutter 0.92s cubic-bezier(0.18, 0.88, 0.22, 1) both;
+}
+
+.cinematic-launch::before {
+  top: 0;
+  transform-origin: top center;
+}
+
+.cinematic-launch::after {
+  bottom: 0;
+  transform-origin: bottom center;
+  animation-name: lobby-shutter-bottom;
+}
+
+.cinematic-launch .cinematic-card {
+  z-index: 1;
+  width: min(100%, 720px);
+  min-height: min(78dvh, 620px);
+  display: grid;
+  align-content: center;
+  border-color: rgba(var(--accent-rgb), 0.34);
+}
+
+.cinematic-launch .cinematic-meta {
+  min-height: 150px;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.cinematic-launch .launch-go {
+  font-size: clamp(4rem, 16vw, 8rem);
+  letter-spacing: -0.08em;
+  text-shadow: 0 0 42px rgba(var(--accent-rgb), 0.7);
+}
+
+/* The in-game role card should stay static after the reveal. */
+body[data-screen="game"] #roleTitle::after {
+  content: none;
+  animation: none;
+}
+
+@keyframes lobby-shutter {
+  0% { transform: translateY(-105%); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes lobby-shutter-bottom {
+  0% { transform: translateY(105%); }
+  100% { transform: translateY(0); }
+}
