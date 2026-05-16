@@ -360,6 +360,7 @@ test("initializeGame starts immediately after forced readiness", () => {
 test("normalizeSettings clamps lobby max players to host choices", () => {
   const { normalizeSettings } = require("../server");
 
+  assert.equal(normalizeSettings({ maxPlayers: 3 }).maxPlayers, 3);
   assert.equal(normalizeSettings({ maxPlayers: 6 }).maxPlayers, 6);
   assert.equal(normalizeSettings({ maxPlayers: 12 }).maxPlayers, 12);
   assert.equal(normalizeSettings({ maxPlayers: 13 }).maxPlayers, 12);
