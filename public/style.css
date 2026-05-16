@@ -1861,8 +1861,8 @@ html[lang="ru"] .language-switcher span:first-child {
 
 .breakdown-card {
   display: grid;
-  gap: 6px;
-  padding: 14px;
+  gap: 4px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.14), transparent 42%), rgba(255, 255, 255, 0.045);
@@ -2747,18 +2747,17 @@ body[data-visual-theme="minimal"] {
 .comment-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 16px 0;
+  gap: 8px;
+  margin: 12px 0;
 }
 
 .share-preview,
 .postgame-panel {
-  margin: 16px 0;
+  margin: 12px 0;
 }
 
 .share-card-mini,
 .postgame-panel,
-.party-history-row,
 .final-comment {
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -2767,17 +2766,14 @@ body[data-visual-theme="minimal"] {
 
 .share-card-mini {
   display: grid;
-  gap: 8px;
-  padding: 16px;
+  gap: 5px;
+  padding: 12px;
 }
 
 .share-card-mini span,
 .share-card-mini small,
 .share-card-mini em,
-.party-history-row small,
-.party-history-row em,
-.final-comments.empty,
-.party-history.empty {
+.final-comments.empty {
   color: var(--muted);
 }
 
@@ -2789,8 +2785,7 @@ body[data-visual-theme="minimal"] {
   padding: 14px;
 }
 
-.final-comments,
-.party-history {
+.final-comments {
   display: grid;
   gap: 8px;
 }
@@ -2805,22 +2800,6 @@ body[data-visual-theme="minimal"] {
   color: var(--muted);
 }
 
-.party-history-row {
-  padding: 10px 12px;
-}
-
-.party-history-row summary {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.party-history-row small,
-.party-history-row em {
-  display: block;
-  margin-top: 6px;
-}
 
 .role-pass {
   position: relative;
@@ -3030,10 +3009,10 @@ body[data-screen="results"] #results {
     grid-template-columns: minmax(240px, 0.78fr) minmax(300px, 1fr) minmax(290px, 0.95fr);
     grid-auto-flow: row dense;
     align-items: start;
-    gap: 10px 12px;
+    gap: 8px 10px;
     max-height: calc(100dvh - 16px);
     overflow: auto;
-    padding: clamp(12px, 1.35vw, 18px);
+    padding: clamp(10px, 1.1vw, 14px);
     border-radius: 22px;
   }
 
@@ -3041,18 +3020,22 @@ body[data-screen="results"] #results {
   body[data-screen="results"] #resultTitle,
   body[data-screen="results"] #resultText,
   body[data-screen="results"] #results > .share-actions,
-  body[data-screen="results"] #resultSharePreview,
   body[data-screen="results"] #restartBtn {
     grid-column: 1;
   }
 
+  body[data-screen="results"] #resultSharePreview {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
   body[data-screen="results"] #resultBreakdown {
     grid-column: 2;
-    grid-row: 1 / span 6;
+    grid-row: 2 / span 5;
   }
 
   body[data-screen="results"] .final-comment-panel,
-  body[data-screen="results"] .party-history-panel,
   body[data-screen="results"] .result-vote-details-panel,
   body[data-screen="results"] #resultVotes {
     grid-column: 3;
@@ -3087,7 +3070,7 @@ body[data-screen="results"] #results {
 
   body[data-screen="results"] .result-breakdown {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 6px;
   }
 
   body[data-screen="results"] .breakdown-card,
@@ -3095,9 +3078,8 @@ body[data-screen="results"] #results {
   body[data-screen="results"] .share-card-mini,
   body[data-screen="results"] .history-row,
   body[data-screen="results"] .vote-row,
-  body[data-screen="results"] .final-comment,
-  body[data-screen="results"] .party-history-row {
-    padding: 8px 10px;
+  body[data-screen="results"] .final-comment {
+    padding: 7px 9px;
     border-radius: 14px;
   }
 
@@ -3140,8 +3122,7 @@ body[data-screen="results"] #results {
   body[data-screen="results"] .track-history,
   body[data-screen="results"] #resultVoteDetails,
   body[data-screen="results"] #resultVotes,
-  body[data-screen="results"] .final-comments,
-  body[data-screen="results"] .party-history {
+  body[data-screen="results"] .final-comments {
     gap: 6px;
     max-height: 22vh;
     overflow: auto;
