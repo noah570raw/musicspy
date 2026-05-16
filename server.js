@@ -39,6 +39,8 @@ const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
+const MAX_FINAL_COMMENTS = 24;
+const MAX_FINAL_COMMENT_LENGTH = 90;
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -445,7 +447,8 @@ const GAME_MODES = {
     spyCount: 1,
     anonymousVoting: false,
     votingTime: 60,
-    runoffOnTie: true
+    runoffOnTie: true,
+    roomTheme: "neon"
   },
   blitz: {
     label: "Блиц",
@@ -455,7 +458,8 @@ const GAME_MODES = {
     spyCount: 1,
     anonymousVoting: true,
     votingTime: 30,
-    runoffOnTie: false
+    runoffOnTie: false,
+    roomTheme: "cyber"
   }
 };
 
@@ -467,7 +471,8 @@ const DEFAULT_SETTINGS = {
   spyCount: GAME_MODES.classic.spyCount,
   anonymousVoting: GAME_MODES.classic.anonymousVoting,
   votingTime: GAME_MODES.classic.votingTime,
-  runoffOnTie: GAME_MODES.classic.runoffOnTie
+  runoffOnTie: GAME_MODES.classic.runoffOnTie,
+  roomTheme: GAME_MODES.classic.roomTheme
 };
 
 function generateCode() {
@@ -509,6 +514,7 @@ function normalizeSettings(input = {}) {
   next.anonymousVoting = input.anonymousVoting === undefined ? next.anonymousVoting : Boolean(input.anonymousVoting);
   next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], next.votingTime);
   next.runoffOnTie = input.runoffOnTie === undefined ? next.runoffOnTie : input.runoffOnTie !== false;
+  next.roomTheme = ["neon", "vinyl", "cyber", "retro", "minimal"].includes(input.roomTheme) ? input.roomTheme : next.roomTheme;
   return next;
 }
 
@@ -708,7 +714,8 @@ function sendPrivateGameStart(lobby, socket) {
     spyIds: isSpy ? lobby.spies : [],
     settings: lobby.settings,
     trackHistory: lobby.trackHistory,
-    chatMessages: lobby.chatMessages
+    chatMessages: lobby.chatMessages,
+    finalComments: lobby.finalComments || []
   });
 }
 
@@ -781,7 +788,8 @@ function publicLobby(lobby) {
     minPlayers: 3,
     totalRounds: lobby.settings.rounds,
     settings: lobby.settings,
-    chatMessages: lobby.chatMessages || []
+    chatMessages: lobby.chatMessages || [],
+    finalComments: lobby.finalComments || []
   };
 }
 
@@ -911,7 +919,8 @@ function emitGameState(code) {
     reactionCounts: countReactions(lobby.currentTrackReactions),
     trackHistory: lobby.trackHistory || [],
     pendingSpyGuess: lobby.pendingSpyGuess || null,
-    chatMessages: lobby.chatMessages || []
+    chatMessages: lobby.chatMessages || [],
+    finalComments: lobby.finalComments || []
   });
 }
 
@@ -1287,7 +1296,8 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     theme: lobby.theme,
     settings: lobby.settings,
     trackHistory: lobby.trackHistory || [],
-    breakdown
+    breakdown,
+    finalComments: lobby.finalComments || []
   });
   emitLobbyUpdate(code);
 }
@@ -1351,6 +1361,7 @@ function createLobbyState(code, hostId, player) {
     spyGuessMode: null,
     spyGuessTargetId: null,
     chatMessages: [],
+    finalComments: [],
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
@@ -1545,6 +1556,7 @@ io.on("connection", (socket) => {
     lobby.timeLeft = null;
     lobby.pausedTurnStage = null;
     lobby.chatMessages = [];
+    lobby.finalComments = [];
 
     for (const player of lobby.players) {
       sendPrivateGameStart(lobby, io.sockets.sockets.get(player.id) || { id: player.id, emit: (event, payload) => io.to(player.id).emit(event, payload) });
@@ -1717,6 +1729,32 @@ io.on("connection", (socket) => {
     lobby.chatMessages = [...(lobby.chatMessages || []), message].slice(-MAX_CHAT_MESSAGES);
     io.to(lobby.code).emit("chat:update", { messages: lobby.chatMessages });
     cb({ success: true, message });
+  });
+
+
+  socket.on("finalComment:send", ({ code, text }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (lobby.phase !== "ended") return cb({ error: "Комментарии доступны после игры" });
+    const player = lobby.players.find((item) => item.id === socket.id);
+    if (!player) return cb({ error: "Ты не в этой комнате" });
+
+    const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_FINAL_COMMENT_LENGTH);
+    if (!messageText) return cb({ error: "Напиши одну фразу" });
+
+    const comment = {
+      id: `${Date.now()}-${crypto.randomBytes(3).toString("hex")}`,
+      playerId: socket.id,
+      playerName: player.name,
+      text: messageText,
+      createdAt: Date.now()
+    };
+    lobby.finalComments = [
+      ...(lobby.finalComments || []).filter((item) => item.playerId !== socket.id),
+      comment
+    ].slice(-MAX_FINAL_COMMENTS);
+    io.to(lobby.code).emit("finalComments:update", { comments: lobby.finalComments });
+    cb({ success: true, comment, comments: lobby.finalComments });
   });
 
   socket.on("playTrack", ({ code, url }, cb = () => {}) => {

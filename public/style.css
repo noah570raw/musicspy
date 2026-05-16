@@ -2528,3 +2528,351 @@ body[data-screen="game"] .language-switcher {
     margin-top: 12px;
   }
 }
+
+.music-equalizer-bg {
+  position: fixed;
+  inset: auto 4vw 0;
+  z-index: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  height: 34vh;
+  pointer-events: none;
+  opacity: 0.22;
+  mask-image: linear-gradient(to top, black, transparent);
+}
+
+.music-equalizer-bg i {
+  width: min(4vw, 42px);
+  height: 18%;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(to top, rgba(var(--accent-rgb), 0.05), rgba(var(--accent-rgb), 0.8), rgba(255,255,255,0.7));
+  animation: eqIdle 4.8s ease-in-out infinite;
+  animation-delay: calc(var(--i, 1) * -0.17s);
+}
+
+.music-equalizer-bg i:nth-child(1) { --i: 1; }
+.music-equalizer-bg i:nth-child(2) { --i: 2; }
+.music-equalizer-bg i:nth-child(3) { --i: 3; }
+.music-equalizer-bg i:nth-child(4) { --i: 4; }
+.music-equalizer-bg i:nth-child(5) { --i: 5; }
+.music-equalizer-bg i:nth-child(6) { --i: 6; }
+.music-equalizer-bg i:nth-child(7) { --i: 7; }
+.music-equalizer-bg i:nth-child(8) { --i: 8; }
+.music-equalizer-bg i:nth-child(9) { --i: 9; }
+.music-equalizer-bg i:nth-child(10) { --i: 10; }
+.music-equalizer-bg i:nth-child(11) { --i: 11; }
+.music-equalizer-bg i:nth-child(12) { --i: 12; }
+
+body.music-playing .music-equalizer-bg i {
+  animation-name: eqPlay;
+  animation-duration: 0.95s;
+}
+
+@keyframes eqIdle {
+  0%, 100% { height: 10%; opacity: 0.35; }
+  50% { height: 34%; opacity: 0.72; }
+}
+
+@keyframes eqPlay {
+  0%, 100% { height: 16%; transform: scaleY(0.85); }
+  25% { height: 72%; transform: scaleY(1.05); }
+  55% { height: 38%; }
+  75% { height: 92%; }
+}
+
+body[data-visual-theme="vinyl"] {
+  --bg: #050505;
+  --panel: rgba(12, 10, 9, 0.88);
+  --accent: #d6b36a;
+  --accent-rgb: 214, 179, 106;
+  --accent-2: #fff1c8;
+}
+
+body[data-visual-theme="cyber"] {
+  --bg: #06030a;
+  --panel: rgba(18, 6, 16, 0.88);
+  --accent: #ff1f62;
+  --accent-rgb: 255, 31, 98;
+  --accent-2: #55f7ff;
+}
+
+body[data-visual-theme="retro"] {
+  --bg: #160914;
+  --panel: rgba(45, 20, 35, 0.88);
+  --accent: #ff8a3d;
+  --accent-rgb: 255, 138, 61;
+  --accent-2: #ffe66d;
+}
+
+body[data-visual-theme="minimal"] {
+  --bg: #020202;
+  --panel: rgba(8, 8, 8, 0.9);
+  --accent: #f5f5f5;
+  --accent-rgb: 245, 245, 245;
+  --accent-2: #bdbdbd;
+}
+
+.player-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.vinyl-disc {
+  position: absolute;
+  z-index: -1;
+  width: min(50vw, 360px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgba(var(--accent-rgb), 0.92) 0 7%, #0a0a0f 7.5% 14%, transparent 14.5%),
+    repeating-radial-gradient(circle at center, #15151d 0 6px, #050509 7px 12px);
+  box-shadow: 0 0 55px rgba(var(--accent-rgb), 0.24), inset 0 0 28px rgba(255,255,255,0.08);
+  opacity: 0.72;
+  transform: scale(0.8);
+  transition: transform 0.55s ease, opacity 0.55s ease;
+}
+
+.vinyl-disc span {
+  position: absolute;
+  inset: 13%;
+  border-radius: inherit;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.vinyl-disc.spinning {
+  opacity: 0.98;
+  transform: scale(1);
+  animation: vinylSpin 3.4s linear infinite;
+}
+
+.vinyl-disc.slowing {
+  animation: vinylSlow 1.4s ease-out;
+}
+
+@keyframes vinylSpin { to { rotate: 360deg; } }
+@keyframes vinylSlow { from { rotate: 0deg; } to { rotate: 90deg; } }
+
+.player-card .embed {
+  position: relative;
+  overflow: hidden;
+}
+
+.player-card .embed:not(.empty)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 0 44%, rgba(255,255,255,0.14) 49%, transparent 54% 100%);
+  animation: scanLine 2.8s linear infinite;
+}
+
+@keyframes scanLine { from { transform: translateX(-130%); } to { transform: translateX(130%); } }
+
+#sendBtn:not(:disabled) {
+  animation: sendPulse 1.7s ease-in-out infinite;
+}
+
+@keyframes sendPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.34); }
+  50% { box-shadow: 0 0 0 12px rgba(var(--accent-rgb), 0); }
+}
+
+.reaction-burst {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  z-index: 5;
+  font-size: clamp(2rem, 6vw, 4rem);
+  animation: emojiFly 0.88s ease-out both;
+  pointer-events: none;
+  text-shadow: 0 10px 24px rgba(0,0,0,0.45);
+}
+
+@keyframes emojiFly {
+  from { opacity: 0; transform: translate(-50%, 35px) scale(0.6) rotate(-10deg); }
+  20% { opacity: 1; }
+  to { opacity: 0; transform: translate(calc(-50% + 24px), -135px) scale(1.35) rotate(12deg); }
+}
+
+.vote-row.has-votes {
+  position: relative;
+  border-color: rgba(255, 31, 45, 0.55);
+}
+
+.vote-row.has-votes::after {
+  content: "красная метка";
+  color: #fff;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 31, 45, 0.84);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.timer-ring.timer-critical {
+  animation: timerShake 0.34s linear infinite;
+}
+
+.timer-ring .progress.danger {
+  stroke: #ff1f2d;
+  filter: drop-shadow(0 0 10px rgba(255,31,45,0.75));
+}
+
+@keyframes timerShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.share-actions,
+.comment-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.share-preview,
+.postgame-panel {
+  margin: 16px 0;
+}
+
+.share-card-mini,
+.postgame-panel,
+.party-history-row,
+.final-comment {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.18), transparent 45%), rgba(255,255,255,0.045);
+}
+
+.share-card-mini {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.share-card-mini span,
+.share-card-mini small,
+.share-card-mini em,
+.party-history-row small,
+.party-history-row em,
+.final-comments.empty,
+.party-history.empty {
+  color: var(--muted);
+}
+
+.share-card-mini strong {
+  font-size: clamp(1.35rem, 4vw, 2.1rem);
+}
+
+.postgame-panel {
+  padding: 14px;
+}
+
+.final-comments,
+.party-history {
+  display: grid;
+  gap: 8px;
+}
+
+.final-comment {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.final-comment span {
+  color: var(--muted);
+}
+
+.party-history-row {
+  padding: 10px 12px;
+}
+
+.party-history-row summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.party-history-row small,
+.party-history-row em {
+  display: block;
+  margin-top: 6px;
+}
+
+.role-pass {
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 620px) {
+  .share-actions,
+  .comment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .vinyl-disc {
+    width: min(84vw, 320px);
+  }
+}
+
+body[data-screen="game"] #roleTitle {
+  position: relative;
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.18), rgba(255,255,255,0.045));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  text-transform: uppercase;
+}
+
+body[data-screen="game"] #roleTitle::before {
+  content: "ACCESS GRANTED";
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--accent-2);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+}
+
+body[data-screen="game"][data-role="spy"] #roleTitle::before {
+  content: "CLASSIFIED";
+  color: #ff8a8a;
+}
+
+body[data-screen="game"] #roleTitle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.18), transparent);
+  animation: passScan 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes passScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  18%, 55% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+body[data-role="civilian"] {
+  --accent: #2f80ff;
+  --accent-rgb: 47, 128, 255;
+  --accent-2: #e6f2ff;
+}
+
+body[data-role="spy"] {
+  --accent: #e50914;
+  --accent-rgb: 229, 9, 20;
+  --accent-2: #ffffff;
+}
