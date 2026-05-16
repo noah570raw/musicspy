@@ -1447,16 +1447,33 @@ function renderOpenLobbies(lobbies = []) {
   list.classList.remove("empty");
   list.innerHTML = state.openLobbies.map((lobby) => {
     const code = escapeAttribute(lobby.code || "");
-    const hostName = escapeHtml(lobby.hostName || t("хост"));
+    const safeCode = escapeHtml(lobby.code || "-----");
+    const hostNameText = lobby.hostName || t("хост");
+    const hostName = escapeHtml(hostNameText);
     const mode = escapeHtml(t(lobby.modeLabel || lobby.gameMode || "Классика"));
     const players = Number(lobby.playerCount || 0);
     const rounds = Number(lobby.rounds || 0);
     const listenTime = Number(lobby.listenTime || DEFAULT_LISTEN_TIME);
+    const avatarCount = Math.max(1, Math.min(players || 1, 4));
+    const hostInitial = escapeHtml(String(hostNameText).trim().slice(0, 1).toUpperCase() || "M");
+    const avatars = Array.from({ length: avatarCount }, (_, index) => {
+      const label = index === 0 ? hostInitial : index + 1;
+      return `<span class="open-lobby-avatar" aria-hidden="true">${label}</span>`;
+    }).join("");
     return `
       <article class="open-lobby-row">
-        <div>
-          <strong>${hostName} · ${escapeHtml(lobby.code || "-----")}</strong>
-          <small>${mode} · ${players} ${escapeHtml(t("игроков"))} · ${rounds} ${escapeHtml(t("раундов"))} · ${listenTime}${escapeHtml(t("с на трек"))}</small>
+        <div class="open-lobby-main">
+          <div class="open-lobby-topline">
+            <span class="open-lobby-status-dot" aria-hidden="true"></span>
+            <strong>${hostName}</strong>
+            <span class="open-lobby-code">${safeCode}</span>
+            <span class="open-lobby-live">${escapeHtml(t("WAITING"))}</span>
+          </div>
+          <small class="open-lobby-meta">${mode} · ${rounds} ${escapeHtml(t("раундов"))} · ${listenTime}${escapeHtml(t("с на трек"))}</small>
+          <div class="open-lobby-footer">
+            <div class="open-lobby-avatars" aria-hidden="true">${avatars}</div>
+            <small>${players} ${escapeHtml(t("игроков онлайн"))}</small>
+          </div>
         </div>
         <button class="secondary" type="button" onclick="joinOpenLobby('${code}')">${escapeHtml(t("Войти в комнату"))}</button>
       </article>
