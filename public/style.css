@@ -4698,3 +4698,166 @@ body[data-screen="results"] .result-score-panel:hover {
     text-align: center;
   }
 }
+
+@media (min-width: 1120px) {
+  body[data-screen="lobby"] .app-shell {
+    width: min(100% - 18px, 1480px);
+    height: 100dvh;
+    min-height: 0;
+    padding: 8px 0;
+  }
+
+  #lobby.lobby-card {
+    display: grid;
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    grid-template-columns: minmax(220px, 0.85fr) minmax(480px, 1.6fr) minmax(260px, 0.95fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "header header header"
+      "chat main actions";
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  #lobby .lobby-header {
+    grid-area: header;
+    margin: 0;
+  }
+
+  #lobby .lobby-grid {
+    grid-area: main;
+    min-height: 0;
+    margin: 0;
+    grid-template-columns: minmax(180px, 0.82fr) minmax(250px, 1.18fr);
+  }
+
+  #lobby .lobby-column,
+  #lobby .lobby-action-panel,
+  #lobby .game-chat-panel {
+    height: 100%;
+    min-height: 0;
+  }
+
+  #lobby .page-chat-column,
+  #lobby .page-action-column {
+    position: static;
+    inset: auto;
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+  }
+
+  #lobby .lobby-page-chat {
+    grid-area: chat;
+  }
+
+  #lobby .lobby-page-actions {
+    grid-area: actions;
+  }
+
+  #lobby .page-chat-column .game-chat-panel {
+    min-height: 0;
+    max-height: none;
+  }
+
+  #lobby .lobby-page-actions .lobby-action-panel {
+    grid-template-rows: auto repeat(4, minmax(32px, auto)) auto minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 9px;
+    overflow: visible;
+  }
+
+  #lobby .lobby-page-actions .lobby-action-panel.no-guest-rename {
+    grid-template-rows: auto repeat(3, minmax(32px, auto)) minmax(0, 1fr) auto;
+  }
+
+  #lobby .action-settings-panel {
+    max-height: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 7px;
+    overflow: visible;
+  }
+
+  #lobby .setting-control-wide {
+    grid-column: 1 / -1;
+  }
+
+  #lobby .setting-control {
+    gap: 2px;
+    padding: 5px;
+    border-radius: 12px;
+  }
+
+  #lobby .setting-control span,
+  #lobby .setting-control small,
+  #lobby .settings-title span,
+  #lobby .panel-title span {
+    font-size: 0.62rem;
+    line-height: 1.15;
+  }
+
+  #lobby .setting-control small {
+    display: none;
+  }
+
+  #lobby .settings-title strong,
+  #lobby .panel-title strong {
+    font-size: 0.86rem;
+  }
+
+  #lobby .settings-title {
+    gap: 6px;
+    padding-bottom: 0;
+  }
+
+  #lobby .game-settings-title {
+    margin-top: 1px;
+    padding-top: 5px;
+  }
+
+  #lobby.lobby-card button,
+  #lobby.lobby-card input,
+  #lobby.lobby-card select {
+    min-height: 32px;
+  }
+
+  #lobby.lobby-card button,
+  #lobby.lobby-card input,
+  #lobby.lobby-card select {
+    padding: 6px 8px;
+  }
+
+  #lobby .action-rename-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  #lobby .action-rename-row #renameInput,
+  #lobby .action-rename-row #renameBtn {
+    order: initial;
+  }
+
+  #lobby .invite-tools,
+  #lobby .players-list,
+  #lobby .lobby-players {
+    gap: 7px;
+  }
+
+  #lobby .qr-wrap {
+    padding: 7px;
+  }
+
+  #lobby .lobby-invite #inviteQr {
+    width: min(145px, 100%);
+  }
+
+  #lobby .player-row {
+    gap: 7px;
+    padding: 7px;
+  }
+}
