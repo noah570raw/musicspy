@@ -2404,8 +2404,10 @@ function renderChat(messages = state.chatMessages) {
       box.textContent = t("Пока сообщений нет");
       continue;
     }
+    const hadMessages = box.children.length > 0;
     box.classList.remove("empty");
     box.innerHTML = markup;
+    box.scrollTo({ top: box.scrollHeight, behavior: hadMessages ? "smooth" : "auto" });
   }
 }
 

@@ -2322,10 +2322,12 @@ body[data-screen="game"] .language-switcher {
 }
 
 .game-chat-panel {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
   margin-top: auto;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.035);
@@ -2333,12 +2335,28 @@ body[data-screen="game"] .language-switcher {
 
 .chat-messages {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  justify-content: flex-end;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
+  min-height: 0;
   max-height: min(220px, 28vh);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 2px 4px;
+  scroll-behavior: smooth;
+}
+
+.chat-messages::before {
+  content: "";
+  margin-top: auto;
+}
+
+.game-chat-panel .panel-title,
+.chat-form,
+.game-chat-panel .status {
+  flex: 0 0 auto;
 }
 
 .chat-messages.empty {
@@ -2353,8 +2371,8 @@ body[data-screen="game"] .language-switcher {
   width: fit-content;
   min-width: min(160px, 100%);
   max-width: 92%;
-  gap: 5px;
-  padding: 10px;
+  gap: 4px;
+  padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.045);
@@ -2402,7 +2420,7 @@ body[data-screen="game"] .language-switcher {
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(44px, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .chat-form input,
@@ -2456,7 +2474,6 @@ body[data-screen="game"] .language-switcher {
 @media (min-width: 1580px) {
   .page-chat-column .game-chat-panel {
     max-height: min(420px, 48vh);
-    grid-template-rows: auto minmax(120px, 1fr) auto auto;
   }
 
   .page-chat-column .chat-messages {
@@ -2491,7 +2508,6 @@ body[data-screen="game"] .language-switcher {
   .lobby-page-chat .game-chat-panel {
     height: 100%;
     max-height: none;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
 
   .lobby-page-chat .chat-messages {
@@ -2548,7 +2564,6 @@ body[data-screen="game"] .language-switcher {
   .game-page-chat .game-chat-panel {
     height: 100%;
     max-height: none;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
 
   .game-page-chat .chat-messages {
