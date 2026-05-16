@@ -1435,11 +1435,13 @@ function publicOpenLobbies(allLobbies = lobbies) {
     });
 }
 
-function createLobbyState(code, hostId, player) {
+function createLobbyState(code, hostId, player, options = {}) {
+  const fallbackName = defaultLobbyName(player?.name);
+
   return {
     code,
-    name: defaultLobbyName(player?.name),
-    isOpen: true,
+    name: normalizeLobbyName(options.name, fallbackName),
+    isOpen: options.isOpen !== false,
     host: hostId,
     createdAt: new Date().toISOString(),
     players: [player],
@@ -1473,7 +1475,7 @@ function createLobbyState(code, hostId, player) {
     timeLeft: null,
     turnStage: "waiting",
     pausedTurnStage: null,
-    settings: { ...DEFAULT_SETTINGS }
+    settings: normalizeSettings(options.settings || DEFAULT_SETTINGS)
   };
 }
 
@@ -1553,11 +1555,15 @@ io.on("connection", (socket) => {
     cb({ success: true, lobbies: publicOpenLobbies() });
   });
 
-  socket.on("createLobby", ({ name, reconnectToken }, cb = () => {}) => {
+  socket.on("createLobby", ({ name, reconnectToken, settings, lobbyName, isOpen } = {}, cb = () => {}) => {
     const code = generateCode();
     const player = playerFromSocket(socket, name, null, reconnectToken);
 
-    lobbies[code] = createLobbyState(code, socket.id, player);
+    lobbies[code] = createLobbyState(code, socket.id, player, {
+      name: lobbyName,
+      isOpen,
+      settings
+    });
 
     socket.join(code);
     cb({ code, playerId: socket.id });
@@ -2052,6 +2058,7 @@ module.exports = {
   getActiveTurnOrder,
   removePlayerFromLobby,
   handlePlayerDeparture,
+  createLobbyState,
   playerFromSocket,
   normalizeAvatar,
   normalizeUsername,
