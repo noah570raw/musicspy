@@ -906,6 +906,59 @@
   </nav>
   <button id="mobileTurnBanner" class="mobile-turn-banner hidden" type="button" onclick="scrollMobilePanel('gamePlayerPanel')">Твой ход — вставь трек</button>
 
+
+  <aside id="friendsSystem" class="friends-system" aria-label="Друзья">
+    <button id="friendsToggle" class="friends-toggle" type="button" onclick="toggleFriendsPanel()" aria-expanded="false" aria-controls="friendsPanel">
+      <span class="friends-toggle-avatar" aria-hidden="true">
+        <span class="friends-toggle-avatar-face">♫</span>
+        <span id="friendsTogglePulse" class="friends-toggle-pulse"></span>
+      </span>
+      <span class="friends-toggle-copy">
+        <strong>Друзья</strong>
+        <small><span id="friendsOnlineCount">0</span> онлайн</small>
+      </span>
+      <span id="friendsNotificationBadge" class="friends-notification-badge hidden" aria-label="Новые заявки">0</span>
+    </button>
+
+    <section id="friendsPanel" class="friends-panel" aria-hidden="true" aria-labelledby="friendsPanelTitle">
+      <div class="friends-panel-glow" aria-hidden="true"></div>
+      <header class="friends-panel-header">
+        <div>
+          <p class="eyebrow">социальный радар</p>
+          <h2 id="friendsPanelTitle">Друзья</h2>
+        </div>
+        <button class="friends-close" type="button" onclick="closeFriendsPanel()" aria-label="Закрыть друзей">×</button>
+      </header>
+
+      <div class="friends-add-card">
+        <label for="friendSearchInput">Добавить друга</label>
+        <div class="friends-add-row">
+          <input id="friendSearchInput" maxlength="18" placeholder="Введите никнейм…" autocomplete="off" oninput="clearFriendAddStatus()" onkeydown="handleFriendSearchKeydown(event)">
+          <button id="friendAddButton" class="secondary friends-add-button" type="button" onclick="sendFriendRequest()">Добавить</button>
+        </div>
+        <p id="friendAddStatus" class="friends-add-status" aria-live="polite"></p>
+      </div>
+
+      <div class="friends-panel-grid">
+        <section class="friends-list-section" aria-labelledby="friendsListTitle">
+          <div class="friends-section-title">
+            <strong id="friendsListTitle">Список друзей</strong>
+            <span id="friendsTotalCount">0 всего</span>
+          </div>
+          <div id="friendsList" class="friends-list"></div>
+        </section>
+
+        <section class="friend-requests-section" aria-labelledby="friendRequestsTitle">
+          <div class="friends-section-title">
+            <strong id="friendRequestsTitle">Заявки в друзья</strong>
+            <span id="friendRequestsCount">0 новых</span>
+          </div>
+          <div id="friendRequestsList" class="friend-requests-list"></div>
+        </section>
+      </div>
+    </section>
+  </aside>
+
   <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="client-config.js"></script>

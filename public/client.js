@@ -66,7 +66,13 @@ const state = {
     autoFocusTrack: false,
     effectsDensity: "ultra"
   },
-  settingsSection: "profile"
+  settingsSection: "profile",
+  friendsPanelOpen: false,
+  friendsAddStatus: "idle",
+  friendsLastNotice: "",
+  friends: [],
+  friendRequests: [],
+  lobbyInvites: []
 };
 
 const APPEARANCE_STORAGE_KEY = "musicSpyAppearance";
@@ -101,6 +107,294 @@ const EFFECTS_DENSITIES = [
   { id: "high", label: "High", details: "Снижает плотность ambient effects и blur, оставляя почти все подсветки интерфейса." },
   { id: "ultra", label: "Ultra", details: "Полные lighting, particles, UI glow и ambient effects — стартовый режим для новых игроков." }
 ];
+
+
+const FRIENDS_MOCK_DATA = [
+  {
+    id: "aurora",
+    nickname: "AuroraBeat",
+    avatar: "A",
+    online: true,
+    activity: "В лобби",
+    lobby: { code: "MIX42", players: 4, maxPlayers: 9, canJoin: true }
+  },
+  {
+    id: "vinyl",
+    nickname: "VinylFox",
+    avatar: "V",
+    online: true,
+    activity: "Играет",
+    lobby: { code: "SPY07", players: 7, maxPlayers: 9, canJoin: false }
+  },
+  {
+    id: "mono",
+    nickname: "MonoKid",
+    avatar: "M",
+    online: true,
+    activity: "В меню",
+    lobby: null
+  },
+  {
+    id: "noir",
+    nickname: "NoirMuse",
+    avatar: "N",
+    online: false,
+    activity: "Не в сети",
+    lobby: null
+  }
+];
+
+const FRIEND_REQUESTS_MOCK_DATA = [
+  { id: "echo", nickname: "EchoPilot", avatar: "E" },
+  { id: "luna", nickname: "LunaBass", avatar: "L" }
+];
+
+function cloneFriendData(items) {
+  return items.map((item) => ({ ...item, lobby: item.lobby ? { ...item.lobby } : null }));
+}
+
+function initFriendsSystem() {
+  state.friends = cloneFriendData(FRIENDS_MOCK_DATA);
+  state.friendRequests = cloneFriendData(FRIEND_REQUESTS_MOCK_DATA);
+  state.lobbyInvites = [];
+  renderFriendsSystem();
+}
+
+function friendStatusLabel(friend) {
+  return friend.online ? "онлайн" : "офлайн";
+}
+
+function getFriendActivity(friend) {
+  if (!friend.online) return "Не в сети";
+  return friend.activity || "В меню";
+}
+
+function renderFriendsSystem() {
+  const onlineCount = state.friends.filter((friend) => friend.online).length;
+  const totalCount = state.friends.length;
+  const requestCount = state.friendRequests.length;
+  const onlineCounter = $("friendsOnlineCount");
+  const totalCounter = $("friendsTotalCount");
+  const requestCounter = $("friendRequestsCount");
+  const badge = $("friendsNotificationBadge");
+  const pulse = $("friendsTogglePulse");
+  if (onlineCounter) onlineCounter.textContent = String(onlineCount);
+  if (totalCounter) totalCounter.textContent = `${totalCount} всего`;
+  if (requestCounter) requestCounter.textContent = `${requestCount} новых`;
+  if (badge) {
+    badge.textContent = String(requestCount);
+    badge.classList.toggle("hidden", requestCount === 0);
+  }
+  if (pulse) pulse.classList.toggle("hidden", onlineCount === 0);
+  renderFriendsList();
+  renderFriendRequests();
+}
+
+function renderFriendsList() {
+  const list = $("friendsList");
+  if (!list) return;
+  if (!state.friends.length) {
+    list.innerHTML = `<div class="friend-empty-state">Пока никого нет. Добавь первого друга по никнейму.</div>`;
+    return;
+  }
+  list.innerHTML = state.friends.map(renderFriendCard).join("");
+}
+
+function renderFriendCard(friend) {
+  const isOnline = Boolean(friend.online);
+  const activity = getFriendActivity(friend);
+  const lobby = friend.lobby;
+  const lobbyPill = lobby ? `<button class="friend-lobby-pill" type="button" onclick="requestFriendLobby('${friend.id}')">${lobby.players}/${lobby.maxPlayers}</button>` : "";
+  const primaryLobbyAction = lobby?.canJoin ? "Войти в лобби" : "Подать заявку в лобби";
+  return `
+    <article class="friend-card" data-friend-id="${friend.id}">
+      <div class="friend-avatar" aria-hidden="true">
+        ${friend.avatar || friend.nickname.slice(0, 1).toUpperCase()}
+        <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
+      </div>
+      <div class="friend-meta">
+        <div class="friend-name-row">
+          <strong class="friend-name">${friend.nickname}</strong>
+          <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
+        </div>
+        <div class="friend-activity-row">
+          <span class="friend-activity">${activity}</span>
+          ${lobbyPill}
+        </div>
+      </div>
+      <div class="friend-actions" aria-label="Действия с ${friend.nickname}">
+        <button class="friend-action" type="button" onclick="inviteFriendToLobby('${friend.id}')">Пригласить в лобби</button>
+        <button class="friend-action" type="button" onclick="requestFriendLobby('${friend.id}')">${primaryLobbyAction}</button>
+        <button class="friend-action" type="button" onclick="messageFriend('${friend.id}')">Написать</button>
+        <button class="friend-action danger" type="button" onclick="removeFriend('${friend.id}')">Удалить из друзей</button>
+      </div>
+    </article>`;
+}
+
+function renderFriendRequests() {
+  const list = $("friendRequestsList");
+  if (!list) return;
+  if (!state.friendRequests.length) {
+    list.innerHTML = `<div class="friend-empty-state">Новых заявок нет. Радар чист.</div>`;
+    return;
+  }
+  list.innerHTML = state.friendRequests.map((request) => `
+    <article class="friend-request-card" data-request-id="${request.id}">
+      <div class="friend-avatar" aria-hidden="true">${request.avatar || request.nickname.slice(0, 1).toUpperCase()}</div>
+      <div class="friend-meta">
+        <strong class="friend-name">${request.nickname}</strong>
+        <span class="friend-activity">хочет стать другом</span>
+      </div>
+      <div class="friend-request-actions">
+        <button class="request-action accept" type="button" onclick="acceptFriendRequest('${request.id}')" aria-label="Принять ${request.nickname}">✓</button>
+        <button class="request-action decline" type="button" onclick="declineFriendRequest('${request.id}')" aria-label="Отклонить ${request.nickname}">×</button>
+      </div>
+    </article>`).join("");
+}
+
+function toggleFriendsPanel() {
+  state.friendsPanelOpen ? closeFriendsPanel() : openFriendsPanel();
+}
+
+function openFriendsPanel() {
+  state.friendsPanelOpen = true;
+  const panel = $("friendsPanel");
+  const toggle = $("friendsToggle");
+  if (panel) {
+    panel.classList.add("open");
+    panel.setAttribute("aria-hidden", "false");
+  }
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
+  renderFriendsSystem();
+}
+
+function closeFriendsPanel() {
+  state.friendsPanelOpen = false;
+  const panel = $("friendsPanel");
+  const toggle = $("friendsToggle");
+  if (panel) {
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+  }
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
+}
+
+function clearFriendAddStatus() {
+  state.friendsAddStatus = "idle";
+  state.friendsLastNotice = "";
+  const status = $("friendAddStatus");
+  if (status) {
+    status.textContent = "";
+    status.className = "friends-add-status";
+  }
+}
+
+function setFriendAddStatus(message, type = "idle") {
+  state.friendsAddStatus = type;
+  state.friendsLastNotice = message;
+  const status = $("friendAddStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.className = `friends-add-status ${type}`.trim();
+}
+
+function handleFriendSearchKeydown(event) {
+  if (event.key === "Enter") sendFriendRequest();
+  if (event.key === "Escape") closeFriendsPanel();
+}
+
+function sendFriendRequest() {
+  const input = $("friendSearchInput");
+  const button = $("friendAddButton");
+  const nickname = input?.value.trim() || "";
+  if (nickname.length < 3) {
+    setFriendAddStatus("Никнейм должен быть длиннее 2 символов.", "error");
+    return;
+  }
+  const normalized = nickname.toLowerCase();
+  const alreadyFriend = state.friends.some((friend) => friend.nickname.toLowerCase() === normalized);
+  const alreadyRequested = state.friendRequests.some((request) => request.nickname.toLowerCase() === normalized);
+  if (alreadyFriend) {
+    setFriendAddStatus("Этот игрок уже в списке друзей.", "error");
+    return;
+  }
+  if (alreadyRequested) {
+    setFriendAddStatus("От этого игрока уже есть входящая заявка.", "error");
+    return;
+  }
+  if (button) button.disabled = true;
+  setFriendAddStatus("Отправляем заявку", "sending");
+  window.setTimeout(() => {
+    if (button) button.disabled = false;
+    setFriendAddStatus(`Заявка для ${nickname} отправлена.`, "success");
+    if (input) input.value = "";
+  }, 780);
+}
+
+function acceptFriendRequest(requestId) {
+  const request = state.friendRequests.find((item) => item.id === requestId);
+  if (!request) return;
+  state.friendRequests = state.friendRequests.filter((item) => item.id !== requestId);
+  state.friends.unshift({
+    id: request.id,
+    nickname: request.nickname,
+    avatar: request.avatar,
+    online: true,
+    activity: "В меню",
+    lobby: null
+  });
+  setFriendAddStatus(`${request.nickname} добавлен в друзья.`, "success");
+  renderFriendsSystem();
+}
+
+function declineFriendRequest(requestId) {
+  const request = state.friendRequests.find((item) => item.id === requestId);
+  state.friendRequests = state.friendRequests.filter((item) => item.id !== requestId);
+  if (request) setFriendAddStatus(`Заявка от ${request.nickname} отклонена.`, "idle");
+  renderFriendsSystem();
+}
+
+function findFriend(friendId) {
+  return state.friends.find((friend) => friend.id === friendId);
+}
+
+function inviteFriendToLobby(friendId) {
+  const friend = findFriend(friendId);
+  if (!friend) return;
+  state.lobbyInvites.push({ type: "invite", friendId, createdAt: Date.now(), code: state.currentCode || "DEMO" });
+  setFriendAddStatus(`Приглашение для ${friend.nickname} подготовлено.`, "success");
+}
+
+function requestFriendLobby(friendId) {
+  const friend = findFriend(friendId);
+  if (!friend) return;
+  if (!friend.lobby) {
+    setFriendAddStatus(`${friend.nickname} сейчас не в лобби.`, "error");
+    return;
+  }
+  state.lobbyInvites.push({ type: "join-request", friendId, createdAt: Date.now(), code: friend.lobby.code });
+  setFriendAddStatus(`Заявка в лобби ${friend.nickname} отправлена (${friend.lobby.players}/${friend.lobby.maxPlayers}).`, "success");
+}
+
+function messageFriend(friendId) {
+  const friend = findFriend(friendId);
+  if (!friend) return;
+  setFriendAddStatus(`Чат с ${friend.nickname} будет доступен после подключения сообщений.`, "idle");
+}
+
+function removeFriend(friendId) {
+  const friend = findFriend(friendId);
+  if (!friend) return;
+  state.friends = state.friends.filter((item) => item.id !== friendId);
+  setFriendAddStatus(`${friend.nickname} удален из друзей.`, "idle");
+  renderFriendsSystem();
+}
+
+function handleFriendsDocumentClick(event) {
+  if (!state.friendsPanelOpen) return;
+  if (event.target.closest(".friends-system")) return;
+  closeFriendsPanel();
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -3623,13 +3917,18 @@ window.addEventListener("DOMContentLoaded", () => {
   renderReactions();
   initChatScrollbarFeedback();
   initCustomSelects();
+  initFriendsSystem();
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".custom-select") && !event.target.closest(".custom-select-menu")) closeCustomSelects();
+    handleFriendsDocumentClick(event);
     const button = event.target.closest("button");
     if (!button) return;
     addButtonRipple(button, event);
     unlockAudio();
     playButtonSound(button);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeFriendsPanel();
   });
   const presetCode = normalizeRoomCodeInput(new URL(window.location.href).searchParams.get("room"));
   if (presetCode) {
