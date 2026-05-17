@@ -36,7 +36,7 @@
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script type="application/ld+json">
     {
@@ -270,83 +270,35 @@
   </div>
 
   <main class="app-shell">
-    <section id="menu" class="screen hero-card studio-hero" aria-labelledby="homeTitle">
-      <div class="studio-atmosphere" aria-hidden="true">
-        <span class="studio-spotlight studio-spotlight-left"></span>
-        <span class="studio-spotlight studio-spotlight-right"></span>
-        <span class="studio-smoke studio-smoke-one"></span>
-        <span class="studio-smoke studio-smoke-two"></span>
+    <section id="menu" class="screen card hero-card">
+      <p class="eyebrow">Шпион помузыкальски</p>
+      <h1>Music Spy</h1>
+      <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+
+      <div class="form-grid">
+        <label>
+          <span>Никнейм</span>
+          <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
+        </label>
+        <label>
+          <span>Код комнаты</span>
+          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+        </label>
       </div>
 
-      <div class="vinyl-stage" aria-hidden="true">
-        <div class="turntable-plinth">
-          <div class="plinth-grain"></div>
-          <div class="speed-leds"><i></i><i></i><i></i></div>
-          <div class="vinyl-disc">
-            <span class="groove groove-one"></span>
-            <span class="groove groove-two"></span>
-            <span class="groove groove-three"></span>
-            <span class="record-label"><b>MS</b><small>33⅓</small></span>
-            <span class="vinyl-glint"></span>
-          </div>
-          <div class="tonearm-base"><i></i></div>
-          <div class="tonearm"><span></span></div>
-          <div class="cartridge"></div>
-          <div class="turntable-feet"><i></i><i></i></div>
-        </div>
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
+        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
+        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
       </div>
 
-      <div class="studio-console">
-        <div class="console-header">
-          <p class="eyebrow">secret analog operation</p>
-          <h1 id="homeTitle">Music Spy</h1>
-          <p class="lead">Секретная музыкальная операция внутри luxury analog studio: собери комнату, включай улики и вычисляй шпиона по трекам.</p>
-        </div>
-
-        <div class="analog-instruments" aria-hidden="true">
-          <div class="vu-meter">
-            <span>VU L</span>
-            <div class="vu-window"><i class="vu-needle needle-left"></i></div>
-          </div>
-          <div class="vu-meter">
-            <span>VU R</span>
-            <div class="vu-window"><i class="vu-needle needle-right"></i></div>
-          </div>
-          <div class="waveform-display"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        </div>
-
-        <div class="form-grid studio-form">
-          <label>
-            <span>Никнейм</span>
-            <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-          </label>
-          <label>
-            <span>Код комнаты</span>
-            <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-          </label>
-        </div>
-
-        <div class="console-controls" aria-hidden="true">
-          <div class="hardware-knob"><i></i><span>gain</span></div>
-          <div class="hardware-slider"><span></span><i style="--level: 68%"></i><b>mix</b></div>
-          <div class="hardware-slider"><span></span><i style="--level: 42%"></i><b>spy</b></div>
-          <div class="led-bank"><i></i><i></i><i></i><i></i><span>armed</span></div>
-        </div>
-
-        <div class="actions two-col studio-actions">
-          <button class="primary" type="button" onclick="showCreateLobbySetup()">Создать комнату</button>
-          <button class="secondary" onclick="joinLobby()">Войти по коду</button>
-          <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
-          <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
-        </div>
-
-        <div class="rules studio-rules">
-          <div><strong>3+</strong><span>игрока</span></div>
-          <div><strong>30с</strong><span>на трек</span></div>
-          <div><strong>3</strong><span>круга</span></div>
-        </div>
-        <p id="menuError" class="status error"></p>
+      <div class="rules">
+        <div><strong>3+</strong><span>игрока</span></div>
+        <div><strong>30с</strong><span>на трек</span></div>
+        <div><strong>3</strong><span>круга</span></div>
       </div>
+      <p id="menuError" class="status error"></p>
     </section>
 
     <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">
