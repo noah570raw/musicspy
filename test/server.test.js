@@ -1,7 +1,17 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const { ALLOWED_REACTIONS, countReactions, getActiveTurnOrder, removePlayerFromLobby } = require("../server");
+
+
+test("Render blueprint injects the supported internal Postgres connection string", () => {
+  const blueprint = fs.readFileSync(path.join(__dirname, "..", "render.yaml"), "utf8");
+
+  assert.match(blueprint, /key:\s*DATABASE_URL[\s\S]*fromDatabase:[\s\S]*property:\s*connectionString/);
+  assert.doesNotMatch(blueprint, /property:\s*internalConnectionString/);
+});
 
 test("getActiveTurnOrder keeps the first-round order for later rounds", () => {
   const lobby = {
