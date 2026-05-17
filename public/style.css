@@ -6528,6 +6528,71 @@ body[data-screen="lobby"] .app-shell {
   gap: 10px;
 }
 
+.theme-choice-scroll {
+  max-height: clamp(126px, 20vh, 184px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 10px 8px 2px;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+.neon-scrollbar {
+  scrollbar-color: rgba(var(--accent-rgb), 0.24) rgba(255, 255, 255, 0.028);
+  scrollbar-width: thin;
+  transition: scrollbar-color 0.25s ease;
+}
+
+.neon-scrollbar:hover,
+.neon-scrollbar:focus-within,
+.neon-scrollbar.is-scrolling {
+  scrollbar-color: rgba(var(--accent-rgb), 0.58) rgba(255, 255, 255, 0.05);
+}
+
+.neon-scrollbar::-webkit-scrollbar {
+  width: 9px;
+}
+
+.neon-scrollbar::-webkit-scrollbar-track {
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(var(--surface-rgb), 0.34);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.2);
+}
+
+.neon-scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.1)) padding-box,
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.78), color-mix(in srgb, var(--accent-2) 52%, rgba(var(--accent-rgb), 0.36))) border-box;
+  box-shadow:
+    inset 0 0 10px rgba(255, 255, 255, 0.14),
+    0 0 14px rgba(var(--accent-rgb), 0.22);
+}
+
+.neon-scrollbar:hover::-webkit-scrollbar-thumb,
+.neon-scrollbar:focus-within::-webkit-scrollbar-thumb,
+.neon-scrollbar.is-scrolling::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.16)) padding-box,
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.96), color-mix(in srgb, var(--accent-2) 68%, rgba(var(--accent-rgb), 0.5))) border-box;
+  box-shadow:
+    inset 0 0 12px rgba(255, 255, 255, 0.2),
+    0 0 18px rgba(var(--accent-rgb), 0.36),
+    0 0 28px color-mix(in srgb, var(--accent-2) 18%, transparent);
+}
+
+.neon-scrollbar::-webkit-scrollbar-thumb:hover {
+  box-shadow:
+    inset 0 0 12px rgba(255, 255, 255, 0.26),
+    0 0 22px rgba(var(--accent-rgb), 0.48),
+    0 0 34px color-mix(in srgb, var(--accent-2) 25%, transparent);
+}
+
 .choice-pill {
   min-height: 40px;
   padding: 0.7rem 0.95rem;
@@ -7292,6 +7357,14 @@ body[data-effects-density="low"] .sound-toggle {
   transition: transform 0.2s cubic-bezier(.2,.8,.2,1), border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, filter 0.22s ease;
 }
 
+.site-menu-card .theme-choice-scroll {
+  position: relative;
+  align-content: start;
+  max-height: clamp(132px, 22vh, 196px);
+  margin-right: -4px;
+  padding-right: 12px;
+}
+
 .choice-pill {
   min-height: 42px;
   border-color: rgba(255, 255, 255, 0.12);
@@ -7338,34 +7411,19 @@ body[data-effects-density="low"] .sound-toggle {
 
 .site-menu-card .language-settings-block {
   display: grid;
-  grid-template-areas:
-    "title switch"
-    "orbit orbit";
+  grid-template-areas: "title switch";
   grid-template-columns: minmax(0, auto) auto;
-  grid-template-rows: auto minmax(210px, 1fr);
+  grid-template-rows: auto;
   column-gap: clamp(18px, 3vw, 34px);
   row-gap: clamp(18px, 2.4vh, 26px);
   min-height: 0;
   height: 100%;
   overflow: hidden;
   place-items: center;
-  align-content: start;
+  align-content: center;
   justify-content: center;
-  padding-top: clamp(14px, 3vh, 30px);
+  padding-block: clamp(18px, 4vh, 34px);
   text-align: left;
-}
-
-.language-orbit {
-  position: relative;
-  grid-area: orbit;
-  place-self: center;
-  width: clamp(250px, 34vw, 330px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(var(--accent-rgb), 0.18);
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.2), transparent 62%);
-  box-shadow: inset 0 0 48px rgba(var(--accent-rgb), 0.11), 0 0 54px rgba(var(--accent-rgb), 0.11);
-  animation: site-menu-orbit 10s linear infinite;
 }
 
 .language-title {
@@ -7437,12 +7495,11 @@ html[lang="en"] .site-menu-card .language-toggle-knob {
   .site-menu-card .language-settings-block {
     grid-template-areas:
       "title"
-      "switch"
-      "orbit";
+      "switch";
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(170px, 1fr);
-    align-content: start;
-    padding-top: clamp(10px, 2vh, 18px);
+    grid-template-rows: auto auto;
+    align-content: center;
+    padding-block: clamp(14px, 3vh, 24px);
     text-align: center;
   }
 

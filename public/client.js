@@ -2910,7 +2910,7 @@ function formatChatTime(createdAt) {
 }
 
 function initChatScrollbarFeedback() {
-  for (const scrollArea of document.querySelectorAll("[data-chat-scroll]")) {
+  for (const scrollArea of document.querySelectorAll("[data-chat-scroll], [data-neon-scroll]")) {
     let scrollFeedbackTimer = null;
     scrollArea.addEventListener("scroll", () => {
       scrollArea.classList.add("is-scrolling");
