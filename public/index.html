@@ -777,19 +777,18 @@
           <div id="reactionButtons" class="reaction-buttons"></div>
         </div>
 
-        <div id="skipVotePanel" class="skip-vote-panel hidden" aria-live="polite">
-          <div class="skip-vote-meta">
-            <span class="skip-vote-eyebrow">Collective skip</span>
-            <strong id="skipVoteCounter">Skip 0/0</strong>
-            <div class="skip-vote-track" aria-hidden="true"><span id="skipVoteProgress"></span></div>
+        <div class="track-form" id="trackForm">
+          <div id="skipVotePanel" class="skip-vote-panel hidden" aria-live="polite">
+            <div class="skip-vote-meta">
+              <span class="skip-vote-eyebrow">Collective skip</span>
+              <strong id="skipVoteCounter">Skip 0/0</strong>
+              <div class="skip-vote-track" aria-hidden="true"><span id="skipVoteProgress"></span></div>
+            </div>
+            <div id="skipVoteVoters" class="skip-vote-voters" aria-label="Игроки за пропуск"></div>
+            <button id="skipVoteBtn" class="skip-vote-btn" type="button" onclick="sendSkipVote()">
+              <span id="skipVoteLabel">Skip</span>
+            </button>
           </div>
-          <div id="skipVoteVoters" class="skip-vote-voters" aria-label="Игроки за пропуск"></div>
-          <button id="skipVoteBtn" class="skip-vote-btn" type="button" onclick="sendSkipVote()">
-            <span id="skipVoteLabel">Skip</span>
-          </button>
-        </div>
-
-        <div class="track-form">
           <input id="url" placeholder="Вставь YouTube или SoundCloud ссылку">
           <button id="sendBtn" class="primary" onclick="sendTrack()">Отправить трек</button>
         </div>
