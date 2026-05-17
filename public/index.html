@@ -247,32 +247,13 @@
             <div class="settings-block">
               <div class="settings-title compact">
                 <strong>ИНТЕНСИВНОСТЬ ЭФФЕКТОВ</strong>
-                <span>Effects Density управляет lighting, particles, UI glow и ambient effects. По умолчанию для нового игрока включен Ultra.</span>
               </div>
               <div id="effectsDensityChoices" class="effects-density-grid" role="radiogroup" aria-label="Effects Density"></div>
-            </div>
-            <div class="settings-block">
-              <label class="menu-toggle-row">
-                <input id="cinematicModeToggle" type="checkbox" onchange="updateGamePreference('cinematicMode', this.checked)">
-                <span><strong>Кинематичные подсказки</strong><small>Показывать атмосферные микро-подсказки перед важными фазами партии.</small></span>
-              </label>
-              <label class="menu-toggle-row">
-                <input id="reactionHintsToggle" type="checkbox" onchange="updateGamePreference('reactionHints', this.checked)">
-                <span><strong>Подсказки реакций</strong><small>Подсвечивать моменты, когда стоит реагировать на подозрительный трек.</small></span>
-              </label>
-              <label class="menu-toggle-row">
-                <input id="autoFocusTrackToggle" type="checkbox" onchange="updateGamePreference('autoFocusTrack', this.checked)">
-                <span><strong>Фокус на треке</strong><small>Во время хода автоматически поднимать область с плеером и таймером.</small></span>
-              </label>
             </div>
           </section>
 
           <section id="settingsPanelLanguage" class="site-menu-panel" data-settings-panel="language">
             <div class="settings-block language-settings-block">
-              <div class="settings-title compact">
-                <strong>Язык</strong>
-                <span>Переключатель языка теперь живет только в меню настроек.</span>
-              </div>
               <div class="language-switcher" aria-label="Переключатель языка">
                 <span>RU</span>
                 <button id="languageToggle" class="language-toggle" type="button" onclick="toggleLanguage()" aria-pressed="false" title="Switch to English">
@@ -326,15 +307,16 @@
       <p id="spyReviewStatus" class="status"></p>
     </div>
   </div>
-  <div class="top-left-controls" aria-label="Основное меню и аккаунт">
+  <div class="top-left-controls" aria-label="Основное меню">
     <button class="main-menu-button" type="button" onclick="openMainMenu()" aria-label="Открыть меню">☰ Меню</button>
-    <div class="account-corner" aria-label="Аккаунт игрока">
-      <button id="accountToggle" class="corner-toggle account-toggle" type="button" onclick="openAccountPanel()" aria-label="Открыть аккаунт" title="Аккаунт и статистика">
-        <span id="accountToggleAvatar">👤</span>
-        <strong id="accountToggleLabel">Гость</strong>
-      </button>
-      <p id="accountStatus" class="status"></p>
-    </div>
+  </div>
+
+  <div class="account-corner" aria-label="Аккаунт игрока">
+    <button id="accountToggle" class="corner-toggle account-toggle" type="button" onclick="openAccountPanel()" aria-label="Открыть аккаунт" title="Аккаунт и статистика">
+      <span id="accountToggleAvatar">👤</span>
+      <strong id="accountToggleLabel">Гость</strong>
+    </button>
+    <p id="accountStatus" class="status"></p>
   </div>
 
   <div id="volumeControl" class="volume-control" aria-label="Громкость сайта">
@@ -588,17 +570,6 @@
                 <small>переголосование</small>
               </label>
 
-              <label class="setting-control">
-                <span>Тема</span>
-                <select id="createSettingRoomTheme" onchange="updateCreateLobbyPreview()">
-                  <option value="neon" selected>Neon Club</option>
-                  <option value="vinyl">Dark Vinyl</option>
-                  <option value="cyber">Cyber Spy</option>
-                  <option value="retro">Retro FM</option>
-                  <option value="minimal">Minimal Black</option>
-                </select>
-                <small>Оформление лобби</small>
-              </label>
             </div>
           </div>
         </div>
@@ -689,23 +660,6 @@
             <button id="startBtn" class="primary lobby-start-button" onclick="startGame()">Запустить игру</button>
           </div>
 
-
-          <div class="action-stack action-stack-theme">
-            <div class="panel-title">
-              <strong>Тема</strong>
-              <span>Оформление лобби</span>
-            </div>
-            <label class="setting-control lobby-theme-control">
-              <select id="lobbySettingRoomTheme" aria-label="Оформление лобби" onchange="updateLobbyTheme()">
-                <option value="neon">Neon Club</option>
-                <option value="vinyl">Dark Vinyl</option>
-                <option value="cyber">Cyber Spy</option>
-                <option value="retro">Retro FM</option>
-                <option value="minimal">Minimal Black</option>
-              </select>
-              <small id="lobbyThemeHint">меняет хост</small>
-            </label>
-          </div>
 
           <div class="action-stack action-stack-secondary">
             <div class="panel-title">
