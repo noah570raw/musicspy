@@ -534,214 +534,113 @@
       </div>
     </section>
 
-    <section id="lobby" class="screen card lobby-card hidden">
-      <div class="section-header lobby-header">
-        <div>
-          <p class="eyebrow">лобби</p>
-          <h2 class="room-title">
-            <span id="lobbyNameTitle">Комната</span>
-            <span class="secret-row">
+    <section id="lobby" class="screen lobby-card hidden" aria-label="Multiplayer lobby">
+      <div class="lobby-ambient" aria-hidden="true">
+        <span class="lobby-ambient-orb lobby-ambient-orb-one"></span>
+        <span class="lobby-ambient-orb lobby-ambient-orb-two"></span>
+        <span class="lobby-scanline"></span>
+      </div>
+
+      <div class="lobby-shell">
+        <aside class="lobby-left-panel" aria-label="Информация комнаты и чат">
+          <header class="lobby-hero-panel">
+            <div class="lobby-live-row">
+              <span class="lobby-live-dot" aria-hidden="true"></span>
+              <span id="lobbyRoomStatus">Ожидаем игроков</span>
+            </div>
+            <p class="eyebrow">music spy pre-match</p>
+            <h2 class="room-title lobby-room-title">
+              <span id="lobbyNameTitle">Комната</span>
+            </h2>
+            <div class="lobby-code-row">
               <button id="copyCode" class="code-pill secret-value" data-sound="copyCode" onclick="copyRoomCode()">-----</button>
               <button id="toggleInviteSecrets" class="icon-button secret-toggle" onclick="toggleInviteSecrets()" aria-label="Показать код комнаты и QR" aria-pressed="false" title="Показать код комнаты и QR">👁️</button>
-            </span>
-          </h2>
-          <p class="lead small">Нужно минимум 3 игрока. Когда все зайдут, хост запускает игру.</p>
-        </div>
-        <span id="hostBadge" class="badge">ожидание</span>
-      </div>
-
-      <div class="lobby-grid">
-        <aside class="lobby-column lobby-invite">
-          <div class="panel-title">
-            <strong>Приглашение</strong>
-            <span>ссылка и QR</span>
-          </div>
-          <div class="invite-tools">
-            <button id="copyInvite" class="secondary" data-sound="copyInvite" onclick="copyInviteLink()">Скопировать ссылку-приглашение</button>
-            <div id="inviteQrWrap" class="qr-wrap secret-value">
-              <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
             </div>
-          </div>
+            <div class="lobby-stat-grid" aria-label="Статус комнаты">
+              <div class="lobby-stat-card">
+                <span>Игроки</span>
+                <strong id="lobbyPlayerCount">0/12</strong>
+              </div>
+              <div class="lobby-stat-card">
+                <span>Готовы</span>
+                <strong id="lobbyReadyCount">0/0</strong>
+              </div>
+              <div class="lobby-stat-card">
+                <span>До старта</span>
+                <strong id="lobbyNeededCount">+3</strong>
+              </div>
+            </div>
+            <p class="lobby-hero-copy">Соберите команду, отметьте готовность и запускайте музыкальную охоту на шпиона.</p>
+            <span id="hostBadge" class="badge lobby-host-badge">ожидание</span>
+          </header>
+
+          <section class="game-chat-panel lobby-chat-panel" aria-label="Чат лобби">
+            <div class="chat-header panel-title">
+              <strong>Командный чат</strong>
+              <span>до матча</span>
+            </div>
+            <div class="chat-messages-area" data-chat-scroll>
+              <div id="lobbyChatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
+            </div>
+            <div class="chat-input-area">
+              <div class="chat-form">
+                <input id="lobbyChatInput" data-chat-input maxlength="240" placeholder="Написать в лобби…" onkeydown="handleChatKeydown(event)">
+                <button id="lobbyChatSendBtn" class="secondary chat-send-button" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
+              </div>
+              <p id="lobbyChatStatus" data-chat-status class="status"></p>
+            </div>
+          </section>
         </aside>
 
-        <section class="lobby-column lobby-players">
-          <div class="panel-title">
-            <strong>Игроки</strong>
-            <span id="readySummary">Готовы: 0/0</span>
+        <main class="lobby-roster-panel" aria-label="Игроки в комнате">
+          <div class="lobby-roster-header">
+            <div>
+              <p class="eyebrow">party roster</p>
+              <h3>Команда перед стартом</h3>
+            </div>
+            <span id="readySummary" class="lobby-ready-summary">Готовы: 0/0</span>
           </div>
-          <div id="players" class="players-list"></div>
-        </section>
+          <div id="players" class="players-list lobby-player-grid"></div>
+        </main>
 
+        <aside class="lobby-actions-panel" aria-label="Действия лобби">
+          <div class="action-stack action-stack-primary">
+            <div class="panel-title">
+              <strong>Запуск</strong>
+              <span>главные действия</span>
+            </div>
+            <button id="readyBtn" class="secondary lobby-ready-button" onclick="toggleReady()">Я готов</button>
+            <button id="startBtn" class="primary lobby-start-button" onclick="startGame()">Запустить игру</button>
+          </div>
 
+          <div class="action-stack action-stack-secondary">
+            <div class="panel-title">
+              <strong>Пригласить</strong>
+              <span>друзья</span>
+            </div>
+            <button id="copyInvite" class="secondary" data-sound="copyInvite" onclick="copyInviteLink()">Скопировать invite link</button>
+            <button id="showQrBtn" class="secondary" type="button" onclick="showInviteQrModal()">Показать QR-код</button>
+          </div>
+
+          <div class="action-stack action-stack-muted">
+            <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
+            <p id="lobbyStatus" class="status"></p>
+          </div>
+        </aside>
       </div>
 
-
-      <aside class="page-action-column lobby-page-actions" aria-label="Действия лобби">
-        <div class="lobby-action-panel">
-          <div class="panel-title">
-            <strong>Действия</strong>
-            <span>старт и профиль</span>
+      <div id="inviteQrModal" class="invite-qr-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="inviteQrTitle">
+        <div class="invite-qr-card">
+          <button class="modal-close" type="button" onclick="hideInviteQrModal()" aria-label="Закрыть QR-код">×</button>
+          <p class="eyebrow">invite scan</p>
+          <h3 id="inviteQrTitle">QR для входа</h3>
+          <div id="inviteQrWrap" class="qr-wrap secret-value">
+            <img id="inviteQr" alt="QR для входа в комнату" class="hidden">
           </div>
-          <button id="readyBtn" class="secondary" onclick="toggleReady()">Я готов</button>
-          <button id="startBtn" class="primary" onclick="startGame()">Запустить игру</button>
-          <button id="forceStartBtn" class="danger hidden" onclick="forceStartGame()">FORCE START</button>
-          <button id="leaveLobbyBtn" class="danger" data-sound="danger" onclick="leaveLobby()">Выйти из лобби</button>
-          <div class="rename-row action-rename-row">
-            <button id="renameBtn" class="secondary" data-sound="nickname" onclick="changeNickname()">Сменить ник</button>
-            <input id="renameInput" maxlength="18" placeholder="Новый ник">
-          </div>
-          <div class="settings-panel action-settings-panel">
-            <div class="settings-title">
-              <strong>Настройки лобби</strong>
-              <span id="lobbyMetaHint">имя и доступ</span>
-            </div>
-
-            <label class="setting-control setting-control-wide">
-              <span>Название лобби</span>
-              <input id="lobbyNameInput" maxlength="32" placeholder="Например, ночной плейлист" onkeydown="handleLobbyNameKeydown(event)">
-              <small>видно в списке открытых комнат</small>
-            </label>
-
-            <label class="setting-control setting-control-wide">
-              <span>Доступ</span>
-              <select id="lobbyVisibility" onchange="updateLobbyMeta()">
-                <option value="open" selected>Открытое</option>
-                <option value="closed">Закрытое</option>
-              </select>
-              <small>закрытое лобби доступно только по коду или ссылке</small>
-            </label>
-
-            <label class="setting-control setting-control-wide">
-              <span>Игроков в комнате</span>
-              <select id="settingMaxPlayers" onchange="updateLobbySettings()">
-                <option value="3">до 3 игроков</option>
-                <option value="4">до 4 игроков</option>
-                <option value="5">до 5 игроков</option>
-                <option value="6">до 6 игроков</option>
-                <option value="7">до 7 игроков</option>
-                <option value="8">до 8 игроков</option>
-                <option value="9">до 9 игроков</option>
-                <option value="10">до 10 игроков</option>
-                <option value="11">до 11 игроков</option>
-                <option value="12" selected>до 12 игроков</option>
-              </select>
-              <small>лимит входа меняет только хост</small>
-            </label>
-
-            <button id="saveLobbyMetaBtn" class="secondary" type="button" onclick="updateLobbyMeta()">Сохранить лобби</button>
-
-            <div class="settings-title game-settings-title">
-              <strong>Настройки игры</strong>
-              <span id="settingsHint">меняет хост</span>
-            </div>
-
-            <label class="setting-control setting-control-wide">
-              <span>Режим</span>
-              <select id="settingGameMode" onchange="changeGameMode()">
-                <option value="classic" selected>Классика</option>
-                <option value="blitz">Блиц</option>
-              </select>
-              <small id="gameModeHint">сбалансированные правила для обычной партии</small>
-            </label>
-
-            <label class="setting-control">
-              <span>Раунды</span>
-              <select id="settingRounds" onchange="updateLobbySettings()">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3" selected>3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-              <small>сколько кругов сыграет каждый</small>
-            </label>
-
-            <label class="setting-control">
-              <span>Время трека</span>
-              <select id="settingListenTime" onchange="updateLobbySettings()">
-                <option value="15">15 секунд</option>
-                <option value="30" selected>30 секунд</option>
-                <option value="45">45 секунд</option>
-                <option value="60">60 секунд</option>
-              </select>
-              <small>пауза на прослушивание</small>
-            </label>
-
-            <label class="setting-control setting-control-wide">
-              <span>Шпионы</span>
-              <select id="settingSpyMode" onchange="updateLobbySettings()">
-                <option value="auto" selected>Авто по игрокам</option>
-                <option value="1">1 шпион</option>
-                <option value="2">2 шпиона</option>
-                <option value="3">3 шпиона</option>
-              </select>
-              <small>авто добавляет шпионов в больших компаниях</small>
-            </label>
-
-            <label class="setting-control">
-              <span>Голосование</span>
-              <select id="settingAnonymousVoting" onchange="updateLobbySettings()">
-                <option value="false" selected>Открытое</option>
-                <option value="true">Анонимное</option>
-              </select>
-              <small>виден ли счет во время выбора</small>
-            </label>
-
-            <label class="setting-control">
-              <span>Таймер голосования</span>
-              <select id="settingVotingTime" onchange="updateLobbySettings()">
-                <option value="0">Без таймера</option>
-                <option value="30">30 секунд</option>
-                <option value="60" selected>60 секунд</option>
-                <option value="90">90 секунд</option>
-              </select>
-              <small>давление для финального решения</small>
-            </label>
-
-            <label class="setting-control setting-control-wide">
-              <span>Ничья</span>
-              <select id="settingRunoffOnTie" onchange="updateLobbySettings()">
-                <option value="true" selected>Второй тур</option>
-                <option value="false">Без второго тура</option>
-              </select>
-              <small>переголосование между лидерами</small>
-            </label>
-
-            <label class="setting-control setting-control-wide">
-              <span>Тема оформления</span>
-              <select id="settingRoomTheme" onchange="updateLobbySettings()">
-                <option value="neon" selected>Neon Club</option>
-                <option value="vinyl">Dark Vinyl</option>
-                <option value="cyber">Cyber Spy</option>
-                <option value="retro">Retro FM</option>
-                <option value="minimal">Minimal Black</option>
-              </select>
-              <small>визуальный вайб комнаты выбирает хост</small>
-            </label>
-          </div>
-
-          <p id="lobbyStatus" class="status"></p>
+          <p class="lead small">Открой камеру телефона и присоединяйся по ссылке комнаты.</p>
+          <button class="secondary" type="button" onclick="copyInviteLink()">Скопировать ссылку</button>
         </div>
-      </aside>
-
-      <aside class="page-chat-column lobby-page-chat" aria-label="Чат лобби">
-        <div class="game-chat-panel">
-          <div class="chat-header panel-title">
-            <strong>Чат лобби</strong>
-            <span>общайся без подсказок</span>
-          </div>
-          <div class="chat-messages-area" data-chat-scroll>
-            <div id="lobbyChatMessages" data-chat-messages class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
-          </div>
-          <div class="chat-input-area">
-            <div class="chat-form">
-              <input id="lobbyChatInput" data-chat-input maxlength="240" placeholder="Сообщение в чат" onkeydown="handleChatKeydown(event)">
-              <button id="lobbyChatSendBtn" class="secondary chat-send-button" type="button" onclick="sendChatMessage()" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
-            </div>
-            <p id="lobbyChatStatus" data-chat-status class="status"></p>
-          </div>
-        </div>
-      </aside>
+      </div>
     </section>
 
     <section id="game" class="screen game-layout hidden">
