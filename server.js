@@ -3,7 +3,14 @@ const crypto = require("crypto");
 const http = require("http");
 const { Server } = require("socket.io");
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const { createUserStorePersistence, friendshipKey, resolveDataDir } = require("./lib/persistence");
+const {
+  createUserStorePersistence,
+  friendshipKey,
+  isProductionRuntime,
+  isRenderEnvironment,
+  resolveDataDir,
+  resolveDatabaseUrl
+} = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
   buildOAuthSuccessRedirect,
@@ -28,10 +35,15 @@ const io = new Server(server);
 app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
 app.get("/healthz", (req, res) => {
-  res.status(persistenceReady ? 200 : 503).json({
-    ok: persistenceReady,
+  const dbConfigured = Boolean(resolveDatabaseUrl());
+  const writable = persistenceAllowsWrites();
+  res.status(persistenceReady && writable ? 200 : 503).json({
+    ok: persistenceReady && writable,
     store: userStorePersistence.kind,
-    persistent: userStorePersistence.kind === "postgres"
+    persistent: userStorePersistence.kind === "postgres",
+    databaseConfigured: dbConfigured,
+    production: isProductionRuntime(),
+    render: isRenderEnvironment()
   });
 });
 app.use((req, res, next) => {
@@ -113,15 +125,38 @@ let usersStore = { users: [], friendships: [], friendRequests: [], directMessage
 let persistenceReady = false;
 let pendingUsersStoreWrite = Promise.resolve();
 
+function persistenceAllowsWrites() {
+  return userStorePersistence.kind === "postgres" || userStorePersistence.kind === "file";
+}
+
+function missingDatabaseMessage() {
+  return "DATABASE_URL is missing. Create a PostgreSQL database in Render, copy Internal Database URL, and add DATABASE_URL environment variable to Web Service.";
+}
+
+function requireAccountPersistence(cb) {
+  if (persistenceAllowsWrites()) return true;
+  cb?.({ error: missingDatabaseMessage() });
+  return false;
+}
+
 async function loadUsersStore() {
   await userStorePersistence.init?.();
   usersStore = await userStorePersistence.read();
   ensureSocialCollections();
   persistenceReady = true;
+  console.log(`[db] environment: ${isProductionRuntime() ? "production" : "development"}${isRenderEnvironment() ? " on Render" : ""}`);
+  console.log(`[db] database connection status: ${userStorePersistence.kind === "postgres" ? "connected" : userStorePersistence.kind === "unconfigured-postgres" ? "missing DATABASE_URL" : "local file fallback"}`);
+  console.log(`[db] persistence mode: ${userStorePersistence.kind}`);
+  if (userStorePersistence.kind === "file") console.log(`[db] local development JSON store: ${userStorePersistence.usersFile}`);
   return usersStore;
 }
 
 function saveUsersStore() {
+  if (!persistenceAllowsWrites()) {
+    const error = new Error(missingDatabaseMessage());
+    console.error("[db] persistent write blocked", error.message);
+    return Promise.reject(error);
+  }
   const write = () => Promise.resolve(userStorePersistence.write(usersStore));
   pendingUsersStoreWrite = pendingUsersStoreWrite.then(write, write).catch((error) => {
     console.error("[db] persistent write failed", error);
@@ -461,6 +496,7 @@ function userHasOAuthIdentity(user, provider, providerId) {
 }
 
 function upsertOAuthUser(provider, profile) {
+  if (!persistenceAllowsWrites()) throw new Error(missingDatabaseMessage());
   const providerId = String(profile.providerId || "").trim();
   if (!providerId) throw new Error("OAuth profile id is missing");
 
@@ -1776,6 +1812,7 @@ io.on("connection", (socket) => {
   socket.data.user = null;
 
   socket.on("auth:session", ({ token, accessToken } = {}, cb = () => {}) => {
+    if (!requireAccountPersistence(cb)) return;
     const user = findUserByToken(accessToken || token);
     if (!user) {
       console.warn("[auth] access restore failed: token missing or expired");
@@ -1787,6 +1824,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:refresh", ({ refreshToken } = {}, cb = () => {}) => {
+    if (!requireAccountPersistence(cb)) return;
     const refreshed = refreshSession(refreshToken);
     if (!refreshed) return cb({ error: "Сессия истекла" });
     registerAuthenticatedSocket(socket, refreshed.user);
@@ -1799,6 +1837,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:register", ({ username, password, displayName } = {}, cb = () => {}) => {
+    if (!requireAccountPersistence(cb)) return;
     const normalizedUsername = normalizeUsername(username);
     if (normalizedUsername.length < 3) return cb({ error: "Логин должен быть от 3 символов: латиница, цифры, _ или -" });
     if (!validatePassword(password)) return cb({ error: "Пароль должен быть от 6 до 72 символов" });
@@ -1827,6 +1866,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:login", ({ username, password } = {}, cb = () => {}) => {
+    if (!requireAccountPersistence(cb)) return;
     const normalizedUsername = normalizeUsername(username);
     const user = usersStore.users.find((item) => item.username === normalizedUsername);
     if (!user || !verifyPassword(password, user)) return cb({ error: "Неверный логин или пароль" });
@@ -2513,6 +2553,9 @@ async function startServer() {
   await loadUsersStore();
   const listener = server.listen(process.env.PORT || 3000, () => {
     console.log(`Music Spy server running; persistent store: ${USERS_FILE}`);
+    if (userStorePersistence.kind === "unconfigured-postgres") {
+      console.warn(`[db] ${missingDatabaseMessage()}`);
+    }
   });
   installGracefulShutdown(listener);
   return listener;

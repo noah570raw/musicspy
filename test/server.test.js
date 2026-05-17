@@ -102,6 +102,41 @@ test("resolveDataDir prefers persistent deployment storage over repo data", () =
   assert.equal(resolveDataDir({ MUSICSPY_DATA_DIR: "/tmp/custom-users" }, fakeFs), "/tmp/custom-users");
 });
 
+
+
+test("production without DATABASE_URL disables file persistence without throwing", () => {
+  const { createUserStorePersistence } = require("../lib/persistence");
+  const warnings = [];
+  const persistence = createUserStorePersistence({
+    env: { NODE_ENV: "production", RENDER: "true" },
+    logger: { warn: (message) => warnings.push(String(message)), log: () => {} }
+  });
+
+  assert.equal(persistence.kind, "unconfigured-postgres");
+  assert.match(warnings.join("\n"), /Missing environment variable: DATABASE_URL/);
+  assert.match(warnings.join("\n"), /Create a PostgreSQL database in Render/);
+});
+
+test("development without DATABASE_URL keeps local JSON persistence", () => {
+  const { createUserStorePersistence } = require("../lib/persistence");
+  const persistence = createUserStorePersistence({
+    env: { NODE_ENV: "development" },
+    fsImpl: {
+      existsSync: () => false,
+      mkdirSync: () => {},
+      writeFileSync: () => {},
+      readFileSync: () => "{}",
+      renameSync: () => {},
+      openSync: () => 1,
+      fsyncSync: () => {},
+      closeSync: () => {}
+    },
+    logger: { warn: () => {}, log: () => {}, error: () => {} }
+  });
+
+  assert.equal(persistence.kind, "file");
+});
+
 test("account helpers normalize usernames and verify password hashes", () => {
   const { normalizeUsername, hashPassword, verifyPassword } = require("../server");
   const user = hashPassword("secret-password");
@@ -492,10 +527,13 @@ test("persistence normalizes missing social collections and writes atomically", 
   assert.ok(mkdirs.includes("/tmp/musicspy-test"));
 });
 
-test("production persistence refuses ephemeral storage without a database", () => {
+test("production persistence refuses ephemeral file storage without a database", async () => {
   const { createUserStorePersistence } = require("../lib/persistence");
-  assert.throws(
-    () => createUserStorePersistence({ env: { NODE_ENV: "production" }, logger: { warn() {} } }),
+  const persistence = createUserStorePersistence({ env: { NODE_ENV: "production" }, logger: { warn() {}, log() {} } });
+
+  assert.equal(persistence.kind, "unconfigured-postgres");
+  await assert.rejects(
+    () => persistence.write({ users: [] }),
     /DATABASE_URL is required/
   );
 });
@@ -514,7 +552,8 @@ test("postgres persistence exposes persistent schema and import path", async () 
       return { rows: [] };
     },
     connect: async () => fakeClient,
-    end: async () => undefined
+    end: async () => undefined,
+    on() {}
   };
 
   const persistence = createPostgresUserStorePersistence({
