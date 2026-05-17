@@ -240,7 +240,7 @@ test("normalizeSettings applies blitz preset and supports one-round games", () =
     votingTime: 30,
     runoffOnTie: false,
     roomTheme: "cyber",
-    maxPlayers: 12
+    maxPlayers: 9
   });
 
   assert.equal(normalizeSettings({ rounds: 1 }).rounds, 1);
@@ -362,8 +362,8 @@ test("normalizeSettings clamps lobby max players to host choices", () => {
 
   assert.equal(normalizeSettings({ maxPlayers: 3 }).maxPlayers, 3);
   assert.equal(normalizeSettings({ maxPlayers: 6 }).maxPlayers, 6);
-  assert.equal(normalizeSettings({ maxPlayers: 12 }).maxPlayers, 12);
-  assert.equal(normalizeSettings({ maxPlayers: 13 }).maxPlayers, 12);
+  assert.equal(normalizeSettings({ maxPlayers: 9 }).maxPlayers, 9);
+  assert.equal(normalizeSettings({ maxPlayers: 10 }).maxPlayers, 9);
 });
 
 test("createLobbyState applies host settings before players can join", () => {

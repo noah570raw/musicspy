@@ -18,7 +18,7 @@ const GAME_MODE_PRESETS = {
     votingTime: 60,
     runoffOnTie: true,
     roomTheme: "neon",
-    maxPlayers: 12
+    maxPlayers: 9
   },
   blitz: {
     label: "Блиц",
@@ -30,6 +30,6 @@ const GAME_MODE_PRESETS = {
     votingTime: 30,
     runoffOnTie: false,
     roomTheme: "cyber",
-    maxPlayers: 12
+    maxPlayers: 9
   }
 };

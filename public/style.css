@@ -2881,6 +2881,7 @@ body[data-screen="game"] .language-switcher {
 .chat-messages {
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: flex-start;
   gap: 7px;
   min-height: 100%;
@@ -5606,7 +5607,8 @@ body[data-screen="lobby"] .app-shell {
   grid-template-columns: minmax(280px, 0.86fr) minmax(420px, 1.42fr) minmax(250px, 0.74fr);
   gap: clamp(12px, 1.5vw, 20px);
   align-items: stretch;
-  min-height: min(820px, calc(100dvh - 48px));
+  height: min(820px, calc(100dvh - 48px));
+  min-height: 0;
 }
 
 .lobby-left-panel,
@@ -5632,7 +5634,7 @@ body[data-screen="lobby"] .app-shell {
 }
 
 .lobby-left-panel {
-  grid-template-rows: auto minmax(320px, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .lobby-hero-panel,
@@ -5773,8 +5775,8 @@ body[data-screen="lobby"] .app-shell {
 }
 
 .lobby-chat-panel .chat-messages-area {
-  flex: 1;
-  min-height: 210px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .lobby-chat-panel .chat-input-area {
@@ -5782,6 +5784,14 @@ body[data-screen="lobby"] .app-shell {
   bottom: 0;
   background: linear-gradient(180deg, rgba(8,7,20,0.72), rgba(8,7,20,0.96));
   backdrop-filter: blur(16px);
+}
+
+.lobby-theme-control {
+  margin: 0;
+}
+
+.lobby-theme-control select {
+  width: 100%;
 }
 
 .lobby-roster-panel {
@@ -6087,6 +6097,7 @@ body[data-screen="lobby"] .app-shell {
 
   .lobby-shell,
   .lobby-actions-panel {
+    height: auto;
     grid-template-columns: 1fr;
     min-height: 0;
   }

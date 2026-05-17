@@ -1671,7 +1671,7 @@ function resetCreateLobbyForm() {
   const fields = {
     createLobbyNameInput: "",
     createLobbyVisibility: "open",
-    createSettingMaxPlayers: preset.maxPlayers || 12,
+    createSettingMaxPlayers: preset.maxPlayers || 9,
     createSettingGameMode: "classic",
     createSettingRounds: preset.rounds,
     createSettingListenTime: preset.listenTime,
@@ -1702,7 +1702,7 @@ function readCreateSettingsFromForm() {
     votingTime: Number($("createSettingVotingTime")?.value ?? 60),
     runoffOnTie: ($("createSettingRunoffOnTie")?.value || "true") === "true",
     roomTheme: $("createSettingRoomTheme")?.value || "neon",
-    maxPlayers: Number($("createSettingMaxPlayers")?.value || 12)
+    maxPlayers: Number($("createSettingMaxPlayers")?.value || 9)
   };
 }
 
@@ -1722,7 +1722,7 @@ function changeCreateGameMode() {
   if ($("createSettingVotingTime")) $("createSettingVotingTime").value = String(preset.votingTime);
   if ($("createSettingRunoffOnTie")) $("createSettingRunoffOnTie").value = String(preset.runoffOnTie);
   if ($("createSettingRoomTheme")) $("createSettingRoomTheme").value = preset.roomTheme || "neon";
-  if ($("createSettingMaxPlayers")) $("createSettingMaxPlayers").value = String(preset.maxPlayers || 12);
+  if ($("createSettingMaxPlayers")) $("createSettingMaxPlayers").value = String(preset.maxPlayers || 9);
   updateCreateGameModeHint(preset);
   refreshCustomSelects();
   updateCreateLobbyPreview();
@@ -1787,7 +1787,7 @@ function renderOpenLobbies(lobbies = []) {
     const lobbyName = escapeHtml(lobbyNameText);
     const mode = escapeHtml(t(lobby.modeLabel || lobby.gameMode || "Классика"));
     const players = Number(lobby.playerCount || 0);
-    const maxPlayers = Number(lobby.maxPlayers || 12);
+    const maxPlayers = Number(lobby.maxPlayers || 9);
     const rounds = Number(lobby.rounds || 0);
     const listenTime = Number(lobby.listenTime || DEFAULT_LISTEN_TIME);
     const avatarCount = Math.max(1, Math.min(players || 1, 4));
@@ -2243,7 +2243,7 @@ function readSettingsFromForm() {
     votingTime: Number($("settingVotingTime").value),
     runoffOnTie: $("settingRunoffOnTie").value === "true",
     roomTheme: $("settingRoomTheme")?.value || "neon",
-    maxPlayers: Number($("settingMaxPlayers")?.value || state.settings.maxPlayers || 12)
+    maxPlayers: Number($("settingMaxPlayers")?.value || state.settings.maxPlayers || 9)
   };
 }
 
@@ -2256,7 +2256,7 @@ function changeGameMode() {
   $("settingVotingTime").value = String(preset.votingTime);
   $("settingRunoffOnTie").value = String(preset.runoffOnTie);
   if ($("settingRoomTheme")) $("settingRoomTheme").value = preset.roomTheme || "neon";
-  if ($("settingMaxPlayers")) $("settingMaxPlayers").value = String(state.settings.maxPlayers || preset.maxPlayers || 12);
+  if ($("settingMaxPlayers")) $("settingMaxPlayers").value = String(state.settings.maxPlayers || preset.maxPlayers || 9);
   updateGameModeHint(preset);
   updateLobbySettings();
 }
@@ -2277,6 +2277,33 @@ function updateLobbySettings() {
     }
     setStatus("lobbyStatus", "Настройки обновлены");
   });
+}
+
+function updateLobbyTheme() {
+  if (!state.currentCode) return;
+  const select = $("lobbySettingRoomTheme");
+  const roomTheme = select?.value || state.settings.roomTheme || "neon";
+  socket.emit("updateSettings", { code: state.currentCode, settings: { roomTheme } }, (res) => {
+    if (res?.error) {
+      applyLobbyThemeControl(state.settings, state.hostId === socket.id);
+      return setStatus("lobbyStatus", res.error, true);
+    }
+    state.settings = res.settings || { ...state.settings, roomTheme };
+    applyRoomTheme(state.settings.roomTheme || roomTheme);
+    applyLobbyThemeControl(state.settings, true);
+    setStatus("lobbyStatus", "Тема лобби обновлена");
+  });
+}
+
+function applyLobbyThemeControl(settings = {}, isHost = false) {
+  const select = $("lobbySettingRoomTheme");
+  if (select) {
+    select.value = settings.roomTheme || "neon";
+    select.disabled = !isHost;
+  }
+  const hint = $("lobbyThemeHint");
+  if (hint) hint.textContent = isHost ? t("ты можешь менять") : t("меняет хост");
+  refreshCustomSelects();
 }
 
 function toggleReady() {
@@ -2315,7 +2342,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
     settingVotingTime: settings.votingTime ?? 60,
     settingRunoffOnTie: String(settings.runoffOnTie !== false),
     settingRoomTheme: settings.roomTheme || "neon",
-    settingMaxPlayers: settings.maxPlayers || 12
+    settingMaxPlayers: settings.maxPlayers || 9
   };
 
   for (const [id, value] of Object.entries(fields)) {
@@ -2390,7 +2417,7 @@ function renderLobby(lobby) {
   state.ready = Boolean(me?.ready);
   const readyCount = state.players.filter((player) => player.ready).length;
   const hostName = state.players.find((p) => p.id === lobby.host)?.name || "...";
-  const maxPlayers = state.settings.maxPlayers || lobby.maxPlayers || 12;
+  const maxPlayers = state.settings.maxPlayers || lobby.maxPlayers || 9;
   const neededPlayers = Math.max(0, 3 - state.players.length);
   const waitingForReady = Math.max(0, state.players.length - readyCount);
   const roomStatus = state.players.length < 3
@@ -2419,7 +2446,9 @@ function renderLobby(lobby) {
   }
   const readyBtn = $("readyBtn");
   if (readyBtn) {
-    readyBtn.textContent = state.ready ? t("READY ✓") : t("READY");
+    readyBtn.textContent = currentLanguage() === "en"
+      ? (state.ready ? "READY ✓" : "READY")
+      : (state.ready ? "ГОТОВ ✓" : "ГОТОВ");
     readyBtn.classList.toggle("ready", state.ready);
   }
   const readySummary = $("readySummary");
@@ -2435,9 +2464,10 @@ function renderLobby(lobby) {
 
   applyLobbyMetaToForm(lobby, isHost);
   applySettingsToForm(state.settings, isHost);
+  applyLobbyThemeControl(state.settings, isHost);
   updateLobbyRenameControls();
 
-  const visibleSeats = Math.min(maxPlayers, Math.max(6, state.players.length));
+  const visibleSeats = maxPlayers;
   const emptySeats = Math.max(0, visibleSeats - state.players.length);
   const playerCards = state.players.map((player, index) => lobbyPlayerCardMarkup(player, index, lobby));
   const seatCards = Array.from({ length: emptySeats }, (_, index) => lobbyEmptySeatMarkup(index));
