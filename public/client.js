@@ -29,6 +29,7 @@ const state = {
   pendingSpyGuess: null,
   reactionCounts: {},
   selectedReaction: null,
+  skipVote: { trackId: null, requiredVotes: 0, voteCount: 0, voterIds: [], voters: [], completed: false },
   currentTrackId: null,
   trackHistory: [],
   chatMessages: [],
@@ -2885,6 +2886,29 @@ function sendReaction(reaction) {
   });
 }
 
+function applySkipVoteState(skipVote = {}) {
+  const previousCount = Number(state.skipVote?.voteCount || 0);
+  state.skipVote = {
+    trackId: skipVote.trackId || null,
+    ownerId: skipVote.ownerId || null,
+    requiredVotes: Number(skipVote.requiredVotes || 0),
+    voteCount: Number(skipVote.voteCount || 0),
+    voterIds: Array.isArray(skipVote.voterIds) ? skipVote.voterIds : [],
+    voters: Array.isArray(skipVote.voters) ? skipVote.voters : [],
+    completed: Boolean(skipVote.completed)
+  };
+  renderSkipVote(previousCount !== state.skipVote.voteCount);
+}
+
+function sendSkipVote() {
+  socket.emit("skipTrackVote", { code: state.currentCode }, (res) => {
+    if (res?.error) return setStatus("gameStatus", res.error, true);
+    if (res?.skipVote) applySkipVoteState(res.skipVote);
+    playSoundCue("vote");
+    setStatus("gameStatus", "Пропуск засчитан");
+  });
+}
+
 async function copyRoomCode() {
   if (!state.currentCode) return;
   try {
@@ -3287,6 +3311,7 @@ function renderGameState(data) {
   state.timeLeft = data.timeLeft ?? state.timeLeft;
   state.voteCandidates = data.voteCandidates || state.voteCandidates;
   state.reactionCounts = data.reactionCounts || state.reactionCounts;
+  applySkipVoteState(data.skipVote || state.skipVote);
   state.trackHistory = data.trackHistory || state.trackHistory;
   state.chatMessages = data.chatMessages || state.chatMessages;
   state.finalComments = data.finalComments || state.finalComments;
@@ -3398,6 +3423,51 @@ function renderReactions() {
     .filter((reaction) => state.reactionCounts[reaction])
     .map((reaction) => `${reaction} ${state.reactionCounts[reaction]}`);
   summary.textContent = isOwnTrack ? t("На свой трек реакции ставить нельзя") : (activeCounts.length ? activeCounts.join(" · ") : t("Пока реакций нет"));
+}
+
+function renderSkipVote(animate = false) {
+  const panel = $("skipVotePanel");
+  const button = $("skipVoteBtn");
+  const label = $("skipVoteLabel");
+  const counter = $("skipVoteCounter");
+  const progress = $("skipVoteProgress");
+  const voters = $("skipVoteVoters");
+  if (!panel || !button || !label || !counter || !progress || !voters) return;
+
+  const skipVote = state.skipVote || {};
+  const requiredVotes = Number(skipVote.requiredVotes || 0);
+  const voteCount = Math.min(Number(skipVote.voteCount || 0), requiredVotes);
+  const listening = ["listening", "paused"].includes(state.turnStage);
+  const isOwner = skipVote.ownerId === socket.id || (state.currentPlayerId === socket.id && listening);
+  const hasVoted = Array.isArray(skipVote.voterIds) && skipVote.voterIds.includes(socket.id);
+  const visible = Boolean(skipVote.trackId && listening && requiredVotes > 0);
+  const eligible = visible && !isOwner;
+  const progressPercent = requiredVotes ? Math.min(100, (voteCount / requiredVotes) * 100) : 0;
+
+  panel.classList.toggle("hidden", !visible);
+  panel.classList.toggle("skip-vote-owner", visible && isOwner);
+  panel.classList.toggle("skip-vote-pulse", visible && eligible && requiredVotes - voteCount === 1 && !hasVoted);
+  panel.classList.toggle("skip-vote-updated", animate);
+  button.classList.toggle("hidden", !eligible);
+  button.disabled = !eligible || hasVoted || skipVote.completed;
+  label.textContent = hasVoted ? t("Пропуск засчитан") : t("Skip");
+  counter.textContent = `Skip ${voteCount}/${requiredVotes}`;
+  progress.style.width = `${progressPercent}%`;
+
+  const voterItems = (skipVote.voters || []).slice(0, 6).map((voter) => {
+    const name = escapeHtml(voter.name || t("Игрок"));
+    const letter = name.slice(0, 1).toUpperCase() || "✓";
+    return `<span class="skip-voter" title="${escapeAttribute(voter.name || t("Игрок"))}">${voter.avatar ? `<img src="${escapeAttribute(voter.avatar)}" alt="">` : letter}<i>✓</i></span>`;
+  });
+  voters.innerHTML = voterItems.join("");
+
+  if (isOwner) {
+    counter.textContent = t("Твой трек · пропуск недоступен");
+  }
+
+  if (animate) {
+    window.setTimeout(() => panel.classList.remove("skip-vote-updated"), 420);
+  }
 }
 
 function formatReactions(reactions = {}) {
@@ -3544,6 +3614,7 @@ function updateTurn({ playerId, name, round, turnNumber, turnsInRound, stage }) 
   clearPlayer();
   state.reactionCounts = {};
   state.selectedReaction = null;
+  applySkipVoteState({});
   renderReactions();
   updateTimer({ timeLeft: null, stage: "waiting", listenTime: state.settings.listenTime || DEFAULT_LISTEN_TIME });
   const turnStatus = isMine ? "Очередь ждет тебя: вставь ссылку на трек." : "Ждем, пока игрок поставит трек. Таймер пока не идет.";
@@ -3581,6 +3652,7 @@ function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_
 
   updateMobileTurnBanner();
   renderHostControls();
+  renderSkipVote();
 }
 
 function updateVoteTimer(timeLeft) {
@@ -3625,6 +3697,7 @@ function muteActiveTrackPlayers() {
 function clearPlayer({ fadeBackground = false } = {}) {
   muteActiveTrackPlayers();
   state.currentTrackId = null;
+  applySkipVoteState({});
   syncAudioVolume({ fadeTime: fadeBackground ? 1.15 : 0.32, fadeBackground });
   const embed = $("embed");
   const activeIframes = embed.querySelectorAll("iframe");
@@ -3659,6 +3732,11 @@ function loadTrack(track) {
     }
     state.currentTrackId = nextTrackId;
     state.reactionCounts = track.reactionCounts || {};
+    if (track.skipVote) {
+      applySkipVoteState(track.skipVote);
+    } else if (state.skipVote?.trackId && state.skipVote.trackId !== nextTrackId) {
+      applySkipVoteState({ trackId: nextTrackId, ownerId: track.playerId, requiredVotes: 0, voteCount: 0, voterIds: [], voters: [] });
+    }
     renderReactions();
   }
   const embed = $("embed");
@@ -4072,6 +4150,7 @@ socket.on("gameStarted", (data) => {
   state.reactionCounts = {};
   state.selectedReaction = null;
   state.currentTrackId = null;
+  applySkipVoteState({});
   state.trackHistory = data.trackHistory || [];
   state.chatMessages = data.chatMessages || [];
   state.finalComments = data.finalComments || [];
@@ -4142,6 +4221,11 @@ socket.on("turn", updateTurn);
 socket.on("timer", updateTimer);
 socket.on("voteTimer", ({ timeLeft }) => updateVoteTimer(timeLeft));
 socket.on("newTrack", loadTrack);
+socket.on("skipVoteUpdate", (skipVote) => applySkipVoteState(skipVote));
+socket.on("trackSkipped", ({ message } = {}) => {
+  playSoundCue("reveal");
+  setStatus("gameStatus", message || "Все игроки пропустили трек");
+});
 socket.on("reactionUpdate", ({ trackId, reactionCounts, trackHistory }) => {
   if (trackId === state.currentTrackId) {
     state.reactionCounts = reactionCounts || {};
@@ -4247,7 +4331,14 @@ socket.on("gameEnd", (data) => {
   });
 });
 
-socket.on("stopTrack", () => {
+socket.on("stopTrack", ({ skipped, message } = {}) => {
+  const embed = $("embed");
+  if (skipped && embed) {
+    embed.classList.add("track-fadeout");
+    setStatus("gameStatus", message || "Все игроки пропустили трек");
+    window.setTimeout(() => clearPlayer({ fadeBackground: true }), 260);
+    return;
+  }
   clearPlayer();
 });
 

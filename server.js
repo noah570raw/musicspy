@@ -680,6 +680,63 @@ function syncLastTrackHistory(lobby) {
   entry.reactions = countReactions(lobby.currentTrackReactions);
 }
 
+function resetSkipVotes(lobby) {
+  lobby.skipVotes = {};
+  lobby.skipCompleted = false;
+}
+
+function activePlayers(lobby) {
+  return (lobby.players || []).filter((player) => !player.disconnected);
+}
+
+function getSkipVoteState(lobby) {
+  if (!lobby || lobby.phase !== "playing" || !lobby.lastTrack || !["listening", "paused"].includes(lobby.turnStage)) {
+    return {
+      trackId: null,
+      ownerId: lobby?.lastTrack?.playerId || null,
+      requiredVotes: 0,
+      voteCount: 0,
+      voterIds: [],
+      voters: [],
+      completed: Boolean(lobby?.skipCompleted)
+    };
+  }
+
+  const ownerId = lobby.lastTrack.playerId;
+  const eligiblePlayers = activePlayers(lobby).filter((player) => player.id !== ownerId);
+  const eligibleIds = new Set(eligiblePlayers.map((player) => player.id));
+  const voterIds = Object.keys(lobby.skipVotes || {}).filter((playerId) => eligibleIds.has(playerId));
+
+  return {
+    trackId: lobby.lastTrack.id,
+    ownerId,
+    requiredVotes: eligiblePlayers.length,
+    voteCount: voterIds.length,
+    voterIds,
+    voters: voterIds.map((playerId) => {
+      const player = lobby.players.find((item) => item.id === playerId);
+      return { id: playerId, name: player?.name || "Игрок", avatar: player?.avatar || "" };
+    }),
+    completed: Boolean(lobby.skipCompleted)
+  };
+}
+
+function shouldCompleteSkip(lobby) {
+  const skipState = getSkipVoteState(lobby);
+  return Boolean(skipState.trackId && skipState.requiredVotes > 0 && skipState.voteCount >= skipState.requiredVotes);
+}
+
+function completeSkipVote(lobby) {
+  if (!lobby || lobby.skipCompleted || !shouldCompleteSkip(lobby)) return false;
+  lobby.skipCompleted = true;
+  clearTimer(lobby.code);
+  io.to(lobby.code).emit("skipVoteUpdate", getSkipVoteState(lobby));
+  io.to(lobby.code).emit("trackSkipped", { message: "Все игроки пропустили трек" });
+  io.to(lobby.code).emit("stopTrack", { skipped: true, message: "Все игроки пропустили трек" });
+  advanceTurn(lobby.code);
+  return true;
+}
+
 
 function normalizeGuess(value) {
   return String(value || "")
@@ -792,6 +849,12 @@ function replacePlayerId(lobby, oldId, newId) {
   }
   lobby.currentTrackReactions = nextReactions;
 
+  const nextSkipVotes = {};
+  for (const [playerId, votedAt] of Object.entries(lobby.skipVotes || {})) {
+    nextSkipVotes[replace(playerId)] = votedAt;
+  }
+  lobby.skipVotes = nextSkipVotes;
+
   if (lobby.lastTrack?.playerId === oldId) lobby.lastTrack.playerId = newId;
   for (const track of lobby.trackHistory || []) {
     if (track.playerId === oldId) track.playerId = newId;
@@ -822,6 +885,7 @@ function schedulePlayerDeparture(lobby, socket) {
   }, RECONNECT_GRACE_MS);
   emitLobbyUpdate(lobby.code);
   emitGameState(lobby.code);
+  completeSkipVote(lobby);
 }
 
 function sendPrivateGameStart(lobby, socket) {
@@ -883,6 +947,7 @@ function removePlayerFromLobby(lobby, playerId) {
   lobby.spies = lobby.spies.filter((id) => id !== playerId);
   lobby.voteCandidates = lobby.voteCandidates.filter((id) => id !== playerId);
   delete lobby.votes[playerId];
+  if (lobby.skipVotes) delete lobby.skipVotes[playerId];
   if (lobby.currentTrackReactions) delete lobby.currentTrackReactions[playerId];
   syncLastTrackHistory(lobby);
 
@@ -1008,7 +1073,7 @@ function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
     resetLobbyToWaiting(lobby);
     io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
   } else if (lobby.phase === "playing") {
-    startTurn(code);
+    if (!completeSkipVote(lobby)) startTurn(code);
   } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
     finishVote(code);
   } else if (lobby.phase === "spyGuess" && !lobby.players.some((player) => lobby.spies.includes(player.id))) {
@@ -1048,6 +1113,7 @@ function emitGameState(code) {
     voteCandidates: lobby.voteCandidates,
     votes: lobby.settings.anonymousVoting && lobby.phase === "voting" ? {} : publicVotes(lobby),
     reactionCounts: countReactions(lobby.currentTrackReactions),
+    skipVote: getSkipVoteState(lobby),
     trackHistory: lobby.trackHistory || [],
     pendingSpyGuess: lobby.pendingSpyGuess || null,
     chatMessages: lobby.chatMessages || [],
@@ -1202,6 +1268,7 @@ function startTurn(code) {
   lobby.turnStage = "waiting";
   lobby.timeLeft = null;
   lobby.pausedTurnStage = null;
+  resetSkipVotes(lobby);
   io.to(code).emit("turn", {
     playerId,
     name: player.name,
@@ -1223,6 +1290,7 @@ function advanceTurn(code) {
   if (!lobby || lobby.phase !== "playing") return;
 
   clearTimer(code);
+  resetSkipVotes(lobby);
   lobby.currentTurnIndex += 1;
 
   if (lobby.currentTurnIndex >= lobby.order.length) {
@@ -1449,6 +1517,7 @@ function resetLobbyToWaiting(lobby) {
   lobby.voteTimeLeft = null;
   lobby.lastTrack = null;
   lobby.currentTrackReactions = {};
+  resetSkipVotes(lobby);
   lobby.trackHistory = [];
   lobby.suspected = [];
   lobby.finalVotes = null;
@@ -1487,6 +1556,7 @@ function initializeGame(lobby) {
   lobby.voteTimeLeft = null;
   lobby.lastTrack = null;
   lobby.currentTrackReactions = {};
+  resetSkipVotes(lobby);
   lobby.trackHistory = [];
   lobby.suspected = [];
   lobby.finalVotes = null;
@@ -1564,6 +1634,8 @@ function createLobbyState(code, hostId, player, options = {}) {
     voteTimeLeft: null,
     lastTrack: null,
     currentTrackReactions: {},
+    skipVotes: {},
+    skipCompleted: false,
     trackHistory: [],
     suspected: [],
     finalVotes: null,
@@ -2074,6 +2146,7 @@ io.on("connection", (socket) => {
     const player = lobby.players.find((item) => item.id === socket.id);
     lobby.submittedThisTurn = true;
     lobby.currentTrackReactions = {};
+    resetSkipVotes(lobby);
     lobby.lastTrack = {
       id: `${lobby.round}-${lobby.currentTurnIndex + 1}-${Date.now()}`,
       url: trackUrl,
@@ -2084,9 +2157,35 @@ io.on("connection", (socket) => {
     };
     lobby.trackHistory.push({ ...lobby.lastTrack, reactions: {} });
 
-    io.to(lobby.code).emit("newTrack", { ...lobby.lastTrack, reactionCounts: {} });
+    io.to(lobby.code).emit("newTrack", { ...lobby.lastTrack, reactionCounts: {}, skipVote: getSkipVoteState(lobby) });
     cb({ success: true });
     startListeningTimer(lobby.code);
+  });
+
+  socket.on("skipTrackVote", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby || lobby.phase !== "playing" || !lobby.lastTrack || !["listening", "paused"].includes(lobby.turnStage)) {
+      return cb({ error: "Сейчас нельзя пропустить трек" });
+    }
+    if (!lobby.players.some((player) => player.id === socket.id && !player.disconnected)) {
+      return cb({ error: "Ты не в этой комнате" });
+    }
+    if (lobby.lastTrack.playerId === socket.id) {
+      return cb({ error: "Нельзя пропускать свой трек" });
+    }
+    if (lobby.skipCompleted) {
+      return cb({ error: "Трек уже пропускается" });
+    }
+
+    lobby.skipVotes = lobby.skipVotes || {};
+    if (!lobby.skipVotes[socket.id]) {
+      lobby.skipVotes[socket.id] = Date.now();
+    }
+
+    const skipState = getSkipVoteState(lobby);
+    io.to(lobby.code).emit("skipVoteUpdate", skipState);
+    cb({ success: true, skipVote: skipState });
+    completeSkipVote(lobby);
   });
 
   socket.on("trackReaction", ({ code, reaction }, cb = () => {}) => {
@@ -2251,6 +2350,9 @@ module.exports = {
   markAllPlayersReady,
   initializeGame,
   countReactions,
+  getSkipVoteState,
+  shouldCompleteSkip,
+  resetSkipVotes,
   getActiveTurnOrder,
   removePlayerFromLobby,
   handlePlayerDeparture,

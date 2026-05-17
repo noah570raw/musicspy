@@ -504,3 +504,29 @@ test("auth sessions are capped and token lookup uses hashed tokens", () => {
   assert.equal(findUserByToken([user], token), user);
   assert.equal(findUserByToken([user], "wrong-token"), null);
 });
+
+test("getSkipVoteState excludes track owner and disconnected listeners", () => {
+  const { getSkipVoteState, shouldCompleteSkip } = require("../server");
+  const lobby = {
+    phase: "playing",
+    turnStage: "listening",
+    lastTrack: { id: "track-1", playerId: "owner" },
+    players: [
+      { id: "owner", name: "Owner" },
+      { id: "listener-1", name: "One" },
+      { id: "listener-2", name: "Two" },
+      { id: "listener-3", name: "Three", disconnected: true }
+    ],
+    skipVotes: { owner: Date.now(), "listener-1": Date.now(), "listener-3": Date.now() }
+  };
+
+  const skipState = getSkipVoteState(lobby);
+
+  assert.equal(skipState.requiredVotes, 2);
+  assert.equal(skipState.voteCount, 1);
+  assert.deepEqual(skipState.voterIds, ["listener-1"]);
+  assert.equal(shouldCompleteSkip(lobby), false);
+
+  lobby.skipVotes["listener-2"] = Date.now();
+  assert.equal(shouldCompleteSkip(lobby), true);
+});
