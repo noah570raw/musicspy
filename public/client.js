@@ -68,6 +68,7 @@ const state = {
 
 const APPEARANCE_STORAGE_KEY = "musicSpyAppearance";
 const GAME_PREFERENCES_STORAGE_KEY = "musicSpyGamePreferences";
+const LOCAL_APPEARANCE_SCREENS = new Set(["menu", "playRooms", "createLobbySetup", "lobby"]);
 const INTERFACE_THEMES = [
   { id: "neon", label: "Neon Club" },
   { id: "vinyl", label: "Dark Vinyl" },
@@ -929,7 +930,7 @@ function showScreen(id) {
   const previousPhase = state.phase;
   state.phase = id;
   document.body.dataset.screen = id;
-  if (["menu", "playRooms", "createLobbySetup", "lobby"].includes(id)) applyRoleTheme();
+  if (LOCAL_APPEARANCE_SCREENS.has(id)) applyRoleTheme();
   if (id === "playRooms") refreshOpenLobbies();
   updateInviteSecretsVisibility();
   updateMobileTurnBanner();
