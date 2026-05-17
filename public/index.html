@@ -36,7 +36,7 @@
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script type="application/ld+json">
     {
@@ -52,6 +52,15 @@
   </script>
 </head>
 <body data-screen="menu">
+  <div class="cinema-stage" aria-hidden="true">
+    <span class="stage-beam stage-beam-left"></span>
+    <span class="stage-beam stage-beam-right"></span>
+    <span class="stage-leak stage-leak-one"></span>
+    <span class="stage-leak stage-leak-two"></span>
+    <span class="stage-fog stage-fog-one"></span>
+    <span class="stage-fog stage-fog-two"></span>
+    <span class="stage-particles"></span>
+  </div>
   <div class="noise"></div>
   <div class="music-equalizer-bg" aria-hidden="true">
     <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -271,9 +280,23 @@
 
   <main class="app-shell">
     <section id="menu" class="screen card hero-card">
+      <div class="hero-panel-light" aria-hidden="true"></div>
+      <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div>
+      <div class="hero-orbit hero-orbit-two" aria-hidden="true"></div>
       <p class="eyebrow">ночная музыкальная операция</p>
-      <h1>Music Spy</h1>
+      <h1 aria-label="Music Spy">
+        <span class="title-shadow" aria-hidden="true">Music Spy</span>
+        <span class="title-core">Music Spy</span>
+        <span class="title-bloom" aria-hidden="true">Music Spy</span>
+      </h1>
       <p class="lead">Собери комнату, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+      <div class="hero-signal-row" aria-hidden="true">
+        <span>private sessions</span>
+        <i></i>
+        <span>live music deduction</span>
+        <i></i>
+        <span>cinematic party mode</span>
+      </div>
 
       <div class="form-grid">
         <label>
