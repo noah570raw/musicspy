@@ -1,10 +1,23 @@
 const express = require("express");
 const crypto = require("crypto");
-const fs = require("fs");
 const http = require("http");
-const path = require("path");
 const { Server } = require("socket.io");
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
+const { createUserStorePersistence, resolveDataDir } = require("./lib/persistence");
+const {
+  buildOAuthErrorRedirect,
+  buildOAuthSuccessRedirect,
+  buildOAuthTokenRequest,
+  createSession: createAuthSession,
+  findUserByToken: findUserBySessionToken,
+  hashPassword,
+  normalizeAvatar,
+  normalizeOAuthProfile,
+  normalizeUsername,
+  parseOAuthResponse,
+  validatePassword,
+  verifyPassword
+} = require("./lib/auth");
 
 const app = express();
 const server = http.createServer(app);
@@ -14,26 +27,8 @@ app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
 app.use(express.static("public"));
 
-const DEFAULT_DATA_DIR = path.join(__dirname, "data");
-const RENDER_PERSISTENT_DIR = "/var/data";
-
-function resolveDataDir(env = process.env, fsImpl = fs) {
-  const explicitDataDir = String(env.MUSICSPY_DATA_DIR || env.DATA_DIR || "").trim();
-  if (explicitDataDir) return path.resolve(explicitDataDir);
-
-  const renderDiskMount = String(env.RENDER_DISK_MOUNT_PATH || "").trim();
-  const persistentCandidates = [renderDiskMount, RENDER_PERSISTENT_DIR].filter(Boolean);
-  const persistentRoot = persistentCandidates.find((candidate) => fsImpl.existsSync(candidate));
-  if (persistentRoot) return path.join(persistentRoot, "musicspy");
-
-  return DEFAULT_DATA_DIR;
-}
-
-const DATA_DIR = resolveDataDir();
-const USERS_FILE = path.join(DATA_DIR, "users.json");
-const LEGACY_USERS_FILE = path.join(DEFAULT_DATA_DIR, "users.json");
-const PASSWORD_ITERATIONS = 120000;
-const AVATAR_MAX_BYTES = 64 * 1024;
+const userStorePersistence = createUserStorePersistence();
+const USERS_FILE = userStorePersistence.usersFile;
 const SPY_GUESS_SECONDS = 60;
 const DECOY_GUESS_SECONDS = 3;
 const HOST_TIMER_STEP_SECONDS = 15;
@@ -101,83 +96,19 @@ const SIMILAR_THEME_GROUPS = [
 ];
 
 
-function ensureDataDir() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-function readJsonStore(file) {
-  const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
-  return {
-    users: Array.isArray(parsed.users) ? parsed.users : [],
-    friendRequests: Array.isArray(parsed.friendRequests) ? parsed.friendRequests : [],
-    directMessages: Array.isArray(parsed.directMessages) ? parsed.directMessages : []
-  };
-}
-
-function readUsersStore() {
-  try {
-    ensureDataDir();
-    if (fs.existsSync(USERS_FILE)) return readJsonStore(USERS_FILE);
-
-    if (USERS_FILE !== LEGACY_USERS_FILE && fs.existsSync(LEGACY_USERS_FILE)) {
-      const legacyStore = readJsonStore(LEGACY_USERS_FILE);
-      fs.writeFileSync(USERS_FILE, JSON.stringify(legacyStore, null, 2));
-      console.log(`Migrated users store from ${LEGACY_USERS_FILE} to ${USERS_FILE}`);
-      return legacyStore;
-    }
-
-    return { users: [] };
-  } catch (error) {
-    console.error("Failed to read users store", error);
-    return { users: [] };
-  }
-}
-
-let usersStore = readUsersStore();
+let usersStore = userStorePersistence.read();
 ensureSocialCollections();
 
 function saveUsersStore() {
-  ensureDataDir();
-  const tmpFile = `${USERS_FILE}.${process.pid}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(usersStore, null, 2));
-  fs.renameSync(tmpFile, USERS_FILE);
-}
-
-function normalizeUsername(username) {
-  return String(username || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
-}
-
-function validatePassword(password) {
-  return typeof password === "string" && password.length >= 6 && password.length <= 72;
-}
-
-function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
-  const hash = crypto.pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, 32, "sha256").toString("hex");
-  return { salt, hash };
-}
-
-function verifyPassword(password, user) {
-  if (!user?.passwordHash || !user?.salt) return false;
-  const { hash } = hashPassword(password, user.salt);
-  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(user.passwordHash, "hex"));
+  userStorePersistence.write(usersStore);
 }
 
 function createSession(user) {
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  user.sessions = [
-    { tokenHash, createdAt: new Date().toISOString() },
-    ...(user.sessions || []).slice(0, 4)
-  ];
-  user.updatedAt = new Date().toISOString();
-  saveUsersStore();
-  return token;
+  return createAuthSession(user, { save: saveUsersStore });
 }
 
 function findUserByToken(token) {
-  if (!token) return null;
-  const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
-  return usersStore.users.find((user) => (user.sessions || []).some((session) => session.tokenHash === tokenHash)) || null;
+  return findUserBySessionToken(usersStore.users, token);
 }
 
 function defaultStats() {
@@ -533,18 +464,6 @@ function consumeOAuthState(state, provider) {
   return entry;
 }
 
-function buildOAuthErrorRedirect(returnTo = "/", message = "OAuth login failed") {
-  const url = new URL(returnTo, "http://musicspy.local");
-  url.searchParams.set("auth_error", message);
-  return `${url.pathname}${url.search}${url.hash}`;
-}
-
-function buildOAuthSuccessRedirect(returnTo = "/", token) {
-  const url = new URL(returnTo, "http://musicspy.local");
-  url.searchParams.set("auth_token", token);
-  return `${url.pathname}${url.search}${url.hash}`;
-}
-
 function oauthConfig(provider, req) {
   if (provider === "google") {
     return {
@@ -573,70 +492,9 @@ function oauthConfig(provider, req) {
   };
 }
 
-function buildOAuthTokenRequest(config, code) {
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    code: String(code),
-    redirect_uri: config.redirectUri
-  });
-  const headers = { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" };
-
-  if (config.tokenAuthStyle === "basic") {
-    const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64");
-    headers.Authorization = `Basic ${credentials}`;
-  } else {
-    body.set("client_id", config.clientId);
-    body.set("client_secret", config.clientSecret);
-  }
-
-  return { method: "POST", headers, body };
-}
-
-async function parseOAuthResponse(response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return { raw: await response.text() };
-}
-
 function oauthError(provider, step, response, payload) {
   const details = payload?.error_description || payload?.error || payload?.message || payload?.raw || "empty response";
   return new Error(`${oauthProviderLabel(provider)} ${step} failed with ${response.status}: ${details}`);
-}
-
-function normalizeOAuthProfile(provider, rawProfile = {}) {
-  if (provider === "google") {
-    return {
-      providerId: rawProfile.sub,
-      email: rawProfile.email || "",
-      username: rawProfile.email ? String(rawProfile.email).split("@")[0] : rawProfile.name,
-      displayName: rawProfile.name || rawProfile.email || "Google player",
-      avatar: rawProfile.picture || ""
-    };
-  }
-
-  const avatar = rawProfile.avatar
-    ? `https://cdn.discordapp.com/avatars/${rawProfile.id}/${rawProfile.avatar}.png?size=128`
-    : "";
-  return {
-    providerId: rawProfile.id,
-    email: rawProfile.email || "",
-    username: rawProfile.username || rawProfile.global_name,
-    displayName: rawProfile.global_name || rawProfile.username || "Discord player",
-    avatar
-  };
-}
-
-function normalizeAvatar(avatar) {
-  const value = String(avatar || "");
-  if (!value) return "";
-  if (!/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\r\n]+$/i.test(value)) {
-    throw new Error("Поддерживаются только PNG, JPG, WEBP или GIF");
-  }
-  const size = Buffer.byteLength(value, "utf8");
-  if (size > AVATAR_MAX_BYTES) {
-    throw new Error("Аватарка слишком большая. Максимум 64 КБ после сжатия");
-  }
-  return value;
 }
 
 function profileForSocket(socket) {
