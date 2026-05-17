@@ -165,53 +165,132 @@
     </div>
   </div>
 
-  <div id="authModal" class="auth-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
-    <div class="auth-modal-card">
-      <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть окно аккаунта">×</button>
-      <p class="eyebrow">аккаунт</p>
-      <h2 id="authModalTitle">Как продолжим?</h2>
-      <p id="authModalText" class="auth-modal-text">Войди через Google или Discord или продолжи как гость.</p>
+  <div id="authModal" class="auth-modal site-menu-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
+    <div class="auth-modal-card site-menu-card">
+      <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть меню">×</button>
+      <p class="eyebrow">меню</p>
+      <h2 id="authModalTitle">Меню</h2>
+      <p id="authModalText" class="auth-modal-text">Профиль, внешний вид, игра, язык и информация о Music Spy.</p>
 
-      <div id="authChoiceView" class="auth-choice-grid">
-        <button class="oauth-button google" type="button" onclick="loginWithOAuth('google')"><span aria-hidden="true">G</span>Войти через Google</button>
-        <button class="oauth-button discord" type="button" onclick="loginWithOAuth('discord')"><span aria-hidden="true">D</span>Войти через Discord</button>
-        <button class="ghost-button" type="button" onclick="continueAsGuest()">Играть как гость</button>
-      </div>
+      <div class="site-menu-layout">
+        <nav class="site-menu-tabs" aria-label="Разделы меню">
+          <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')">Профиль</button>
+          <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')">Внешний вид</button>
+          <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')">Игра</button>
+          <button id="settingsTabLanguage" class="site-menu-tab" type="button" onclick="openSettingsSection('language')">Язык</button>
+          <button id="settingsTabAbout" class="site-menu-tab" type="button" onclick="openSettingsSection('about')">О сайте</button>
+        </nav>
 
-      <div id="authFormView" class="auth-form-view hidden">
-        <div class="auth-grid">
-          <input id="authLogin" maxlength="24" placeholder="логин" autocomplete="username">
-          <input id="authPassword" type="password" maxlength="72" placeholder="пароль" autocomplete="current-password">
-        </div>
-        <div id="authRegisterHint" class="auth-register-hint">
-          Логин: от 3 символов, латиница, цифры, _ или -. Пароль: от 6 символов.
-        </div>
-        <div class="actions two-col auth-actions">
-          <button id="authSubmitBtn" class="primary" type="button" onclick="submitAuthForm()">Создать аккаунт</button>
-          <button class="secondary" type="button" onclick="selectAuthMode('choice')">Назад</button>
-        </div>
-      </div>
+        <div class="site-menu-content">
+          <section id="settingsPanelProfile" class="site-menu-panel active" data-settings-panel="profile">
+            <div id="authChoiceView" class="auth-choice-grid">
+              <button class="oauth-button google" type="button" onclick="loginWithOAuth('google')"><span aria-hidden="true">G</span>Войти через Google</button>
+              <button class="oauth-button discord" type="button" onclick="loginWithOAuth('discord')"><span aria-hidden="true">D</span>Войти через Discord</button>
+              <button class="ghost-button" type="button" onclick="continueAsGuest()">Играть как гость</button>
+            </div>
 
-      <div id="accountProfileView" class="account-profile-view hidden">
-        <div class="profile-hero">
-          <div id="profileAvatar" class="profile-avatar profile-avatar-large">?</div>
-          <div>
-            <strong id="profileName">Гость</strong>
-            <span id="profileLogin">без аккаунта</span>
-          </div>
-        </div>
-        <div id="profileStatsGrid" class="profile-stats-grid"></div>
-        <div class="profile-editor-panel">
-          <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
-          <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
-        </div>
-        <div id="profileEditor" class="profile-editor hidden">
-          <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
-          <input id="avatarInput" type="file" accept="image/png,image/png,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
-          <div class="actions two-col">
-            <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
-            <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
-          </div>
+            <div id="authFormView" class="auth-form-view hidden">
+              <div class="auth-grid">
+                <input id="authLogin" maxlength="24" placeholder="логин" autocomplete="username">
+                <input id="authPassword" type="password" maxlength="72" placeholder="пароль" autocomplete="current-password">
+              </div>
+              <div id="authRegisterHint" class="auth-register-hint">
+                Логин: от 3 символов, латиница, цифры, _ или -. Пароль: от 6 символов.
+              </div>
+              <div class="actions two-col auth-actions">
+                <button id="authSubmitBtn" class="primary" type="button" onclick="submitAuthForm()">Создать аккаунт</button>
+                <button class="secondary" type="button" onclick="selectAuthMode('choice')">Назад</button>
+              </div>
+            </div>
+
+            <div id="accountProfileView" class="account-profile-view hidden">
+              <div class="profile-hero">
+                <div id="profileAvatar" class="profile-avatar profile-avatar-large">?</div>
+                <div>
+                  <strong id="profileName">Гость</strong>
+                  <span id="profileLogin">без аккаунта</span>
+                </div>
+              </div>
+              <div id="profileStatsGrid" class="profile-stats-grid"></div>
+              <div class="profile-editor-panel">
+                <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
+                <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
+              </div>
+              <div id="profileEditor" class="profile-editor hidden">
+                <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
+                <input id="avatarInput" type="file" accept="image/png,image/png,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
+                <div class="actions two-col">
+                  <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
+                  <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="settingsPanelAppearance" class="site-menu-panel" data-settings-panel="appearance">
+            <div class="settings-block">
+              <div class="settings-title compact">
+                <strong>Тема интерфейса</strong>
+                <span>Выбери общий визуальный вайб сайта.</span>
+              </div>
+              <div id="interfaceThemeChoices" class="choice-pill-grid"></div>
+            </div>
+            <div class="settings-block">
+              <div class="settings-title compact">
+                <strong>Акцентный цвет</strong>
+                <span>Цвет кнопок, свечения и важных деталей вне ролевого экрана игры.</span>
+              </div>
+              <div id="accentColorChoices" class="accent-color-grid"></div>
+            </div>
+          </section>
+
+          <section id="settingsPanelGame" class="site-menu-panel" data-settings-panel="game">
+            <div class="settings-block">
+              <label class="menu-toggle-row">
+                <input id="cinematicModeToggle" type="checkbox" onchange="updateGamePreference('cinematicMode', this.checked)">
+                <span><strong>Кинематичные подсказки</strong><small>Показывать атмосферные микро-подсказки перед важными фазами партии.</small></span>
+              </label>
+              <label class="menu-toggle-row">
+                <input id="reactionHintsToggle" type="checkbox" onchange="updateGamePreference('reactionHints', this.checked)">
+                <span><strong>Подсказки реакций</strong><small>Подсвечивать моменты, когда стоит реагировать на подозрительный трек.</small></span>
+              </label>
+              <label class="menu-toggle-row">
+                <input id="autoFocusTrackToggle" type="checkbox" onchange="updateGamePreference('autoFocusTrack', this.checked)">
+                <span><strong>Фокус на треке</strong><small>Во время хода автоматически поднимать область с плеером и таймером.</small></span>
+              </label>
+            </div>
+          </section>
+
+          <section id="settingsPanelLanguage" class="site-menu-panel" data-settings-panel="language">
+            <div class="settings-block language-settings-block">
+              <div class="settings-title compact">
+                <strong>Язык</strong>
+                <span>Переключатель языка теперь живет только в меню настроек.</span>
+              </div>
+              <div class="language-switcher" aria-label="Переключатель языка">
+                <span>RU</span>
+                <button id="languageToggle" class="language-toggle" type="button" onclick="toggleLanguage()" aria-pressed="false" title="Switch to English">
+                  <span class="language-toggle-knob"></span>
+                </button>
+                <span>EN</span>
+              </div>
+            </div>
+          </section>
+
+          <section id="settingsPanelAbout" class="site-menu-panel" data-settings-panel="about">
+            <div class="about-site-card">
+              <span class="about-site-icon" aria-hidden="true">🕵️‍♂️</span>
+              <div>
+                <h3>Music Spy — музыкальная дедукция</h3>
+                <p>Это сайт для быстрых вечеринок: игроки получают тайную тему, ставят треки и по музыкальным уликам пытаются вычислить шпиона.</p>
+              </div>
+            </div>
+            <div class="about-site-grid">
+              <article><strong>Для друзей</strong><span>Комнаты, приглашения, QR-коды и открытые лобби помогают собрать компанию без лишних шагов.</span></article>
+              <article><strong>Для эмоций</strong><span>Реакции, история треков и финальные обсуждения превращают партию в мини-концерт.</span></article>
+              <article><strong>Для хитрости</strong><span>Шпион слушает чужие подсказки, блефует треками и пытается назвать тему в финале.</span></article>
+            </div>
+          </section>
         </div>
       </div>
       <p id="authStatus" class="status"></p>
@@ -261,19 +340,12 @@
     </div>
   </div>
 
-  <div class="language-switcher" aria-label="Переключатель языка">
-    <span>RU</span>
-    <button id="languageToggle" class="language-toggle" type="button" onclick="toggleLanguage()" aria-pressed="false" title="Switch to English">
-      <span class="language-toggle-knob"></span>
-    </button>
-    <span>EN</span>
-  </div>
-
   <main class="app-shell">
     <section id="menu" class="screen card hero-card">
       <p class="eyebrow">Шпион помузыкальски</p>
       <h1>Music Spy</h1>
       <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+      <button class="main-menu-button" type="button" onclick="openMainMenu()">☰ Меню</button>
 
       <div class="form-grid">
         <label>

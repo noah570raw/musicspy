@@ -54,8 +54,37 @@ const state = {
   mobileTurnLabel: "",
   openLobbies: [],
   lobbyName: "",
-  lobbyIsOpen: true
+  lobbyIsOpen: true,
+  visualTheme: "neon",
+  accentColor: "violet",
+  gamePreferences: {
+    cinematicMode: true,
+    reactionHints: true,
+    autoFocusTrack: false
+  },
+  settingsSection: "profile"
 };
+
+const APPEARANCE_STORAGE_KEY = "musicSpyAppearance";
+const GAME_PREFERENCES_STORAGE_KEY = "musicSpyGamePreferences";
+const INTERFACE_THEMES = [
+  { id: "neon", label: "Neon Club" },
+  { id: "vinyl", label: "Dark Vinyl" },
+  { id: "cyber", label: "Cyber Pop" },
+  { id: "retro", label: "Retro Sunset" },
+  { id: "minimal", label: "Minimal Mono" }
+];
+const ACCENT_COLORS = [
+  { id: "red", label: "Красный", hex: "#ef4444", rgb: "239, 68, 68" },
+  { id: "orange", label: "Оранжевый", hex: "#f97316", rgb: "249, 115, 22" },
+  { id: "yellow", label: "Желтый", hex: "#facc15", rgb: "250, 204, 21" },
+  { id: "green", label: "Зеленый", hex: "#22c55e", rgb: "34, 197, 94" },
+  { id: "cyan", label: "Голубой", hex: "#06b6d4", rgb: "6, 182, 212" },
+  { id: "blue", label: "Синий", hex: "#3b82f6", rgb: "59, 130, 246" },
+  { id: "violet", label: "Фиолетовый", hex: "#8b5cf6", rgb: "139, 92, 246" },
+  { id: "white", label: "Белый", hex: "#f8fafc", rgb: "248, 250, 252" },
+  { id: "black", label: "Черный", hex: "#111827", rgb: "17, 24, 39" }
+];
 
 const $ = (id) => document.getElementById(id);
 
@@ -122,6 +151,7 @@ function setLanguage(lang) {
   }
   localizeStaticDom();
   refreshCustomSelects();
+  renderAppearanceControls();
   updateMusicToggle();
   syncNameInput();
   updateLobbyRenameControls();
@@ -720,17 +750,126 @@ function restoreMusicPreference() {
   syncAudioVolume();
 }
 
+function applyAccentColor() {
+  const color = ACCENT_COLORS.find((item) => item.id === state.accentColor) || ACCENT_COLORS.find((item) => item.id === "violet");
+  if (!color || document.body.dataset.role) {
+    document.body.style.removeProperty("--accent");
+    document.body.style.removeProperty("--accent-rgb");
+    document.body.style.removeProperty("--accent-dark");
+    return;
+  }
+  document.body.style.setProperty("--accent", color.hex);
+  document.body.style.setProperty("--accent-rgb", color.rgb);
+  document.body.style.setProperty("--accent-dark", color.hex);
+}
+
 function applyRoleTheme(role = "") {
   if (["spy", "civilian"].includes(role)) {
     document.body.dataset.role = role;
+    applyAccentColor();
     return;
   }
   delete document.body.dataset.role;
+  applyAccentColor();
 }
 
-function applyRoomTheme(theme = "neon") {
-  const safeTheme = ["neon", "vinyl", "cyber", "retro", "minimal"].includes(theme) ? theme : "neon";
+function applyRoomTheme(theme = state.visualTheme || "neon") {
+  const safeTheme = INTERFACE_THEMES.some((item) => item.id === theme) ? theme : "neon";
+  state.visualTheme = safeTheme;
   document.body.dataset.visualTheme = safeTheme;
+  applyAccentColor();
+}
+
+function saveAppearancePreference() {
+  try {
+    window.localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      visualTheme: state.visualTheme,
+      accentColor: state.accentColor
+    }));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function restoreAppearancePreference() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(APPEARANCE_STORAGE_KEY) || "{}");
+    if (INTERFACE_THEMES.some((item) => item.id === stored.visualTheme)) state.visualTheme = stored.visualTheme;
+    if (ACCENT_COLORS.some((item) => item.id === stored.accentColor)) state.accentColor = stored.accentColor;
+  } catch {
+    state.visualTheme = "neon";
+    state.accentColor = "violet";
+  }
+  applyRoomTheme(state.visualTheme);
+  renderAppearanceControls();
+}
+
+function setVisualThemePreference(theme) {
+  if (!INTERFACE_THEMES.some((item) => item.id === theme)) return;
+  applyRoomTheme(theme);
+  saveAppearancePreference();
+  renderAppearanceControls();
+}
+
+function setAccentColorPreference(colorId) {
+  if (!ACCENT_COLORS.some((item) => item.id === colorId)) return;
+  state.accentColor = colorId;
+  applyAccentColor();
+  saveAppearancePreference();
+  renderAppearanceControls();
+}
+
+function renderAppearanceControls() {
+  const themeGrid = $("interfaceThemeChoices");
+  if (themeGrid) {
+    themeGrid.innerHTML = INTERFACE_THEMES.map((theme) => `
+      <button class="choice-pill${theme.id === state.visualTheme ? " selected" : ""}" type="button" onclick="setVisualThemePreference('${theme.id}')">${escapeHtml(theme.label)}</button>
+    `).join("");
+  }
+  const colorGrid = $("accentColorChoices");
+  if (colorGrid) {
+    colorGrid.innerHTML = ACCENT_COLORS.map((color) => `
+      <button class="accent-swatch${color.id === state.accentColor ? " selected" : ""}" type="button" onclick="setAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"></button>
+    `).join("");
+  }
+}
+
+function saveGamePreferences() {
+  try {
+    window.localStorage.setItem(GAME_PREFERENCES_STORAGE_KEY, JSON.stringify(state.gamePreferences));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function restoreGamePreferences() {
+  try {
+    state.gamePreferences = {
+      ...state.gamePreferences,
+      ...(JSON.parse(window.localStorage.getItem(GAME_PREFERENCES_STORAGE_KEY) || "{}") || {})
+    };
+  } catch {
+    // Keep defaults.
+  }
+  syncGamePreferenceToggles();
+}
+
+function syncGamePreferenceToggles() {
+  const map = {
+    cinematicMode: "cinematicModeToggle",
+    reactionHints: "reactionHintsToggle",
+    autoFocusTrack: "autoFocusTrackToggle"
+  };
+  for (const [key, id] of Object.entries(map)) {
+    const el = $(id);
+    if (el) el.checked = Boolean(state.gamePreferences[key]);
+  }
+}
+
+function updateGamePreference(key, value) {
+  if (!Object.hasOwn(state.gamePreferences, key)) return;
+  state.gamePreferences[key] = Boolean(value);
+  saveGamePreferences();
 }
 
 function showScreen(id) {
@@ -1110,8 +1249,28 @@ function showAuthModal(mode = "choice") {
   $("authModal").classList.remove("hidden");
 }
 
-function openAccountPanel() {
+function openSettingsSection(section = "profile") {
+  const safeSection = ["profile", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
+  state.settingsSection = safeSection;
+  for (const panel of document.querySelectorAll("[data-settings-panel]")) {
+    panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
+  }
+  for (const tab of document.querySelectorAll(".site-menu-tab")) {
+    const tabSection = tab.id.replace("settingsTab", "").toLowerCase();
+    tab.classList.toggle("active", tabSection === safeSection);
+  }
+  if (safeSection === "appearance") renderAppearanceControls();
+  if (safeSection === "game") syncGamePreferenceToggles();
+}
+
+function openMainMenu(section = "profile") {
   showAuthModal(state.profile ? "profile" : "choice");
+  openSettingsSection(section);
+}
+
+function openAccountPanel() {
+  if (isOAuthProfile(state.profile)) return;
+  openMainMenu("profile");
 }
 
 function hideAuthModal() {
@@ -1198,9 +1357,7 @@ function selectAuthMode(mode) {
   $("authFormView").classList.toggle("hidden", !isForm);
   $("accountProfileView").classList.toggle("hidden", !isProfile);
   $("authRegisterHint").classList.toggle("hidden", !isRegister);
-  $("authModalTitle").textContent = isProfile
-    ? t("Профиль игрока")
-    : isChoice ? t("Как продолжим?") : t("Вход в аккаунт");
+  $("authModalTitle").textContent = t("Меню");
   $("authModalText").textContent = isProfile
     ? t("Твоя музыкальная легенда, аватар и статистика партий.")
     : isChoice
@@ -1248,9 +1405,22 @@ function applyProfile(profileData = { user: null, guest: true }) {
   attemptAutoJoinFromInvite();
 }
 
+function isOAuthProfile(user) {
+  const providers = Array.isArray(user?.authProviders) ? user.authProviders : [];
+  return providers.includes("google") || providers.includes("discord");
+}
+
 function updateAccountToggle(displayName, user) {
+  const toggle = $("accountToggle");
   const avatar = $("accountToggleAvatar");
   const label = $("accountToggleLabel");
+  const oauthLocked = isOAuthProfile(user);
+  if (toggle) {
+    toggle.disabled = oauthLocked;
+    toggle.classList.toggle("locked", oauthLocked);
+    toggle.title = oauthLocked ? t("Аккаунт уже подключен через Google или Discord") : t("Аккаунт и статистика");
+    toggle.setAttribute("aria-disabled", String(oauthLocked));
+  }
   if (label) label.textContent = user ? displayName : t("Гость");
   if (!avatar) return;
   avatar.innerHTML = user?.avatar
@@ -3221,6 +3391,8 @@ socket.on("lobbyUpdate", (lobby) => {
 
 window.addEventListener("DOMContentLoaded", () => {
   restoreLanguagePreference();
+  restoreAppearancePreference();
+  restoreGamePreferences();
   restoreSiteVolume();
   renderReactions();
   initChatScrollbarFeedback();

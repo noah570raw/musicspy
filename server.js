@@ -192,6 +192,7 @@ function publicUser(user) {
     username: user.username,
     displayName: user.displayName,
     avatar: user.avatar || "",
+    authProviders: Array.from(new Set((user.oauth || []).map((identity) => identity.provider).filter(Boolean))),
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) }
   };
