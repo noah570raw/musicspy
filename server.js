@@ -43,6 +43,8 @@ const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
+const MAX_DIRECT_MESSAGES = 5000;
+const MAX_DIRECT_MESSAGE_LENGTH = 600;
 const MAX_LOBBY_NAME_LENGTH = 32;
 const MIN_LOBBY_PLAYERS = 3;
 const DEFAULT_MAX_PLAYERS = 9;
@@ -53,6 +55,7 @@ const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const lobbies = {};
 const timers = {};
 const oauthStates = new Map();
+const userSockets = new Map();
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 
@@ -104,7 +107,11 @@ function ensureDataDir() {
 
 function readJsonStore(file) {
   const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
-  return { users: Array.isArray(parsed.users) ? parsed.users : [] };
+  return {
+    users: Array.isArray(parsed.users) ? parsed.users : [],
+    friendRequests: Array.isArray(parsed.friendRequests) ? parsed.friendRequests : [],
+    directMessages: Array.isArray(parsed.directMessages) ? parsed.directMessages : []
+  };
 }
 
 function readUsersStore() {
@@ -127,6 +134,7 @@ function readUsersStore() {
 }
 
 let usersStore = readUsersStore();
+ensureSocialCollections();
 
 function saveUsersStore() {
   ensureDataDir();
@@ -196,6 +204,245 @@ function publicUser(user) {
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) }
   };
+}
+
+
+function ensureSocialCollections() {
+  if (!Array.isArray(usersStore.friendRequests)) usersStore.friendRequests = [];
+  if (!Array.isArray(usersStore.directMessages)) usersStore.directMessages = [];
+  for (const user of usersStore.users) {
+    if (!Array.isArray(user.friends)) user.friends = [];
+  }
+}
+
+function findUserById(userId) {
+  return usersStore.users.find((user) => user.id === userId) || null;
+}
+
+function findUserByNicknameOrUsername(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const normalizedUsername = normalizeUsername(raw);
+  const normalizedName = raw.toLowerCase();
+  return usersStore.users.find((user) => user.username === normalizedUsername)
+    || usersStore.users.find((user) => String(user.displayName || "").trim().toLowerCase() === normalizedName)
+    || null;
+}
+
+function usersAreFriends(userAId, userBId) {
+  const userA = findUserById(userAId);
+  return Boolean(userA && (userA.friends || []).includes(userBId));
+}
+
+function getPendingFriendRequest(senderId, receiverId) {
+  ensureSocialCollections();
+  return usersStore.friendRequests.find((request) => request.status === "pending" && request.senderId === senderId && request.receiverId === receiverId) || null;
+}
+
+function publicSocialUser(user, viewerId = "") {
+  const status = getUserPresence(user?.id);
+  const nickname = user?.displayName || user?.username || "Игрок";
+  return {
+    id: user.id,
+    username: user.username,
+    nickname,
+    displayName: user.displayName || user.username,
+    avatar: user.avatar || "",
+    online: status.online,
+    activity: status.activity,
+    lobby: status.lobby,
+    unread: getUnreadDirectCount(viewerId, user.id)
+  };
+}
+
+function getUserPresence(userId) {
+  if (!userId || !userSockets.has(userId)) return { online: false, activity: "Не в сети", lobby: null };
+  for (const lobby of Object.values(lobbies)) {
+    const player = lobby.players.find((item) => item.accountId === userId && !item.disconnected);
+    if (!player) continue;
+    const lobbyInfo = {
+      code: lobby.code,
+      players: lobby.players.filter((item) => !item.disconnected).length,
+      maxPlayers: lobby.settings?.maxPlayers || DEFAULT_MAX_PLAYERS,
+      canJoin: lobby.isOpen !== false && lobby.phase === "lobby"
+    };
+    return lobby.phase === "playing" || lobby.phase === "voting" || lobby.phase === "spyGuess"
+      ? { online: true, activity: "Играет", lobby: lobbyInfo }
+      : { online: true, activity: "В лобби", lobby: lobbyInfo };
+  }
+  return { online: true, activity: "В меню", lobby: null };
+}
+
+function getSocialState(userId) {
+  ensureSocialCollections();
+  const user = findUserById(userId);
+  if (!user) return { friends: [], incomingRequests: [], outgoingRequests: [] };
+  const friends = (user.friends || []).map(findUserById).filter(Boolean).map((friend) => publicSocialUser(friend, userId));
+  const incomingRequests = usersStore.friendRequests
+    .filter((request) => request.status === "pending" && request.receiverId === userId)
+    .map((request) => ({ request, user: findUserById(request.senderId) }))
+    .filter(({ user }) => user)
+    .map(({ request, user: requestUser }) => ({ ...request, user: publicSocialUser(requestUser, userId) }));
+  const outgoingRequests = usersStore.friendRequests
+    .filter((request) => request.status === "pending" && request.senderId === userId)
+    .map((request) => ({ request, user: findUserById(request.receiverId) }))
+    .filter(({ user }) => user)
+    .map(({ request, user: requestUser }) => ({ ...request, user: publicSocialUser(requestUser, userId) }));
+  return { friends, incomingRequests, outgoingRequests };
+}
+
+function emitSocialState(userId) {
+  if (!userId) return;
+  io.to(`user:${userId}`).emit("social:state", getSocialState(userId));
+}
+
+function emitSocialForUserAndFriends(userId) {
+  const user = findUserById(userId);
+  emitSocialState(userId);
+  for (const friendId of user?.friends || []) emitSocialState(friendId);
+}
+
+function addFriendship(userAId, userBId) {
+  const userA = findUserById(userAId);
+  const userB = findUserById(userBId);
+  if (!userA || !userB) return false;
+  userA.friends = Array.from(new Set([...(userA.friends || []), userBId]));
+  userB.friends = Array.from(new Set([...(userB.friends || []), userAId]));
+  userA.updatedAt = new Date().toISOString();
+  userB.updatedAt = userA.updatedAt;
+  return true;
+}
+
+function createFriendRequest(senderId, receiverId) {
+  ensureSocialCollections();
+  const sender = findUserById(senderId);
+  const receiver = findUserById(receiverId);
+  if (!sender || !receiver) return { error: "Пользователь не найден" };
+  if (senderId === receiverId) return { error: "Нельзя добавить самого себя" };
+  if (usersAreFriends(senderId, receiverId)) return { error: "Вы уже друзья" };
+  if (getPendingFriendRequest(senderId, receiverId)) return { error: "Заявка уже отправлена" };
+  const reverse = getPendingFriendRequest(receiverId, senderId);
+  if (reverse) {
+    reverse.status = "accepted";
+    reverse.respondedAt = new Date().toISOString();
+    addFriendship(senderId, receiverId);
+    saveUsersStore();
+    emitSocialForUserAndFriends(senderId);
+    emitSocialForUserAndFriends(receiverId);
+    io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:accepted", message: `${sender.displayName || sender.username} принял заявку` });
+    return { success: true, accepted: true };
+  }
+  const request = { id: crypto.randomUUID(), senderId, receiverId, status: "pending", createdAt: new Date().toISOString() };
+  usersStore.friendRequests.push(request);
+  saveUsersStore();
+  emitSocialState(senderId);
+  emitSocialState(receiverId);
+  io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:request", message: `Новая заявка от ${sender.displayName || sender.username}` });
+  return { success: true, request };
+}
+
+function acceptFriendRequest(receiverId, requestId) {
+  ensureSocialCollections();
+  const request = usersStore.friendRequests.find((item) => item.id === requestId && item.receiverId === receiverId && item.status === "pending");
+  if (!request) return { error: "Заявка не найдена" };
+  request.status = "accepted";
+  request.respondedAt = new Date().toISOString();
+  addFriendship(request.senderId, request.receiverId);
+  saveUsersStore();
+  emitSocialForUserAndFriends(request.senderId);
+  emitSocialForUserAndFriends(request.receiverId);
+  const receiver = findUserById(receiverId);
+  io.to(`user:${request.senderId}`).emit("social:notification", { type: "friend:accepted", message: `${receiver?.displayName || receiver?.username || "Игрок"} принял заявку` });
+  return { success: true };
+}
+
+function declineFriendRequest(receiverId, requestId) {
+  ensureSocialCollections();
+  const request = usersStore.friendRequests.find((item) => item.id === requestId && item.receiverId === receiverId && item.status === "pending");
+  if (!request) return { error: "Заявка не найдена" };
+  request.status = "declined";
+  request.respondedAt = new Date().toISOString();
+  saveUsersStore();
+  emitSocialState(request.senderId);
+  emitSocialState(request.receiverId);
+  return { success: true };
+}
+
+function removeFriend(userId, friendId) {
+  const user = findUserById(userId);
+  const friend = findUserById(friendId);
+  if (!user || !friend || !usersAreFriends(userId, friendId)) return { error: "Друг не найден" };
+  user.friends = (user.friends || []).filter((id) => id !== friendId);
+  friend.friends = (friend.friends || []).filter((id) => id !== userId);
+  user.updatedAt = new Date().toISOString();
+  friend.updatedAt = user.updatedAt;
+  saveUsersStore();
+  emitSocialState(userId);
+  emitSocialState(friendId);
+  return { success: true };
+}
+
+function conversationIdFor(userAId, userBId) {
+  return [userAId, userBId].sort().join(":");
+}
+
+function getDirectHistory(userId, friendId) {
+  const conversationId = conversationIdFor(userId, friendId);
+  return (usersStore.directMessages || [])
+    .filter((message) => message.conversationId === conversationId)
+    .slice(-120)
+    .map((message) => ({ ...message, mine: message.senderId === userId }));
+}
+
+function getUnreadDirectCount(userId, friendId = "") {
+  ensureSocialCollections();
+  return usersStore.directMessages.filter((message) => message.receiverId === userId && (!friendId || message.senderId === friendId) && message.status !== "read").length;
+}
+
+function markDirectRead(userId, friendId) {
+  ensureSocialCollections();
+  let changed = false;
+  for (const message of usersStore.directMessages) {
+    if (message.senderId === friendId && message.receiverId === userId && message.status !== "read") {
+      message.status = "read";
+      message.readAt = new Date().toISOString();
+      changed = true;
+    }
+  }
+  if (changed) saveUsersStore();
+  return changed;
+}
+
+function registerAuthenticatedSocket(socket, user) {
+  if (!user) return;
+  if (socket.data.user?.id && socket.data.user.id !== user.id) unregisterAuthenticatedSocket(socket);
+  socket.data.user = user;
+  socket.join(`user:${user.id}`);
+  const sockets = userSockets.get(user.id) || new Set();
+  sockets.add(socket.id);
+  userSockets.set(user.id, sockets);
+  let deliveredChanged = false;
+  for (const message of usersStore.directMessages || []) {
+    if (message.receiverId === user.id && message.status === "pending") {
+      message.status = "delivered";
+      deliveredChanged = true;
+    }
+  }
+  if (deliveredChanged) saveUsersStore();
+  emitSocialForUserAndFriends(user.id);
+}
+
+function unregisterAuthenticatedSocket(socket) {
+  const userId = socket.data.user?.id;
+  if (!userId) return;
+  socket.leave(`user:${userId}`);
+  const sockets = userSockets.get(userId);
+  if (sockets) {
+    sockets.delete(socket.id);
+    if (!sockets.size) userSockets.delete(userId);
+  }
+  socket.data.user = null;
+  emitSocialForUserAndFriends(userId);
 }
 
 function sanitizeDisplayName(value, fallback = "Игрок") {
@@ -877,6 +1124,9 @@ function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
   if (!lobby) return;
   io.to(code).emit("lobbyUpdate", publicLobby(lobby));
+  for (const player of lobby.players || []) {
+    if (player.accountId) emitSocialForUserAndFriends(player.accountId);
+  }
 }
 
 function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
@@ -1481,12 +1731,12 @@ io.on("connection", (socket) => {
   socket.on("auth:session", ({ token } = {}, cb = () => {}) => {
     const user = findUserByToken(token);
     if (!user) return cb({ error: "Сессия не найдена" });
-    socket.data.user = user;
+    registerAuthenticatedSocket(socket, user);
     cb({ success: true, profile: profileForSocket(socket) });
   });
 
   socket.on("auth:guest", ({ name } = {}, cb = () => {}) => {
-    socket.data.user = null;
+    unregisterAuthenticatedSocket(socket);
     cb({ success: true, profile: profileForSocket(socket), name: normalizeName(name || "Гость") });
   });
 
@@ -1513,7 +1763,7 @@ io.on("connection", (socket) => {
       updatedAt: now
     };
     usersStore.users.push(user);
-    socket.data.user = user;
+    registerAuthenticatedSocket(socket, user);
     const token = createSession(user);
     cb({ success: true, token, profile: profileForSocket(socket) });
   });
@@ -1522,13 +1772,13 @@ io.on("connection", (socket) => {
     const normalizedUsername = normalizeUsername(username);
     const user = usersStore.users.find((item) => item.username === normalizedUsername);
     if (!user || !verifyPassword(password, user)) return cb({ error: "Неверный логин или пароль" });
-    socket.data.user = user;
+    registerAuthenticatedSocket(socket, user);
     const token = createSession(user);
     cb({ success: true, token, profile: profileForSocket(socket) });
   });
 
   socket.on("auth:logout", (cb = () => {}) => {
-    socket.data.user = null;
+    unregisterAuthenticatedSocket(socket);
     cb({ success: true, profile: profileForSocket(socket) });
   });
 
@@ -1545,6 +1795,95 @@ io.on("connection", (socket) => {
     } catch (error) {
       cb({ error: error.message || "Не удалось обновить профиль" });
     }
+  });
+
+
+  socket.on("social:get", (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть друзей" });
+    cb({ success: true, ...getSocialState(user.id) });
+  });
+
+  socket.on("friend:request", ({ nickname } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы добавлять друзей" });
+    const receiver = findUserByNicknameOrUsername(nickname);
+    if (!receiver) return cb({ error: "Пользователь не найден" });
+    const result = createFriendRequest(user.id, receiver.id);
+    cb(result.success ? { success: true } : result);
+  });
+
+  socket.on("friend:accept", ({ requestId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт" });
+    cb(acceptFriendRequest(user.id, String(requestId || "")));
+  });
+
+  socket.on("friend:decline", ({ requestId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт" });
+    cb(declineFriendRequest(user.id, String(requestId || "")));
+  });
+
+  socket.on("friend:remove", ({ friendId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт" });
+    cb(removeFriend(user.id, String(friendId || "")));
+  });
+
+  socket.on("friend:lobby:invite", ({ friendId, code } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    const targetId = String(friendId || "");
+    if (!user) return cb({ error: "Войди в аккаунт" });
+    if (!usersAreFriends(user.id, targetId)) return cb({ error: "Вы не друзья" });
+    const lobbyCode = normalizeCode(code);
+    if (!lobbyCode || !lobbies[lobbyCode] || !lobbies[lobbyCode].players.some((player) => player.accountId === user.id || player.id === socket.id)) {
+      return cb({ error: "Ты не в лобби" });
+    }
+    io.to(`user:${targetId}`).emit("social:notification", { type: "lobby:invite", code: lobbyCode, message: `${user.displayName || user.username} зовет в лобби ${lobbyCode}` });
+    cb({ success: true });
+  });
+
+  socket.on("dm:history", ({ friendId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    const targetId = String(friendId || "");
+    if (!user) return cb({ error: "Войди в аккаунт" });
+    if (!usersAreFriends(user.id, targetId)) return cb({ error: "Вы не друзья" });
+    const changed = markDirectRead(user.id, targetId);
+    if (changed) {
+      emitSocialState(user.id);
+      io.to(`user:${targetId}`).emit("dm:read", { friendId: user.id });
+    }
+    cb({ success: true, friendId: targetId, messages: getDirectHistory(user.id, targetId) });
+  });
+
+  socket.on("dm:send", ({ friendId, text } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    const targetId = String(friendId || "");
+    const body = String(text || "").trim().slice(0, MAX_DIRECT_MESSAGE_LENGTH);
+    if (!user) return cb({ error: "Войди в аккаунт" });
+    if (!body) return cb({ error: "Напиши сообщение" });
+    if (!usersAreFriends(user.id, targetId)) return cb({ error: "Вы не друзья" });
+    const receiverOnline = userSockets.has(targetId);
+    const message = {
+      id: crypto.randomUUID(),
+      conversationId: conversationIdFor(user.id, targetId),
+      senderId: user.id,
+      receiverId: targetId,
+      text: body,
+      status: receiverOnline ? "delivered" : "pending",
+      createdAt: new Date().toISOString()
+    };
+    usersStore.directMessages.push(message);
+    if (usersStore.directMessages.length > MAX_DIRECT_MESSAGES) usersStore.directMessages = usersStore.directMessages.slice(-MAX_DIRECT_MESSAGES);
+    saveUsersStore();
+    const senderPayload = { ...message, mine: true };
+    const receiverPayload = { ...message, mine: false };
+    cb({ success: true, message: senderPayload });
+    io.to(`user:${user.id}`).emit("dm:message", { friendId: targetId, message: senderPayload });
+    io.to(`user:${targetId}`).emit("dm:message", { friendId: user.id, message: receiverPayload });
+    io.to(`user:${targetId}`).emit("social:notification", { type: "dm:new", friendId: user.id, message: `Новое сообщение от ${user.displayName || user.username}` });
+    emitSocialState(targetId);
   });
 
   socket.on("getOpenLobbies", (cb = () => {}) => {
@@ -2005,6 +2344,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const disconnectedUserId = socket.data.user?.id || null;
+    unregisterAuthenticatedSocket(socket);
     for (const code of Object.keys(lobbies)) {
       const lobby = lobbies[code];
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
@@ -2016,6 +2357,7 @@ io.on("connection", (socket) => {
         handlePlayerDeparture(lobby, socket, { leaveRoom: false });
       }
     }
+    if (disconnectedUserId) emitSocialForUserAndFriends(disconnectedUserId);
   });
 });
 
@@ -2065,6 +2407,11 @@ module.exports = {
   buildOAuthSuccessRedirect,
   buildOAuthErrorRedirect,
   resolveDataDir,
+  createFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  removeFriend,
+  getSocialState,
   pauseTurnTimer,
   resumeTurnTimer,
   adjustTurnTimer,
