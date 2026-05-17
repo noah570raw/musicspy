@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const http = require("http");
 const { Server } = require("socket.io");
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const { createUserStorePersistence, friendshipKey, resolveDataDir } = require("./lib/persistence");
+const { createUserStorePersistence, friendshipKey, resolveDataDir, shouldUsePostgres } = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
   buildOAuthSuccessRedirect,
@@ -101,8 +101,21 @@ const SIMILAR_THEME_GROUPS = [
 let usersStore = userStorePersistence.read();
 ensureSocialCollections();
 
+async function initializePersistence() {
+  if (typeof userStorePersistence.init === "function") {
+    usersStore = await userStorePersistence.init();
+    ensureSocialCollections();
+  }
+  const mode = userStorePersistence.mode || (shouldUsePostgres(process.env) ? "postgres" : "file");
+  console.log(`[db] persistence mode=${mode} location=${USERS_FILE}`);
+}
+
 function saveUsersStore() {
-  userStorePersistence.write(usersStore);
+  const pendingWrite = userStorePersistence.write(usersStore);
+  if (pendingWrite && typeof pendingWrite.catch === "function") {
+    pendingWrite.catch((error) => console.error("[db] persistent write failed", error));
+  }
+  return pendingWrite;
 }
 
 function createSession(user) {
@@ -131,7 +144,9 @@ function defaultStats() {
     civilianGames: 0,
     civilianWins: 0,
     winStreak: 0,
-    bestWinStreak: 0
+    bestWinStreak: 0,
+    mmr: 1000,
+    rank: "bronze"
   };
 }
 
@@ -1485,8 +1500,29 @@ function updateUserStatsForGame(lobby, civiliansWin) {
       stats.civilianGames += 1;
       stats.civilianWins += won ? 1 : 0;
     }
+    stats.mmr = Number(stats.mmr || 1000) + (won ? 25 : -15);
+    stats.rank = stats.mmr >= 1400 ? "gold" : (stats.mmr >= 1200 ? "silver" : "bronze");
     user.stats = stats;
-    user.updatedAt = new Date().toISOString();
+    const matchRecord = {
+      id: crypto.randomUUID(),
+      lobbyCode: lobby.code,
+      theme: lobby.theme,
+      role: isSpy ? "spy" : "civilian",
+      won,
+      civiliansWin,
+      players: lobby.players.map((item) => ({ accountId: item.accountId || null, name: item.name, guest: Boolean(item.guest) })),
+      settings: lobby.settings,
+      trackHistory: lobby.trackHistory || [],
+      createdAt: new Date().toISOString()
+    };
+    user.matchHistory = [...(Array.isArray(user.matchHistory) ? user.matchHistory : []), matchRecord].slice(-100);
+    user.progression = {
+      ...(user.progression || {}),
+      mmr: stats.mmr,
+      rank: stats.rank,
+      lastMatchAt: matchRecord.createdAt
+    };
+    user.updatedAt = matchRecord.createdAt;
     changed = true;
   }
   if (changed) saveUsersStore();
@@ -2397,9 +2433,16 @@ function pickTheme() {
 }
 
 if (require.main === module) {
-  server.listen(process.env.PORT || 3000, () => {
-    console.log(`Music Spy server running; users store: ${USERS_FILE}`);
-  });
+  initializePersistence()
+    .then(() => {
+      server.listen(process.env.PORT || 3000, () => {
+        console.log(`Music Spy server running; users store: ${USERS_FILE}`);
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to initialize persistent storage", error);
+      process.exit(1);
+    });
 }
 
 module.exports = {
@@ -2429,6 +2472,7 @@ module.exports = {
   buildOAuthTokenRequest,
   buildOAuthSuccessRedirect,
   buildOAuthErrorRedirect,
+  initializePersistence,
   resolveDataDir,
   createFriendRequest,
   acceptFriendRequest,
