@@ -52,6 +52,7 @@
   </script>
 </head>
 <body data-screen="menu">
+  <audio id="backgroundMusic" src="https://www.image2url.com/r2/default/audio/1779010144930-1c23475c-00b6-44fd-8b94-4462c31ebbd0.mp3" loop preload="auto"></audio>
   <div class="noise"></div>
   <div class="music-equalizer-bg" aria-hidden="true">
     <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -341,7 +342,8 @@
       <strong>Звук</strong>
     </button>
     <div id="volumePanel" class="volume-panel" aria-hidden="true">
-      <button id="musicToggle" class="sound-mode-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить музыкальное сопровождение">🎧</button>
+      <button id="musicToggle" class="sound-mode-toggle" type="button" onclick="toggleMusic()" aria-pressed="true" title="Включить или выключить фоновый MP3">🎧</button>
+      <span id="musicSourceLabel" class="music-source-label">MP3 фон</span>
       <input id="siteVolume" type="range" min="0" max="100" value="70" oninput="updateSiteVolume(this.value)" aria-label="Громкость звуков и музыки">
       <strong id="siteVolumeValue">70%</strong>
     </div>

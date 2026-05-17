@@ -2877,6 +2877,15 @@ html[lang="ru"] .language-switcher span:first-child {
   font-weight: 900;
 }
 
+.music-source-label {
+  min-width: max-content;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .spy-guess-options {
   display: grid;
   gap: 10px;
