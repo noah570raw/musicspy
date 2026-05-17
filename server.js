@@ -27,6 +27,13 @@ const io = new Server(server);
 
 app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
+app.get("/healthz", (req, res) => {
+  res.status(persistenceReady ? 200 : 503).json({
+    ok: persistenceReady,
+    store: userStorePersistence.kind,
+    persistent: userStorePersistence.kind === "postgres"
+  });
+});
 app.use((req, res, next) => {
   if (persistenceReady || req.path.startsWith("/social-assets")) return next();
   res.status(503).json({ error: "Persistent database is still starting" });
@@ -2473,11 +2480,42 @@ function pickTheme() {
   return THEMES[Math.floor(Math.random() * THEMES.length)];
 }
 
+async function flushAndClosePersistence() {
+  await pendingUsersStoreWrite;
+  await userStorePersistence.close?.();
+}
+
+function installGracefulShutdown(listener) {
+  let closing = false;
+  const shutdown = (signal) => {
+    if (closing) return;
+    closing = true;
+    console.log(`[db] ${signal} received; flushing persistent user store before shutdown`);
+    listener.close(async () => {
+      try {
+        await flushAndClosePersistence();
+        process.exit(0);
+      } catch (error) {
+        console.error("[db] failed to flush persistent store during shutdown", error);
+        process.exit(1);
+      }
+    });
+    setTimeout(() => {
+      console.error("[db] shutdown timed out before persistent flush completed");
+      process.exit(1);
+    }, 25_000).unref();
+  };
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+}
+
 async function startServer() {
   await loadUsersStore();
-  return server.listen(process.env.PORT || 3000, () => {
+  const listener = server.listen(process.env.PORT || 3000, () => {
     console.log(`Music Spy server running; persistent store: ${USERS_FILE}`);
   });
+  installGracefulShutdown(listener);
+  return listener;
 }
 
 if (require.main === module) {
