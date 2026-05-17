@@ -3551,6 +3551,7 @@ function renderSkipVote(animate = false) {
   const progressPercent = requiredVotes ? Math.min(100, (voteCount / requiredVotes) * 100) : 0;
 
   panel.classList.toggle("hidden", !visible);
+  panel.closest(".track-form")?.classList.toggle("skip-vote-active", visible);
   panel.classList.toggle("skip-vote-owner", visible && isOwner);
   panel.classList.toggle("skip-vote-pulse", visible && eligible && requiredVotes - voteCount === 1 && !hasVoted);
   panel.classList.toggle("skip-vote-updated", animate);
