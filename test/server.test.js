@@ -239,7 +239,6 @@ test("normalizeSettings applies blitz preset and supports one-round games", () =
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false,
-    roomTheme: "cyber",
     maxPlayers: 9
   });
 
@@ -381,7 +380,6 @@ test("createLobbyState applies host settings before players can join", () => {
       anonymousVoting: false,
       votingTime: 90,
       runoffOnTie: true,
-      roomTheme: "vinyl",
       maxPlayers: 5
     }
   });
@@ -395,7 +393,6 @@ test("createLobbyState applies host settings before players can join", () => {
   assert.equal(lobby.settings.spyMode, "manual");
   assert.equal(lobby.settings.spyCount, 2);
   assert.equal(lobby.settings.votingTime, 90);
-  assert.equal(lobby.settings.roomTheme, "vinyl");
   assert.equal(lobby.settings.maxPlayers, 5);
 });
 
@@ -411,7 +408,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
       isOpen: true,
       createdAt: "2026-01-01T10:00:00.000Z",
       players: [{ id: "host-1", name: "Мотя" }, { id: "guest", name: "Лена" }],
-      settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "neon", maxPlayers: 8 }
+      settings: { gameMode: "classic", rounds: 3, listenTime: 30, maxPlayers: 8 }
     },
     CLOSED1: {
       code: "CLOSED1",
@@ -422,7 +419,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
       started: false,
       createdAt: "2026-01-01T12:00:00.000Z",
       players: [{ id: "host-3", name: "Тихо" }],
-      settings: { gameMode: "classic", rounds: 3, listenTime: 30, roomTheme: "minimal" }
+      settings: { gameMode: "classic", rounds: 3, listenTime: 30 }
     },
     PLAY1: {
       code: "PLAY1",
@@ -431,7 +428,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
       started: true,
       createdAt: "2026-01-01T11:00:00.000Z",
       players: [{ id: "host-2", name: "Играет" }],
-      settings: { gameMode: "blitz", rounds: 1, listenTime: 15, roomTheme: "cyber" }
+      settings: { gameMode: "blitz", rounds: 1, listenTime: 15 }
     }
   };
 
@@ -444,7 +441,6 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
     modeLabel: "Классика",
     rounds: 3,
     listenTime: 30,
-    roomTheme: "neon",
     maxPlayers: 8,
     createdAt: "2026-01-01T10:00:00.000Z"
   }]);
