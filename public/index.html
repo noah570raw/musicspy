@@ -379,7 +379,7 @@
               </div>
             </div>
             <div class="preview-stat-grid" aria-label="Краткие настройки">
-              <div><span id="createLobbyPreviewPlayers">12</span><small>игроков</small></div>
+              <div><span id="createLobbyPreviewPlayers">9</span><small>игроков</small></div>
               <div><span id="createLobbyPreviewRounds">3</span><small>раунда</small></div>
               <div><span id="createLobbyPreviewTime">30с</span><small>трек</small></div>
             </div>
@@ -417,10 +417,7 @@
                   <option value="6">до 6 игроков</option>
                   <option value="7">до 7 игроков</option>
                   <option value="8">до 8 игроков</option>
-                  <option value="9">до 9 игроков</option>
-                  <option value="10">до 10 игроков</option>
-                  <option value="11">до 11 игроков</option>
-                  <option value="12" selected>до 12 игроков</option>
+                  <option value="9" selected>до 9 игроков</option>
                 </select>
                 <small>лимит входа</small>
               </label>
@@ -548,7 +545,6 @@
               <span class="lobby-live-dot" aria-hidden="true"></span>
               <span id="lobbyRoomStatus">Ожидаем игроков</span>
             </div>
-            <p class="eyebrow">music spy pre-match</p>
             <h2 class="room-title lobby-room-title">
               <span id="lobbyNameTitle">Комната</span>
             </h2>
@@ -559,7 +555,7 @@
             <div class="lobby-stat-grid" aria-label="Статус комнаты">
               <div class="lobby-stat-card">
                 <span>Игроки</span>
-                <strong id="lobbyPlayerCount">0/12</strong>
+                <strong id="lobbyPlayerCount">0/9</strong>
               </div>
               <div class="lobby-stat-card">
                 <span>Готовы</span>
@@ -576,7 +572,7 @@
 
           <section class="game-chat-panel lobby-chat-panel" aria-label="Чат лобби">
             <div class="chat-header panel-title">
-              <strong>Командный чат</strong>
+              <strong>Чат</strong>
               <span>до матча</span>
             </div>
             <div class="chat-messages-area" data-chat-scroll>
@@ -595,8 +591,8 @@
         <main class="lobby-roster-panel" aria-label="Игроки в комнате">
           <div class="lobby-roster-header">
             <div>
-              <p class="eyebrow">party roster</p>
-              <h3>Команда перед стартом</h3>
+              <p class="eyebrow">music spy</p>
+              <h3>Игроки</h3>
             </div>
             <span id="readySummary" class="lobby-ready-summary">Готовы: 0/0</span>
           </div>
@@ -611,6 +607,25 @@
             </div>
             <button id="readyBtn" class="secondary lobby-ready-button" onclick="toggleReady()">Я готов</button>
             <button id="startBtn" class="primary lobby-start-button" onclick="startGame()">Запустить игру</button>
+          </div>
+
+
+          <div class="action-stack action-stack-theme">
+            <div class="panel-title">
+              <strong>Тема</strong>
+              <span>визуальный вайб</span>
+            </div>
+            <label class="setting-control lobby-theme-control">
+              <span>Оформление лобби</span>
+              <select id="lobbySettingRoomTheme" onchange="updateLobbyTheme()">
+                <option value="neon">Neon Club</option>
+                <option value="vinyl">Dark Vinyl</option>
+                <option value="cyber">Cyber Spy</option>
+                <option value="retro">Retro FM</option>
+                <option value="minimal">Minimal Black</option>
+              </select>
+              <small id="lobbyThemeHint">меняет хост</small>
+            </label>
           </div>
 
           <div class="action-stack action-stack-secondary">
