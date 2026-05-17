@@ -440,15 +440,6 @@ body[data-screen="playRooms"] .app-shell {
   50% { transform: translate3d(16px, -18px, 0) scale(1.12); opacity: 0.42; }
 }
 
-.play-rooms-back {
-  position: absolute;
-  top: clamp(14px, 2vw, 24px);
-  right: clamp(14px, 2vw, 24px);
-  z-index: 2;
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  backdrop-filter: blur(16px);
-}
-
 .play-rooms-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.15fr);
