@@ -524,7 +524,7 @@ function normalizeSettings(input = {}) {
   next.anonymousVoting = input.anonymousVoting === undefined ? next.anonymousVoting : Boolean(input.anonymousVoting);
   next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], next.votingTime);
   next.runoffOnTie = input.runoffOnTie === undefined ? next.runoffOnTie : input.runoffOnTie !== false;
-  next.roomTheme = ["neon", "vinyl", "cyber", "retro", "minimal"].includes(input.roomTheme) ? input.roomTheme : next.roomTheme;
+  next.roomTheme = ["neon", "vinyl", "cyber", "retro", "minimal", "aurora", "ocean", "forest"].includes(input.roomTheme) ? input.roomTheme : next.roomTheme;
   next.maxPlayers = clampNumber(input.maxPlayers, ALLOWED_MAX_PLAYERS, next.maxPlayers || DEFAULT_MAX_PLAYERS);
   return next;
 }
