@@ -121,6 +121,7 @@ function setLanguage(lang) {
     toggle.title = state.lang === "en" ? "Переключить на русский" : "Switch to English";
   }
   localizeStaticDom();
+  refreshCustomSelects();
   updateMusicToggle();
   syncNameInput();
   updateLobbyRenameControls();
@@ -1430,6 +1431,117 @@ function showPlayRooms() {
   showScreen("playRooms");
 }
 
+
+function closeCustomSelects(except = null) {
+  document.querySelectorAll(".custom-select.open").forEach((customSelect) => {
+    if (customSelect === except) return;
+    customSelect.classList.remove("open");
+    customSelect.querySelector(".custom-select-trigger")?.setAttribute("aria-expanded", "false");
+  });
+}
+
+function refreshCustomSelect(select) {
+  if (!select) return;
+  const wrapper = select.nextElementSibling?.classList?.contains("custom-select") ? select.nextElementSibling : null;
+  if (!wrapper) return;
+  const trigger = wrapper.querySelector(".custom-select-trigger");
+  const menu = wrapper.querySelector(".custom-select-menu");
+  const selectedOption = select.options[select.selectedIndex] || select.options[0];
+  if (trigger && selectedOption) trigger.querySelector("span").textContent = selectedOption.textContent;
+  if (!menu) return;
+  menu.querySelectorAll(".custom-select-option").forEach((optionButton) => {
+    const isSelected = optionButton.dataset.value === select.value;
+    optionButton.classList.toggle("selected", isSelected);
+    optionButton.setAttribute("aria-selected", String(isSelected));
+    optionButton.textContent = select.querySelector(`option[value="${CSS.escape(optionButton.dataset.value || "")}"]`)?.textContent || optionButton.textContent;
+  });
+}
+
+function refreshCustomSelects(root = document) {
+  root.querySelectorAll("select.custom-select-native").forEach(refreshCustomSelect);
+}
+
+function enhanceSelect(select) {
+  if (!select || select.classList.contains("custom-select-native")) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "custom-select";
+
+  const trigger = document.createElement("button");
+  trigger.className = "custom-select-trigger";
+  trigger.type = "button";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.innerHTML = "<span></span>";
+
+  const menu = document.createElement("div");
+  menu.className = "custom-select-menu";
+  menu.setAttribute("role", "listbox");
+
+  Array.from(select.options).forEach((option) => {
+    const optionButton = document.createElement("button");
+    optionButton.className = "custom-select-option";
+    optionButton.type = "button";
+    optionButton.dataset.value = option.value;
+    optionButton.setAttribute("role", "option");
+    optionButton.textContent = option.textContent;
+    optionButton.addEventListener("click", () => {
+      select.value = option.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      refreshCustomSelect(select);
+      closeCustomSelects();
+      trigger.focus();
+    });
+    menu.appendChild(optionButton);
+  });
+
+  trigger.addEventListener("click", () => {
+    const willOpen = !wrapper.classList.contains("open");
+    closeCustomSelects(wrapper);
+    wrapper.classList.toggle("open", willOpen);
+    trigger.setAttribute("aria-expanded", String(willOpen));
+  });
+
+  trigger.addEventListener("keydown", (event) => {
+    if (!["ArrowDown", "ArrowUp", "Enter", " ", "Escape"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Escape") {
+      closeCustomSelects();
+      return;
+    }
+    if (!wrapper.classList.contains("open")) {
+      closeCustomSelects(wrapper);
+      wrapper.classList.add("open");
+      trigger.setAttribute("aria-expanded", "true");
+      return;
+    }
+    const options = Array.from(menu.querySelectorAll(".custom-select-option"));
+    const currentIndex = Math.max(0, options.findIndex((option) => option.dataset.value === select.value));
+    const nextIndex = event.key === "ArrowUp"
+      ? (currentIndex - 1 + options.length) % options.length
+      : event.key === "ArrowDown"
+        ? (currentIndex + 1) % options.length
+        : currentIndex;
+    const nextOption = options[nextIndex];
+    if (nextOption && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      select.value = nextOption.dataset.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      refreshCustomSelect(select);
+      nextOption.scrollIntoView({ block: "nearest" });
+    }
+    if (event.key === "Enter" || event.key === " ") closeCustomSelects();
+  });
+
+  select.classList.add("custom-select-native");
+  select.insertAdjacentElement("afterend", wrapper);
+  wrapper.append(trigger, menu);
+  select.addEventListener("change", () => refreshCustomSelect(select));
+  refreshCustomSelect(select);
+}
+
+function initCustomSelects(root = document) {
+  root.querySelectorAll("select").forEach(enhanceSelect);
+}
+
 function showCreateLobbySetup() {
   setStatus("playRoomsStatus");
   setStatus("createLobbyStatus");
@@ -1459,6 +1571,7 @@ function resetCreateLobbyForm() {
     if (el) el.value = String(value);
   }
   updateCreateGameModeHint(preset);
+  refreshCustomSelects();
 }
 
 function readCreateSettingsFromForm() {
@@ -1495,6 +1608,7 @@ function changeCreateGameMode() {
   if ($("createSettingRoomTheme")) $("createSettingRoomTheme").value = preset.roomTheme || "neon";
   if ($("createSettingMaxPlayers")) $("createSettingMaxPlayers").value = String(preset.maxPlayers || 12);
   updateCreateGameModeHint(preset);
+  refreshCustomSelects();
   updateCreateLobbyPreview();
 }
 
@@ -1514,10 +1628,21 @@ function updateCreateLobbyPreview() {
   const fallbackName = `Лобби ${getName() || t("хоста")}`;
   const mode = GAME_MODE_PRESETS[settings.gameMode]?.label || settings.gameMode || "Классика";
   if (previewName) previewName.textContent = meta.lobbyName.trim() || fallbackName;
+  const access = meta.isOpen ? t("Открытое") : t("Закрытое");
   if (previewMeta) {
-    const access = meta.isOpen ? t("Открытое") : t("Закрытое");
     previewMeta.textContent = `${t(mode)} · ${settings.rounds} ${t("раундов")} · ${settings.listenTime}${t("с на трек")} · ${access}`;
   }
+  const visibility = $("createLobbyPreviewVisibility");
+  if (visibility) {
+    visibility.classList.toggle("closed", !meta.isOpen);
+    visibility.classList.toggle("open", meta.isOpen);
+    visibility.querySelector("span")?.replaceChildren(access);
+  }
+  if ($("createLobbyPreviewMode")) $("createLobbyPreviewMode").textContent = t(mode);
+  if ($("createLobbyPreviewPlayers")) $("createLobbyPreviewPlayers").textContent = String(settings.maxPlayers);
+  if ($("createLobbyPreviewRounds")) $("createLobbyPreviewRounds").textContent = String(settings.rounds);
+  if ($("createLobbyPreviewTime")) $("createLobbyPreviewTime").textContent = `${settings.listenTime}${t("с")}`;
+  refreshCustomSelects();
 }
 
 function renderOpenLobbies(lobbies = []) {
@@ -2884,7 +3009,9 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreSiteVolume();
   renderReactions();
   initChatScrollbarFeedback();
+  initCustomSelects();
   document.addEventListener("click", (event) => {
+    if (!event.target.closest(".custom-select")) closeCustomSelects();
     const button = event.target.closest("button");
     if (!button) return;
     addButtonRipple(button, event);
