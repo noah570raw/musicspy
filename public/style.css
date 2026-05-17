@@ -5612,7 +5612,6 @@ body[data-screen="lobby"] .app-shell {
   min-height: 0;
 }
 
-.lobby-left-panel,
 .lobby-roster-panel,
 .lobby-actions-panel,
 .lobby-hero-panel,
@@ -5643,7 +5642,11 @@ body[data-screen="lobby"] .app-shell {
 
 .lobby-left-panel {
   grid-template-rows: auto minmax(0, 1fr);
-  border-radius: 30px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
 }
 
 .lobby-hero-panel,
@@ -6134,7 +6137,7 @@ body[data-screen="lobby"] .app-shell {
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 10050;
+  z-index: 9999;
   width: max-content;
   max-width: min(360px, calc(100vw - 48px));
   min-height: 0;

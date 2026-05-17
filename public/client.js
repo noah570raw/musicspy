@@ -763,6 +763,10 @@ function setStatus(id, message = "", isError = false) {
 
   if (!TOAST_STATUS_IDS.has(id)) return;
 
+  if (el.parentElement !== document.body) {
+    document.body.appendChild(el);
+  }
+
   if (toastTimers.has(id)) {
     window.clearTimeout(toastTimers.get(id));
     toastTimers.delete(id);
