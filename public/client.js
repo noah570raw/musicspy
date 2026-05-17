@@ -351,7 +351,23 @@ function getBackgroundMusicVolume() {
   return isTrackListening() ? DUCKED_BACKGROUND_MUSIC_VOLUME : BACKGROUND_MUSIC_VOLUME;
 }
 
+function getBackgroundMusicElement() {
+  return $("backgroundMusic");
+}
+
+function getBackgroundAudioVolume() {
+  return (state.siteVolume / 100) * getBackgroundMusicVolume();
+}
+
+function syncBackgroundAudio() {
+  const media = getBackgroundMusicElement();
+  if (!media) return;
+  media.volume = getBackgroundAudioVolume();
+  media.muted = !state.musicEnabled || state.siteVolume === 0;
+}
+
 function syncAudioVolume({ fadeTime = 0.18 } = {}) {
+  syncBackgroundAudio();
   if (!state.audio) return;
   setGainValue(state.audio.master, state.siteVolume / 100, 0.08);
   setGainValue(state.audio.musicGain, getBackgroundMusicVolume(), fadeTime);
@@ -731,6 +747,16 @@ function scheduleAmbientMusic() {
 }
 
 function startBackgroundMusic() {
+  const media = getBackgroundMusicElement();
+  if (media) {
+    syncBackgroundAudio();
+    if (!state.musicEnabled || state.siteVolume === 0) return;
+    media.play().catch(() => {
+      // Browsers can block autoplay until the user interacts with the page.
+    });
+    return;
+  }
+
   const audio = createAudioEngine();
   if (!audio || audio.musicTimer || !state.musicEnabled) return;
   syncAudioVolume();
@@ -739,6 +765,11 @@ function startBackgroundMusic() {
 }
 
 function stopBackgroundMusic() {
+  const media = getBackgroundMusicElement();
+  if (media) {
+    media.pause();
+  }
+
   if (!state.audio?.musicTimer) return;
   window.clearInterval(state.audio.musicTimer);
   state.audio.musicTimer = null;
@@ -751,7 +782,7 @@ function updateMusicToggle() {
   if (toggle) {
     toggle.textContent = emoji;
     toggle.setAttribute("aria-pressed", String(state.musicEnabled));
-    toggle.title = state.musicEnabled ? t("Музыкальное сопровождение включено") : t("Музыкальное сопровождение выключено");
+    toggle.title = state.musicEnabled ? t("Фоновый MP3 включен") : t("Фоновый MP3 выключен");
   }
   if (icon) icon.textContent = emoji;
 }
@@ -1194,8 +1225,10 @@ function updateSiteVolume(value) {
 function applySiteVolume() {
   const normalizedVolume = state.siteVolume / 100;
   for (const media of document.querySelectorAll("audio, video")) {
+    if (media.id === "backgroundMusic") continue;
     media.volume = normalizedVolume;
   }
+  syncBackgroundAudio();
 
   const trackFrame = $("trackFrame");
   if (trackFrame?.contentWindow && trackFrame.src.includes("youtube.com")) {
