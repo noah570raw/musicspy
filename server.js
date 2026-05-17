@@ -43,7 +43,8 @@ app.get("/healthz", (req, res) => {
     persistent: userStorePersistence.kind === "postgres",
     databaseConfigured: dbConfigured,
     production: isProductionRuntime(),
-    render: isRenderEnvironment()
+    render: isRenderEnvironment(),
+    auth: authEnvironmentSnapshot(req)
   });
 });
 app.use((req, res, next) => {
@@ -71,6 +72,7 @@ const DEFAULT_MAX_PLAYERS = 9;
 const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8, 9];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const OAUTH_STATE_VERSION = 1;
 
 const lobbies = {};
 const timers = {};
@@ -495,7 +497,34 @@ function userHasOAuthIdentity(user, provider, providerId) {
   return (user.oauth || []).some((identity) => identity.provider === provider && identity.providerId === providerId);
 }
 
-function upsertOAuthUser(provider, profile) {
+function identityProviderId(user, provider) {
+  const field = provider === "google" ? "googleId" : "discordId";
+  return String(user?.[field] || "").trim();
+}
+
+function findUserByOAuthIdentity(provider, providerId, email = "") {
+  const stableId = String(providerId || "").trim();
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  return usersStore.users.find((user) => userHasOAuthIdentity(user, provider, stableId))
+    || usersStore.users.find((user) => identityProviderId(user, provider) === stableId)
+    || (normalizedEmail
+      ? usersStore.users.find((user) => (user.oauth || []).some((identity) => String(identity.email || "").trim().toLowerCase() === normalizedEmail))
+      : null)
+    || null;
+}
+
+function linkOAuthIdentity(user, provider, providerId, email, now) {
+  if (!Array.isArray(user.oauth)) user.oauth = [];
+  const existing = user.oauth.find((item) => item.provider === provider && item.providerId === providerId);
+  if (existing) {
+    existing.email = email || existing.email || "";
+    return false;
+  }
+  user.oauth.push({ provider, providerId, email, linkedAt: now });
+  return true;
+}
+
+async function upsertOAuthUser(provider, profile) {
   if (!persistenceAllowsWrites()) throw new Error(missingDatabaseMessage());
   const providerId = String(profile.providerId || "").trim();
   if (!providerId) throw new Error("OAuth profile id is missing");
@@ -503,7 +532,7 @@ function upsertOAuthUser(provider, profile) {
   const now = new Date().toISOString();
   const email = String(profile.email || "").trim().toLowerCase();
   const displayName = sanitizeDisplayName(profile.displayName || email.split("@")[0], oauthProviderLabel(provider));
-  let user = usersStore.users.find((item) => userHasOAuthIdentity(item, provider, providerId));
+  let user = findUserByOAuthIdentity(provider, providerId, email);
 
   if (!user) {
     const usernameBase = profile.username || email.split("@")[0] || `${provider}_${providerId}`;
@@ -513,26 +542,38 @@ function upsertOAuthUser(provider, profile) {
       displayName,
       avatar: profile.avatar || "",
       stats: defaultStats(),
+      settings: {},
       oauth: [{ provider, providerId, email, linkedAt: now }],
       sessions: [],
       createdAt: now,
       updatedAt: now
     };
     usersStore.users.push(user);
+    console.info(`[auth:${provider}] DB lookup: created account user=${user.id} providerId=${providerId}`);
   } else {
+    const linked = linkOAuthIdentity(user, provider, providerId, email, now);
     user.displayName = user.displayName || displayName;
     if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
-    const identity = (user.oauth || []).find((item) => item.provider === provider && item.providerId === providerId);
-    if (identity) identity.email = email || identity.email || "";
+    if (!user.stats) user.stats = defaultStats();
+    if (!user.settings) user.settings = {};
+    if (!Array.isArray(user.sessions)) user.sessions = [];
     user.updatedAt = now;
+    console.info(`[auth:${provider}] DB lookup: restored account user=${user.id} providerId=${providerId}${linked ? " linkedIdentity=true" : ""}`);
   }
 
-  saveUsersStore();
+  await saveUsersStore();
   return user;
 }
 
 function getPublicBaseUrl(req) {
-  const configured = String(process.env.PUBLIC_URL || process.env.APP_URL || "").trim().replace(/\/$/, "");
+  const configured = String(
+    process.env.PUBLIC_URL
+    || process.env.APP_URL
+    || process.env.SERVER_URL
+    || process.env.RENDER_EXTERNAL_URL
+    || process.env.CLIENT_URL
+    || ""
+  ).trim().replace(/\/$/, "");
   if (configured) return configured;
   return `${req.protocol}://${req.get("host")}`;
 }
@@ -542,19 +583,69 @@ function oauthRedirectUri(req, provider) {
   return String(process.env[envKey] || "").trim() || `${getPublicBaseUrl(req)}/auth/${provider}/callback`;
 }
 
+function oauthStateSecret() {
+  return String(
+    process.env.SESSION_SECRET
+    || process.env.OAUTH_STATE_SECRET
+    || process.env.GOOGLE_CLIENT_SECRET
+    || process.env.DISCORD_CLIENT_SECRET
+    || "musicspy-development-oauth-state"
+  );
+}
+
+function signOAuthStatePayload(payload) {
+  return crypto.createHmac("sha256", oauthStateSecret()).update(payload).digest("base64url");
+}
+
+function encodeOAuthState(entry) {
+  const payload = Buffer.from(JSON.stringify(entry)).toString("base64url");
+  return `${payload}.${signOAuthStatePayload(payload)}`;
+}
+
+function decodeOAuthState(state) {
+  const value = String(state || "");
+  const [payload, signature, extra] = value.split(".");
+  if (!payload || !signature || extra !== undefined) return null;
+  const expected = signOAuthStatePayload(payload);
+  const left = Buffer.from(signature);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) return null;
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeReturnTo(returnTo = "/") {
+  const value = String(returnTo || "/");
+  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
+}
+
 function createOAuthState(provider, returnTo = "/") {
-  const state = crypto.randomBytes(24).toString("hex");
-  const safeReturnTo = String(returnTo || "/").startsWith("/") ? String(returnTo || "/") : "/";
-  oauthStates.set(state, { provider, returnTo: safeReturnTo, createdAt: Date.now() });
+  const stateId = crypto.randomBytes(24).toString("hex");
+  const entry = {
+    v: OAUTH_STATE_VERSION,
+    id: stateId,
+    provider,
+    returnTo: sanitizeReturnTo(returnTo),
+    createdAt: Date.now()
+  };
+  const state = encodeOAuthState(entry);
+  oauthStates.set(stateId, entry);
   return state;
 }
 
 function consumeOAuthState(state, provider) {
-  const entry = oauthStates.get(String(state || ""));
-  oauthStates.delete(String(state || ""));
+  const decoded = decodeOAuthState(state);
+  const stateId = decoded?.id || String(state || "");
+  const memoryEntry = oauthStates.get(stateId);
+  oauthStates.delete(stateId);
+  const entry = memoryEntry || decoded;
   if (!entry || entry.provider !== provider) return null;
-  if (Date.now() - entry.createdAt > OAUTH_STATE_TTL_MS) return null;
-  return entry;
+  if (Date.now() - Number(entry.createdAt || 0) > OAUTH_STATE_TTL_MS) return null;
+  return { ...entry, returnTo: sanitizeReturnTo(entry.returnTo) };
 }
 
 function oauthConfig(provider, req) {
@@ -581,13 +672,45 @@ function oauthConfig(provider, req) {
     userUrl: "https://discord.com/api/v10/users/@me",
     scope: "identify email",
     prompt: "consent",
-    tokenAuthStyle: "basic"
+    tokenAuthStyle: "body"
   };
 }
 
 function oauthError(provider, step, response, payload) {
   const details = payload?.error_description || payload?.error || payload?.message || payload?.raw || "empty response";
   return new Error(`${oauthProviderLabel(provider)} ${step} failed with ${response.status}: ${details}`);
+}
+
+
+function authEnvironmentSnapshot(req = null) {
+  const baseUrl = req ? getPublicBaseUrl(req) : String(
+    process.env.PUBLIC_URL
+    || process.env.APP_URL
+    || process.env.SERVER_URL
+    || process.env.RENDER_EXTERNAL_URL
+    || process.env.CLIENT_URL
+    || "http://localhost:3000"
+  ).trim().replace(/\/$/, "");
+  return {
+    baseUrl,
+    googleConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    discordConfigured: Boolean(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
+    databaseConfigured: Boolean(resolveDatabaseUrl()),
+    sessionSecretConfigured: Boolean(process.env.SESSION_SECRET),
+    clientUrlConfigured: Boolean(process.env.CLIENT_URL),
+    googleCallbackUrl: String(process.env.GOOGLE_REDIRECT_URI || "").trim() || `${baseUrl}/auth/google/callback`,
+    discordCallbackUrl: String(process.env.DISCORD_REDIRECT_URI || "").trim() || `${baseUrl}/auth/discord/callback`
+  };
+}
+
+function logAuthDeploymentConfig() {
+  const snapshot = authEnvironmentSnapshot();
+  console.info(`[auth] env configured google=${snapshot.googleConfigured} discord=${snapshot.discordConfigured} database=${snapshot.databaseConfigured} sessionSecret=${snapshot.sessionSecretConfigured} clientUrl=${snapshot.clientUrlConfigured}`);
+  console.info(`[auth] expected Google callback URL: ${snapshot.googleCallbackUrl}`);
+  console.info(`[auth] expected Discord callback URL: ${snapshot.discordCallbackUrl}`);
+  if (isRenderEnvironment()) {
+    console.info("[auth] Render OAuth checklist: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DATABASE_URL, SESSION_SECRET, and CLIENT_URL must be set; provider callback URLs must exactly match the logged HTTPS callback URLs.");
+  }
 }
 
 function profileForSocket(socket) {
@@ -1083,7 +1206,9 @@ function publicLobby(lobby) {
 function redirectToOAuth(provider, req, res) {
   const config = oauthConfig(provider, req);
   const returnTo = req.query.returnTo || "/";
+  console.info(`[auth:${provider}] OAuth start returnTo=${sanitizeReturnTo(returnTo)} redirectUri=${config.redirectUri}`);
   if (!config.clientId || !config.clientSecret) {
+    console.error(`[auth:${provider}] OAuth start blocked: missing ${provider.toUpperCase()}_CLIENT_ID or ${provider.toUpperCase()}_CLIENT_SECRET`);
     return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
   }
 
@@ -1095,39 +1220,54 @@ function redirectToOAuth(provider, req, res) {
   authUrl.searchParams.set("scope", config.scope);
   authUrl.searchParams.set("state", state);
   if (config.prompt) authUrl.searchParams.set("prompt", config.prompt);
+  console.info(`[auth:${provider}] OAuth redirect prepared scopes="${config.scope}"`);
   return res.redirect(authUrl.toString());
 }
 
 async function handleOAuthCallback(provider, req, res) {
+  console.info(`[auth:${provider}] callback received code=${req.query.code ? "present" : "missing"} state=${req.query.state ? "present" : "missing"} error=${req.query.error || "none"}`);
   const stateEntry = consumeOAuthState(req.query.state, provider);
   const returnTo = stateEntry?.returnTo || "/";
+  if (req.query.error) {
+    const providerError = req.query.error_description || req.query.error;
+    console.error(`[auth:${provider}] provider rejected login: ${providerError}`);
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `OAuth ошибка: ${providerError}`));
+  }
   if (!stateEntry || !req.query.code) {
+    console.error(`[auth:${provider}] state validation failed or authorization code missing`);
     return res.redirect(buildOAuthErrorRedirect(returnTo, "OAuth-сессия устарела. Попробуй еще раз."));
   }
 
   const config = oauthConfig(provider, req);
   if (!config.clientId || !config.clientSecret) {
+    console.error(`[auth:${provider}] callback blocked: missing ${provider.toUpperCase()}_CLIENT_ID or ${provider.toUpperCase()}_CLIENT_SECRET`);
     return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
   }
 
   try {
+    console.info(`[auth:${provider}] token exchange started redirectUri=${config.redirectUri}`);
     const tokenResponse = await fetch(config.tokenUrl, buildOAuthTokenRequest(config, req.query.code));
     const tokenData = await parseOAuthResponse(tokenResponse);
+    console.info(`[auth:${provider}] token exchange completed status=${tokenResponse.status} accessToken=${tokenData.access_token ? "present" : "missing"}`);
     if (!tokenResponse.ok) throw oauthError(provider, "token exchange", tokenResponse, tokenData);
     if (!tokenData.access_token) throw new Error("OAuth provider did not return an access token");
 
+    console.info(`[auth:${provider}] profile request started`);
     const userResponse = await fetch(config.userUrl, {
       headers: { Authorization: `${tokenData.token_type || "Bearer"} ${tokenData.access_token}`, Accept: "application/json" }
     });
     const rawProfile = await parseOAuthResponse(userResponse);
+    console.info(`[auth:${provider}] profile request completed status=${userResponse.status}`);
     if (!userResponse.ok) throw oauthError(provider, "profile request", userResponse, rawProfile);
     const profile = normalizeOAuthProfile(provider, rawProfile);
-    const user = upsertOAuthUser(provider, profile);
+    console.info(`[auth:${provider}] DB lookup started providerId=${profile.providerId || "missing"}`);
+    const user = await upsertOAuthUser(provider, profile);
     const session = createSession(user);
+    console.info(`[auth:${provider}] session creation complete user=${user.id} redirect=${returnTo}`);
     return res.redirect(buildOAuthSuccessRedirect(returnTo, session));
   } catch (error) {
-    console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
-    return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+    console.error(`[auth:${provider}] OAuth failed: ${error.stack || error.message || error}`);
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}: ${error.message || "ошибка OAuth"}`));
   }
 }
 
@@ -2553,6 +2693,7 @@ async function startServer() {
   await loadUsersStore();
   const listener = server.listen(process.env.PORT || 3000, () => {
     console.log(`Music Spy server running; persistent store: ${USERS_FILE}`);
+    logAuthDeploymentConfig();
     if (userStorePersistence.kind === "unconfigured-postgres") {
       console.warn(`[db] ${missingDatabaseMessage()}`);
     }
