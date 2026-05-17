@@ -1432,11 +1432,45 @@ function showPlayRooms() {
 }
 
 
+const CUSTOM_SELECT_MENU_OFFSET = 8;
+
+function getCustomSelectMenu(customSelect) {
+  return customSelect?._customSelectMenu || null;
+}
+
+function positionCustomSelectMenu(customSelect) {
+  const menu = getCustomSelectMenu(customSelect);
+  const trigger = customSelect?.querySelector(".custom-select-trigger");
+  if (!menu || !trigger) return;
+
+  const rect = trigger.getBoundingClientRect();
+  const viewportGap = 12;
+  const availableBelow = window.innerHeight - rect.bottom - viewportGap;
+  const availableAbove = rect.top - viewportGap;
+  const openUp = availableBelow < 180 && availableAbove > availableBelow;
+  const maxHeight = Math.max(148, Math.min(280, (openUp ? availableAbove : availableBelow) - CUSTOM_SELECT_MENU_OFFSET));
+
+  menu.style.setProperty("--custom-select-menu-width", `${rect.width}px`);
+  menu.style.setProperty("--custom-select-menu-left", `${rect.left}px`);
+  menu.style.setProperty("--custom-select-menu-max-height", `${maxHeight}px`);
+  menu.style.left = `${rect.left}px`;
+  menu.style.width = `${rect.width}px`;
+  menu.style.maxHeight = `${maxHeight}px`;
+  menu.style.top = openUp ? "auto" : `${rect.bottom + CUSTOM_SELECT_MENU_OFFSET}px`;
+  menu.style.bottom = openUp ? `${window.innerHeight - rect.top + CUSTOM_SELECT_MENU_OFFSET}px` : "auto";
+  menu.dataset.placement = openUp ? "top" : "bottom";
+}
+
 function closeCustomSelects(except = null) {
   document.querySelectorAll(".custom-select.open").forEach((customSelect) => {
     if (customSelect === except) return;
     customSelect.classList.remove("open");
     customSelect.querySelector(".custom-select-trigger")?.setAttribute("aria-expanded", "false");
+    const menu = getCustomSelectMenu(customSelect);
+    if (menu) {
+      menu.classList.remove("open");
+      menu.setAttribute("aria-hidden", "true");
+    }
   });
 }
 
@@ -1445,9 +1479,14 @@ function refreshCustomSelect(select) {
   const wrapper = select.nextElementSibling?.classList?.contains("custom-select") ? select.nextElementSibling : null;
   if (!wrapper) return;
   const trigger = wrapper.querySelector(".custom-select-trigger");
-  const menu = wrapper.querySelector(".custom-select-menu");
+  const menu = getCustomSelectMenu(wrapper);
   const selectedOption = select.options[select.selectedIndex] || select.options[0];
-  if (trigger && selectedOption) trigger.querySelector("span").textContent = selectedOption.textContent;
+  if (trigger && selectedOption) {
+    trigger.querySelector("span").textContent = selectedOption.textContent;
+    trigger.disabled = select.disabled;
+    trigger.setAttribute("aria-disabled", String(select.disabled));
+    trigger.setAttribute("aria-label", `${select.closest("label")?.querySelector("span")?.textContent || "Выбор"}: ${selectedOption.textContent}`);
+  }
   if (!menu) return;
   menu.querySelectorAll(".custom-select-option").forEach((optionButton) => {
     const isSelected = optionButton.dataset.value === select.value;
@@ -1455,6 +1494,7 @@ function refreshCustomSelect(select) {
     optionButton.setAttribute("aria-selected", String(isSelected));
     optionButton.textContent = select.querySelector(`option[value="${CSS.escape(optionButton.dataset.value || "")}"]`)?.textContent || optionButton.textContent;
   });
+  if (wrapper.classList.contains("open")) positionCustomSelectMenu(wrapper);
 }
 
 function refreshCustomSelects(root = document) {
@@ -1467,15 +1507,22 @@ function enhanceSelect(select) {
   wrapper.className = "custom-select";
 
   const trigger = document.createElement("button");
+  const menuId = `custom-select-menu-${select.id || Math.random().toString(36).slice(2)}`;
   trigger.className = "custom-select-trigger";
   trigger.type = "button";
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-controls", menuId);
   trigger.innerHTML = "<span></span>";
 
   const menu = document.createElement("div");
+  menu.id = menuId;
   menu.className = "custom-select-menu";
   menu.setAttribute("role", "listbox");
+  menu.setAttribute("aria-hidden", "true");
+  menu.dataset.selectFor = select.id || "";
+  wrapper._customSelectMenu = menu;
+  menu._customSelectWrapper = wrapper;
 
   Array.from(select.options).forEach((option) => {
     const optionButton = document.createElement("button");
@@ -1494,12 +1541,26 @@ function enhanceSelect(select) {
     menu.appendChild(optionButton);
   });
 
-  trigger.addEventListener("click", () => {
-    const willOpen = !wrapper.classList.contains("open");
+  const openSelect = () => {
     closeCustomSelects(wrapper);
-    wrapper.classList.toggle("open", willOpen);
-    trigger.setAttribute("aria-expanded", String(willOpen));
-  });
+    wrapper.classList.add("open");
+    menu.classList.add("open");
+    menu.setAttribute("aria-hidden", "false");
+    trigger.setAttribute("aria-expanded", "true");
+    positionCustomSelectMenu(wrapper);
+    menu.querySelector(".selected")?.scrollIntoView({ block: "nearest" });
+  };
+
+  const toggleSelect = () => {
+    if (select.disabled) return;
+    if (wrapper.classList.contains("open")) {
+      closeCustomSelects();
+    } else {
+      openSelect();
+    }
+  };
+
+  trigger.addEventListener("click", toggleSelect);
 
   trigger.addEventListener("keydown", (event) => {
     if (!["ArrowDown", "ArrowUp", "Enter", " ", "Escape"].includes(event.key)) return;
@@ -1509,9 +1570,7 @@ function enhanceSelect(select) {
       return;
     }
     if (!wrapper.classList.contains("open")) {
-      closeCustomSelects(wrapper);
-      wrapper.classList.add("open");
-      trigger.setAttribute("aria-expanded", "true");
+      openSelect();
       return;
     }
     const options = Array.from(menu.querySelectorAll(".custom-select-option"));
@@ -1533,7 +1592,8 @@ function enhanceSelect(select) {
 
   select.classList.add("custom-select-native");
   select.insertAdjacentElement("afterend", wrapper);
-  wrapper.append(trigger, menu);
+  wrapper.append(trigger);
+  document.body.appendChild(menu);
   select.addEventListener("change", () => refreshCustomSelect(select));
   refreshCustomSelect(select);
 }
@@ -1541,6 +1601,14 @@ function enhanceSelect(select) {
 function initCustomSelects(root = document) {
   root.querySelectorAll("select").forEach(enhanceSelect);
 }
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".custom-select.open").forEach(positionCustomSelectMenu);
+});
+
+window.addEventListener("scroll", () => {
+  document.querySelectorAll(".custom-select.open").forEach(positionCustomSelectMenu);
+}, true);
 
 function showCreateLobbySetup() {
   setStatus("playRoomsStatus");
@@ -2072,6 +2140,7 @@ function applyLobbyMetaToForm(lobby = {}, isHost = false) {
 
   const hint = $("lobbyMetaHint");
   if (hint) hint.textContent = isHost ? t("ты можешь менять") : (isOpen ? t("открытое") : t("закрытое"));
+  refreshCustomSelects();
 }
 
 function readLobbyMetaFromForm() {
@@ -2203,6 +2272,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
   updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
   $("settingsHint").textContent = isHost ? t("ты можешь менять") : t("меняет хост");
   applyRoomTheme(fields.settingRoomTheme);
+  refreshCustomSelects();
 }
 
 function sendTrack() {
@@ -3011,7 +3081,7 @@ window.addEventListener("DOMContentLoaded", () => {
   initChatScrollbarFeedback();
   initCustomSelects();
   document.addEventListener("click", (event) => {
-    if (!event.target.closest(".custom-select")) closeCustomSelects();
+    if (!event.target.closest(".custom-select") && !event.target.closest(".custom-select-menu")) closeCustomSelects();
     const button = event.target.closest("button");
     if (!button) return;
     addButtonRipple(button, event);
