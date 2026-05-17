@@ -6216,7 +6216,8 @@ body[data-screen="lobby"] .app-shell {
 }
 
 .lobby-ready-button,
-.lobby-start-button {
+.lobby-start-button,
+.lobby-force-start-button {
   min-height: 56px !important;
   font-size: 0.98rem;
   font-weight: 950;
@@ -6229,8 +6230,14 @@ body[data-screen="lobby"] .app-shell {
   box-shadow: 0 0 36px rgba(var(--accent-rgb),0.32);
 }
 
-#startBtn.hidden {
+#startBtn.hidden,
+#forceStartBtn.hidden {
   display: none;
+}
+
+.lobby-force-start-button {
+  border-color: rgba(255, 90, 90, 0.55);
+  box-shadow: 0 0 30px rgba(255, 90, 90, 0.2);
 }
 
 .action-stack-secondary button,

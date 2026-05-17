@@ -1669,7 +1669,7 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
   const isHost = player.id === lobby.host;
   const isMe = player.id === socket.id;
   const isReady = Boolean(player.ready);
-  const statusText = isReady ? t("Готов") : t("Ожидает");
+  const statusText = isReady ? t("готов") : t("не готов");
   const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
   return `
     <article class="${cardClass}">
@@ -2699,15 +2699,15 @@ function renderLobby(lobby) {
   }
   const forceStartBtn = $("forceStartBtn");
   if (forceStartBtn) {
-    forceStartBtn.disabled = !isHost || state.players.length < 3;
-    forceStartBtn.classList.toggle("hidden", !isHost);
+    const canForceStart = isHost && state.players.length >= 3 && readyCount !== state.players.length;
+    forceStartBtn.disabled = !canForceStart;
+    forceStartBtn.classList.toggle("hidden", !canForceStart);
     forceStartBtn.textContent = t("FORCE START");
   }
   const readyBtn = $("readyBtn");
   if (readyBtn) {
-    readyBtn.textContent = currentLanguage() === "en"
-      ? "READY"
-      : "ГОТОВ";
+    readyBtn.textContent = state.ready ? t("готов") : t("не готов");
+    readyBtn.setAttribute("aria-pressed", String(state.ready));
     readyBtn.classList.toggle("ready", state.ready);
   }
   const readySummary = $("readySummary");
