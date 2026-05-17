@@ -2016,7 +2016,16 @@ function logoutAccount() {
 }
 
 function toggleProfileEditor() {
-  $("profileEditor").classList.toggle("hidden");
+  const editor = $("profileEditor");
+  if (!editor) return;
+  const isOpening = editor.classList.toggle("hidden") === false;
+  if (!isOpening) return;
+
+  window.requestAnimationFrame(() => {
+    editor.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const firstField = $("profileDisplayName");
+    firstField?.focus({ preventScroll: true });
+  });
 }
 
 function previewAvatarFile(file) {
@@ -3914,6 +3923,7 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreAppearancePreference();
   restoreGamePreferences();
   restoreSiteVolume();
+  startBackgroundMusic({ fadeIn: true });
   renderReactions();
   initChatScrollbarFeedback();
   initCustomSelects();
