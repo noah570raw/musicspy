@@ -476,7 +476,7 @@ test("persistence normalizes missing social collections and writes atomically", 
   });
 
   files.set("/tmp/musicspy-test/users.json", JSON.stringify({ users: [{ id: "u1" }] }));
-  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [] });
+  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [], lobbyHistory: [], matchHistory: [], playerProgression: [] });
 
   persistence.write({ users: [], friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2" }], friendRequests: [{ id: "r1" }], directMessages: [{ id: "m1" }] });
   assert.equal(files.has(`/tmp/musicspy-test/users.json.${process.pid}.tmp`), false);
@@ -484,9 +484,69 @@ test("persistence normalizes missing social collections and writes atomically", 
     users: [],
     friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2", createdAt: "1970-01-01T00:00:00.000Z" }],
     friendRequests: [{ id: "r1" }],
-    directMessages: [{ id: "m1" }]
+    directMessages: [{ id: "m1" }],
+    lobbyHistory: [],
+    matchHistory: [],
+    playerProgression: []
   });
   assert.ok(mkdirs.includes("/tmp/musicspy-test"));
+});
+
+test("production persistence refuses ephemeral storage without a database", () => {
+  const { createUserStorePersistence } = require("../lib/persistence");
+  assert.throws(
+    () => createUserStorePersistence({ env: { NODE_ENV: "production" }, logger: { warn() {} } }),
+    /DATABASE_URL is required/
+  );
+});
+
+test("postgres persistence exposes persistent schema and import path", async () => {
+  const { createPostgresUserStorePersistence } = require("../lib/persistence");
+  const queries = [];
+  const fakeClient = {
+    query: async (text, params) => { queries.push({ text, params }); },
+    release() {}
+  };
+  const fakePool = {
+    query: async (text, params) => {
+      queries.push({ text, params });
+      if (String(text).includes("COUNT(*)")) return { rows: [{ count: 1 }] };
+      return { rows: [] };
+    },
+    connect: async () => fakeClient,
+    end: async () => undefined
+  };
+
+  const persistence = createPostgresUserStorePersistence({
+    env: { DATABASE_URL: "postgres://example/musicspy", PGSSLMODE: "disable" },
+    fsImpl: { existsSync: () => false },
+    logger: { log() {} },
+    pgModule: { Pool: function Pool() { return fakePool; } }
+  });
+
+  await persistence.init();
+  await persistence.write({
+    users: [{ id: "u1", username: "one", displayName: "One", stats: { games: 1 }, settings: { lang: "en" }, sessions: [{ id: "s1", refreshTokenHash: "r" }] }],
+    friendships: [],
+    friendRequests: [],
+    directMessages: [],
+    lobbyHistory: [{ id: "l1", lobbyCode: "ABCD", result: { civiliansWin: true } }],
+    matchHistory: [{ id: "m1", lobbyHistoryId: "l1", userId: "u1", lobbyCode: "ABCD", role: "spy", won: true }],
+    playerProgression: [{ id: "p1", userId: "u1", type: "match_completed", payload: { xp: 1 } }]
+  });
+
+  const sql = queries.map((item) => item.text).join("\n");
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS accounts/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS auth_sessions/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS friendships/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS friend_requests/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS direct_messages/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS lobby_history/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS match_history/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS player_progression/);
+  assert.match(sql, /INSERT INTO accounts/);
+  assert.match(sql, /INSERT INTO auth_sessions/);
+  assert.match(sql, /INSERT INTO match_history/);
 });
 
 test("auth sessions persist refresh tokens and access lookup uses hashed tokens", () => {

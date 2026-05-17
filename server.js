@@ -27,6 +27,10 @@ const io = new Server(server);
 
 app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
+app.use((req, res, next) => {
+  if (persistenceReady || req.path.startsWith("/social-assets")) return next();
+  res.status(503).json({ error: "Persistent database is still starting" });
+});
 app.use(express.static("public"));
 
 const userStorePersistence = createUserStorePersistence();
@@ -98,11 +102,24 @@ const SIMILAR_THEME_GROUPS = [
 ];
 
 
-let usersStore = userStorePersistence.read();
-ensureSocialCollections();
+let usersStore = { users: [], friendships: [], friendRequests: [], directMessages: [], lobbyHistory: [], matchHistory: [], playerProgression: [] };
+let persistenceReady = false;
+let pendingUsersStoreWrite = Promise.resolve();
+
+async function loadUsersStore() {
+  await userStorePersistence.init?.();
+  usersStore = await userStorePersistence.read();
+  ensureSocialCollections();
+  persistenceReady = true;
+  return usersStore;
+}
 
 function saveUsersStore() {
-  userStorePersistence.write(usersStore);
+  const write = () => Promise.resolve(userStorePersistence.write(usersStore));
+  pendingUsersStoreWrite = pendingUsersStoreWrite.then(write, write).catch((error) => {
+    console.error("[db] persistent write failed", error);
+  });
+  return pendingUsersStoreWrite;
 }
 
 function createSession(user) {
@@ -1492,6 +1509,65 @@ function updateUserStatsForGame(lobby, civiliansWin) {
   if (changed) saveUsersStore();
 }
 
+function recordLobbyAndMatchHistory(lobby, civiliansWin, suspected, finalVotes, finalSpyGuess, breakdown) {
+  ensureSocialCollections();
+  const endedAt = new Date().toISOString();
+  const hostPlayer = lobby.players.find((player) => player.id === lobby.host) || lobby.players[0];
+  const lobbyHistoryId = crypto.randomUUID();
+  const result = {
+    civiliansWin,
+    suspected,
+    votes: finalVotes,
+    spyGuess: finalSpyGuess,
+    spies: lobby.spies,
+    theme: lobby.theme,
+    trackHistory: lobby.trackHistory || [],
+    breakdown
+  };
+  usersStore.lobbyHistory.push({
+    id: lobbyHistoryId,
+    lobbyCode: lobby.code,
+    lobbyName: lobby.name || "",
+    hostUserId: hostPlayer?.accountId || null,
+    settings: lobby.settings || {},
+    result,
+    createdAt: lobby.createdAt || endedAt,
+    endedAt
+  });
+
+  for (const player of lobby.players || []) {
+    if (!player.accountId) continue;
+    const user = findUserById(player.accountId);
+    if (!user) continue;
+    const isSpy = lobby.spies.includes(player.id);
+    const won = isSpy ? !civiliansWin : civiliansWin;
+    usersStore.matchHistory.push({
+      id: crypto.randomUUID(),
+      lobbyHistoryId,
+      userId: user.id,
+      lobbyCode: lobby.code,
+      role: isSpy ? "spy" : "civilian",
+      won,
+      statsAfter: { ...defaultStats(), ...(user.stats || {}) },
+      result,
+      createdAt: endedAt
+    });
+    usersStore.playerProgression.push({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      type: "match_completed",
+      payload: { lobbyHistoryId, lobbyCode: lobby.code, won, role: isSpy ? "spy" : "civilian", stats: user.stats || defaultStats() },
+      createdAt: endedAt
+    });
+  }
+
+  usersStore.lobbyHistory = usersStore.lobbyHistory.slice(-500);
+  usersStore.matchHistory = usersStore.matchHistory.slice(-5000);
+  usersStore.playerProgression = usersStore.playerProgression.slice(-5000);
+  saveUsersStore();
+  console.info(`[db] match history write queued lobby=${lobby.code} matches=${(lobby.players || []).filter((player) => player.accountId).length}`);
+}
+
 function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const lobby = lobbies[code];
   if (!lobby) return;
@@ -1506,6 +1582,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
   updateUserStatsForGame(lobby, civiliansWin);
+  recordLobbyAndMatchHistory(lobby, civiliansWin, suspected, finalVotes, finalSpyGuess, breakdown);
   lobby.phase = "ended";
   clearTimer(code);
 
@@ -2396,9 +2473,21 @@ function pickTheme() {
   return THEMES[Math.floor(Math.random() * THEMES.length)];
 }
 
+async function startServer() {
+  await loadUsersStore();
+  return server.listen(process.env.PORT || 3000, () => {
+    console.log(`Music Spy server running; persistent store: ${USERS_FILE}`);
+  });
+}
+
 if (require.main === module) {
-  server.listen(process.env.PORT || 3000, () => {
-    console.log(`Music Spy server running; users store: ${USERS_FILE}`);
+  startServer().catch((error) => {
+    console.error("Music Spy failed to start persistent storage", error);
+    process.exit(1);
+  });
+} else {
+  loadUsersStore().catch((error) => {
+    console.error("Music Spy failed to initialize persistent storage", error);
   });
 }
 
@@ -2438,5 +2527,7 @@ module.exports = {
   pauseTurnTimer,
   resumeTurnTimer,
   adjustTurnTimer,
-  publicOpenLobbies
+  publicOpenLobbies,
+  loadUsersStore,
+  startServer
 };
