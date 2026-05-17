@@ -945,7 +945,7 @@
       <div class="friends-add-card">
         <label for="friendSearchInput">Добавить друга</label>
         <div class="friends-add-row">
-          <input id="friendSearchInput" maxlength="18" placeholder="Введите никнейм…" autocomplete="off" oninput="clearFriendAddStatus()" onkeydown="handleFriendSearchKeydown(event)">
+          <input id="friendSearchInput" maxlength="18" placeholder="@username" autocomplete="off" oninput="clearFriendAddStatus()" onkeydown="handleFriendSearchKeydown(event)">
           <button id="friendAddButton" class="secondary friends-add-button" type="button" onclick="sendFriendRequest()">Добавить</button>
         </div>
         <p id="friendAddStatus" class="friends-add-status" aria-live="polite"></p>
