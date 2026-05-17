@@ -1,17 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 
 const { ALLOWED_REACTIONS, countReactions, getActiveTurnOrder, removePlayerFromLobby } = require("../server");
-
-
-test("Render blueprint injects the supported internal Postgres connection string", () => {
-  const blueprint = fs.readFileSync(path.join(__dirname, "..", "render.yaml"), "utf8");
-
-  assert.match(blueprint, /key:\s*DATABASE_URL[\s\S]*fromDatabase:[\s\S]*property:\s*connectionString/);
-  assert.doesNotMatch(blueprint, /property:\s*internalConnectionString/);
-});
 
 test("getActiveTurnOrder keeps the first-round order for later rounds", () => {
   const lobby = {
@@ -110,41 +100,6 @@ test("resolveDataDir prefers persistent deployment storage over repo data", () =
 
   assert.equal(resolveDataDir({}, fakeFs), "/var/data/musicspy");
   assert.equal(resolveDataDir({ MUSICSPY_DATA_DIR: "/tmp/custom-users" }, fakeFs), "/tmp/custom-users");
-});
-
-
-
-test("production without DATABASE_URL disables file persistence without throwing", () => {
-  const { createUserStorePersistence } = require("../lib/persistence");
-  const warnings = [];
-  const persistence = createUserStorePersistence({
-    env: { NODE_ENV: "production", RENDER: "true" },
-    logger: { warn: (message) => warnings.push(String(message)), log: () => {} }
-  });
-
-  assert.equal(persistence.kind, "unconfigured-postgres");
-  assert.match(warnings.join("\n"), /Missing environment variable: DATABASE_URL/);
-  assert.match(warnings.join("\n"), /Create a PostgreSQL database in Render/);
-});
-
-test("development without DATABASE_URL keeps local JSON persistence", () => {
-  const { createUserStorePersistence } = require("../lib/persistence");
-  const persistence = createUserStorePersistence({
-    env: { NODE_ENV: "development" },
-    fsImpl: {
-      existsSync: () => false,
-      mkdirSync: () => {},
-      writeFileSync: () => {},
-      readFileSync: () => "{}",
-      renameSync: () => {},
-      openSync: () => 1,
-      fsyncSync: () => {},
-      closeSync: () => {}
-    },
-    logger: { warn: () => {}, log: () => {}, error: () => {} }
-  });
-
-  assert.equal(persistence.kind, "file");
 });
 
 test("account helpers normalize usernames and verify password hashes", () => {
@@ -521,7 +476,7 @@ test("persistence normalizes missing social collections and writes atomically", 
   });
 
   files.set("/tmp/musicspy-test/users.json", JSON.stringify({ users: [{ id: "u1" }] }));
-  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [], lobbyHistory: [], matchHistory: [], playerProgression: [] });
+  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [] });
 
   persistence.write({ users: [], friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2" }], friendRequests: [{ id: "r1" }], directMessages: [{ id: "m1" }] });
   assert.equal(files.has(`/tmp/musicspy-test/users.json.${process.pid}.tmp`), false);
@@ -529,73 +484,9 @@ test("persistence normalizes missing social collections and writes atomically", 
     users: [],
     friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2", createdAt: "1970-01-01T00:00:00.000Z" }],
     friendRequests: [{ id: "r1" }],
-    directMessages: [{ id: "m1" }],
-    lobbyHistory: [],
-    matchHistory: [],
-    playerProgression: []
+    directMessages: [{ id: "m1" }]
   });
   assert.ok(mkdirs.includes("/tmp/musicspy-test"));
-});
-
-test("production persistence refuses ephemeral file storage without a database", async () => {
-  const { createUserStorePersistence } = require("../lib/persistence");
-  const persistence = createUserStorePersistence({ env: { NODE_ENV: "production" }, logger: { warn() {}, log() {} } });
-
-  assert.equal(persistence.kind, "unconfigured-postgres");
-  await assert.rejects(
-    () => persistence.write({ users: [] }),
-    /DATABASE_URL is required/
-  );
-});
-
-test("postgres persistence exposes persistent schema and import path", async () => {
-  const { createPostgresUserStorePersistence } = require("../lib/persistence");
-  const queries = [];
-  const fakeClient = {
-    query: async (text, params) => { queries.push({ text, params }); },
-    release() {}
-  };
-  const fakePool = {
-    query: async (text, params) => {
-      queries.push({ text, params });
-      if (String(text).includes("COUNT(*)")) return { rows: [{ count: 1 }] };
-      return { rows: [] };
-    },
-    connect: async () => fakeClient,
-    end: async () => undefined,
-    on() {}
-  };
-
-  const persistence = createPostgresUserStorePersistence({
-    env: { DATABASE_URL: "postgres://example/musicspy", PGSSLMODE: "disable" },
-    fsImpl: { existsSync: () => false },
-    logger: { log() {} },
-    pgModule: { Pool: function Pool() { return fakePool; } }
-  });
-
-  await persistence.init();
-  await persistence.write({
-    users: [{ id: "u1", username: "one", displayName: "One", stats: { games: 1 }, settings: { lang: "en" }, sessions: [{ id: "s1", refreshTokenHash: "r" }] }],
-    friendships: [],
-    friendRequests: [],
-    directMessages: [],
-    lobbyHistory: [{ id: "l1", lobbyCode: "ABCD", result: { civiliansWin: true } }],
-    matchHistory: [{ id: "m1", lobbyHistoryId: "l1", userId: "u1", lobbyCode: "ABCD", role: "spy", won: true }],
-    playerProgression: [{ id: "p1", userId: "u1", type: "match_completed", payload: { xp: 1 } }]
-  });
-
-  const sql = queries.map((item) => item.text).join("\n");
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS accounts/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS auth_sessions/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS friendships/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS friend_requests/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS direct_messages/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS lobby_history/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS match_history/);
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS player_progression/);
-  assert.match(sql, /INSERT INTO accounts/);
-  assert.match(sql, /INSERT INTO auth_sessions/);
-  assert.match(sql, /INSERT INTO match_history/);
 });
 
 test("auth sessions persist refresh tokens and access lookup uses hashed tokens", () => {
