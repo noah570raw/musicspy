@@ -1387,6 +1387,54 @@ function playerAvatarMarkup(player, fallback = "?") {
   return `<span class="avatar">${escapeHtml(fallback)}</span>`;
 }
 
+
+function playerInitials(name = "?") {
+  return String(name || "?")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "?";
+}
+
+function lobbyPlayerCardMarkup(player, index, lobby) {
+  const isHost = player.id === lobby.host;
+  const isMe = player.id === socket.id;
+  const isReady = Boolean(player.ready);
+  const statusText = isReady ? t("Готов") : t("Ожидает");
+  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
+  return `
+    <article class="${cardClass}">
+      <div class="lobby-player-glow" aria-hidden="true"></div>
+      <div class="lobby-avatar-wrap">
+        ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
+        <span class="lobby-online-dot" aria-hidden="true"></span>
+      </div>
+      <div class="lobby-player-info">
+        <strong>${escapeHtml(player.name || t("Игрок"))}</strong>
+        <span>${isMe ? t("это ты") : t("в комнате")}</span>
+      </div>
+      <div class="lobby-player-badges">
+        ${isHost ? `<em class="host-chip">HOST</em>` : ""}
+        <em class="ready-chip">${escapeHtml(statusText)}</em>
+      </div>
+    </article>
+  `;
+}
+
+function lobbyEmptySeatMarkup(index) {
+  return `
+    <article class="lobby-player-card lobby-empty-seat">
+      <div class="lobby-empty-plus" aria-hidden="true">+</div>
+      <div class="lobby-player-info">
+        <strong>${escapeHtml(t("Свободный слот"))}</strong>
+        <span>${escapeHtml(t("пригласите друга"))}</span>
+      </div>
+      <em class="ready-chip">${escapeHtml(t("OPEN"))}</em>
+    </article>
+  `;
+}
+
 function normalizeRoomCodeInput(value) {
   return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
 }
@@ -2073,6 +2121,22 @@ function updateInviteSecretsVisibility() {
 function toggleInviteSecrets() {
   state.inviteSecretsVisible = !state.inviteSecretsVisible;
   updateInviteSecretsVisibility();
+  syncAudioVolume();
+}
+
+function showInviteQrModal() {
+  state.inviteSecretsVisible = true;
+  updateInviteSecretsVisibility();
+  const modal = $("inviteQrModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.querySelector(".modal-close")?.focus({ preventScroll: true });
+}
+
+function hideInviteQrModal() {
+  const modal = $("inviteQrModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
 }
 
 function resetRoomState() {
@@ -2270,7 +2334,8 @@ function applySettingsToForm(settings = {}, isHost = false) {
   }
 
   updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
-  $("settingsHint").textContent = isHost ? t("ты можешь менять") : t("меняет хост");
+  const settingsHint = $("settingsHint");
+  if (settingsHint) settingsHint.textContent = isHost ? t("ты можешь менять") : t("меняет хост");
   applyRoomTheme(fields.settingRoomTheme);
   refreshCustomSelects();
 }
@@ -2324,34 +2389,59 @@ function renderLobby(lobby) {
   const me = state.players.find((player) => player.id === socket.id);
   state.ready = Boolean(me?.ready);
   const readyCount = state.players.filter((player) => player.ready).length;
-  $("hostBadge").textContent = isHost ? t("ты хост") : `${t("хост")}: ${state.players.find((p) => p.id === lobby.host)?.name || "..."}`;
-  $("startBtn").disabled = !isHost || state.players.length < 3 || readyCount !== state.players.length;
-  $("startBtn").textContent = state.players.length < 3
-    ? t("Ждем минимум 3 игроков")
-    : readyCount !== state.players.length
-      ? t("Ждем готовность всех игроков")
-      : t("Запустить игру");
-  const forceStartBtn = $("forceStartBtn");
-  forceStartBtn.disabled = !isHost || state.players.length < 3;
-  forceStartBtn.classList.toggle("hidden", !isHost);
-  forceStartBtn.textContent = t("FORCE START");
-  $("readyBtn").textContent = state.ready ? t("Не готов") : t("Я готов");
-  $("readyBtn").classList.toggle("ready", state.ready);
+  const hostName = state.players.find((p) => p.id === lobby.host)?.name || "...";
   const maxPlayers = state.settings.maxPlayers || lobby.maxPlayers || 12;
-  $("readySummary").textContent = t(`Готовы: ${readyCount}/${state.players.length}`) + ` · ${state.players.length}/${maxPlayers}`;
+  const neededPlayers = Math.max(0, 3 - state.players.length);
+  const waitingForReady = Math.max(0, state.players.length - readyCount);
+  const roomStatus = state.players.length < 3
+    ? t(`Нужно ещё ${neededPlayers} игрок${neededPlayers === 1 ? "" : "а"}`)
+    : waitingForReady
+      ? t(`Ждём готовность: ${waitingForReady}`)
+      : t("Команда готова к старту");
+
+  const hostBadge = $("hostBadge");
+  if (hostBadge) hostBadge.textContent = isHost ? t("ты хост") : `${t("хост")}: ${hostName}`;
+  const startBtn = $("startBtn");
+  if (startBtn) {
+    startBtn.disabled = !isHost || state.players.length < 3 || readyCount !== state.players.length;
+    startBtn.classList.toggle("hidden", !isHost);
+    startBtn.textContent = state.players.length < 3
+      ? t("Ждем минимум 3 игроков")
+      : readyCount !== state.players.length
+        ? t("Ждем готовность всех игроков")
+        : t("START GAME");
+  }
+  const forceStartBtn = $("forceStartBtn");
+  if (forceStartBtn) {
+    forceStartBtn.disabled = !isHost || state.players.length < 3;
+    forceStartBtn.classList.toggle("hidden", !isHost);
+    forceStartBtn.textContent = t("FORCE START");
+  }
+  const readyBtn = $("readyBtn");
+  if (readyBtn) {
+    readyBtn.textContent = state.ready ? t("READY ✓") : t("READY");
+    readyBtn.classList.toggle("ready", state.ready);
+  }
+  const readySummary = $("readySummary");
+  if (readySummary) readySummary.textContent = t(`Готовы: ${readyCount}/${state.players.length}`) + ` · ${state.players.length}/${maxPlayers}`;
+  const playerCount = $("lobbyPlayerCount");
+  if (playerCount) playerCount.textContent = `${state.players.length}/${maxPlayers}`;
+  const readyCountEl = $("lobbyReadyCount");
+  if (readyCountEl) readyCountEl.textContent = `${readyCount}/${state.players.length}`;
+  const neededCountEl = $("lobbyNeededCount");
+  if (neededCountEl) neededCountEl.textContent = neededPlayers ? `+${neededPlayers}` : (waitingForReady ? `${waitingForReady}` : "GO");
+  const roomStatusEl = $("lobbyRoomStatus");
+  if (roomStatusEl) roomStatusEl.textContent = roomStatus;
+
   applyLobbyMetaToForm(lobby, isHost);
   applySettingsToForm(state.settings, isHost);
   updateLobbyRenameControls();
 
-  $("players").innerHTML = state.players.map((player, index) => `
-    <div class="player-row">
-      ${playerAvatarMarkup(player, index + 1)}
-      <strong>${escapeHtml(player.name)}</strong>
-      ${player.ready ? `<em>${t("готов")}</em>` : `<em>${t("не готов")}</em>`}
-      ${player.id === lobby.host ? "<em>host</em>" : ""}
-      ${player.id === socket.id ? `<em>${t("ты")}</em>` : ""}
-    </div>
-  `).join("");
+  const visibleSeats = Math.min(maxPlayers, Math.max(6, state.players.length));
+  const emptySeats = Math.max(0, visibleSeats - state.players.length);
+  const playerCards = state.players.map((player, index) => lobbyPlayerCardMarkup(player, index, lobby));
+  const seatCards = Array.from({ length: emptySeats }, (_, index) => lobbyEmptySeatMarkup(index));
+  $("players").innerHTML = [...playerCards, ...seatCards].join("");
   renderChat();
 
   if (state.phase === "game") renderHostControls();
