@@ -374,17 +374,12 @@
       <div class="play-rooms-layout">
         <div class="play-rooms-hero">
           <p class="eyebrow">быстрый старт</p>
-          <h2 id="playRoomsTitle">Play Lobby</h2>
+          <h2 id="playRoomsTitle">Создать лобби</h2>
           <p class="lead small">Создай приватную музыкальную комнату или подключись к живому открытому лобби, где уже собирается команда.</p>
-          <div class="play-rooms-signal" aria-hidden="true">
-            <span class="signal-dot"></span>
-            <span>social deduction session</span>
-          </div>
 
           <div class="play-room-actions">
             <button class="primary play-primary" type="button" onclick="showCreateLobbySetup()">
               <span>Создать лобби</span>
-              <small>сначала настройки</small>
             </button>
             <button class="secondary play-secondary" type="button" onclick="refreshOpenLobbies()">Обновить список</button>
           </div>
@@ -404,7 +399,7 @@
             </div>
             <span id="openLobbiesSummary">ищем лобби...</span>
           </div>
-          <div id="openLobbiesList" class="open-lobbies-list empty">Нажми «Обновить список», чтобы найти открытые комнаты</div>
+          <div id="openLobbiesList" class="open-lobbies-list empty"></div>
         </div>
       </div>
       <p id="playRoomsStatus" class="status play-rooms-status"></p>
@@ -568,6 +563,17 @@
                   <option value="false">Без второго тура</option>
                 </select>
                 <small>переголосование</small>
+              </label>
+
+              <label class="setting-control">
+                <span>Визуальные эффекты</span>
+                <select id="createSettingVisualEffects" onchange="updateCreateVisualEffectsPreference()">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="ultra" selected>Ultra</option>
+                </select>
+                <small>плотность glow и ambient</small>
               </label>
 
             </div>

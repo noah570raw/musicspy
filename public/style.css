@@ -115,7 +115,7 @@ button {
 .app-shell {
   position: relative;
   z-index: 1;
-  width: min(1280px, calc(100% - 24px));
+  width: min(1280px, calc(100% - 32px));
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
@@ -327,8 +327,8 @@ button:disabled {
   isolation: isolate;
   overflow: hidden;
   width: min(100%, 1020px);
-  min-height: min(680px, calc(100dvh - 40px));
-  padding: clamp(18px, 3vw, 34px);
+  min-height: min(620px, calc(100dvh - 40px));
+  padding: clamp(16px, 2.4vw, 28px);
   border-color: rgba(255, 255, 255, 0.16);
   background:
     linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035) 44%, rgba(6,4,15,0.64)),
@@ -423,7 +423,7 @@ button:disabled {
 .play-rooms-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.15fr);
-  gap: clamp(18px, 3vw, 34px);
+  gap: clamp(12px, 2vw, 22px);
   align-items: stretch;
   min-height: 100%;
 }
@@ -440,15 +440,15 @@ button:disabled {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 520px;
-  padding: clamp(22px, 3vw, 34px);
+  min-height: 460px;
+  padding: clamp(18px, 2.4vw, 26px);
   border-radius: 30px;
   text-align: left;
 }
 
 .play-rooms-hero h2 {
-  max-width: 9ch;
-  font-size: clamp(3rem, 7vw, 5.75rem);
+  max-width: 11ch;
+  font-size: clamp(2.55rem, 5.8vw, 4.8rem);
   line-height: 0.86;
   letter-spacing: -0.08em;
   text-shadow: 0 18px 48px rgba(139, 92, 246, 0.24);
@@ -456,7 +456,7 @@ button:disabled {
 
 .play-rooms-hero .lead.small {
   max-width: 28rem;
-  margin: 22px 0 0;
+  margin: 16px 0 0;
   color: rgba(248, 246, 255, 0.78);
   font-size: 1rem;
 }
@@ -490,16 +490,16 @@ button:disabled {
 .play-room-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 10px;
   margin: auto 0 0;
-  padding-top: 30px;
+  padding-top: 20px;
 }
 
 .play-primary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 68px;
+  justify-content: center;
+  min-height: 60px;
   padding: 16px 18px 16px 20px;
   border: 1px solid rgba(255,255,255,0.18);
   background: linear-gradient(135deg, #a78bfa, #7c3aed 48%, #db2777);
@@ -559,9 +559,9 @@ button:disabled {
 .open-lobbies-panel {
   display: flex;
   flex-direction: column;
-  min-height: 520px;
+  min-height: 460px;
   margin: 0;
-  padding: clamp(18px, 2.4vw, 26px);
+  padding: clamp(16px, 2vw, 22px);
   border-radius: 30px;
   text-align: left;
 }
@@ -602,13 +602,11 @@ button:disabled {
 }
 
 .open-lobbies-list.empty {
-  display: grid;
-  place-items: center;
-  min-height: 300px;
-  padding: 28px;
-  border: 1px dashed rgba(255,255,255,0.16);
-  border-radius: 24px;
-  background: rgba(0,0,0,0.18);
+  display: none;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--muted);
   text-align: center;
 }
@@ -4899,25 +4897,25 @@ body[data-screen="createLobbySetup"] {
 }
 
 body[data-screen="createLobbySetup"] .app-shell {
-  width: min(1500px, calc(100% - 28px));
-  padding: clamp(8px, 1.25vh, 14px) 0;
+  width: min(1420px, calc(100% - 32px));
+  padding: clamp(6px, 1vh, 10px) 0;
 }
 
 :root {
-  --create-gap: clamp(10px, 1.2vw, 16px);
-  --create-radius: 28px;
-  --create-control-radius: 16px;
+  --create-gap: clamp(7px, 0.85vw, 11px);
+  --create-radius: 24px;
+  --create-control-radius: 14px;
   --create-panel-bg: linear-gradient(145deg, rgba(255,255,255,0.088), rgba(255,255,255,0.026));
 }
 
 .create-lobby-card {
   position: relative;
   isolation: isolate;
-  width: min(100%, 1380px);
+  width: min(100%, 1320px);
   overflow: visible;
-  padding: clamp(14px, 1.45vw, 22px);
+  padding: clamp(10px, 1.05vw, 16px);
   border-color: rgba(255, 255, 255, 0.16);
-  border-radius: 34px;
+  border-radius: 28px;
   background:
     radial-gradient(circle at 18% 5%, rgba(var(--accent-rgb), 0.2), transparent 26rem),
     radial-gradient(circle at 86% 14%, rgba(var(--accent-rgb), 0.13), transparent 24rem),
@@ -4949,25 +4947,25 @@ body[data-screen="createLobbySetup"] .app-shell {
 
 .create-lobby-header {
   align-items: center;
-  gap: 18px;
-  padding: 0 4px 2px;
+  gap: 12px;
+  padding: 0 4px;
 }
 
 .create-lobby-header h2 {
-  font-size: clamp(2rem, 3.8vw, 4rem);
+  font-size: clamp(1.75rem, 3vw, 3.15rem);
   text-shadow: 0 0 34px rgba(var(--accent-rgb), 0.22);
 }
 
 .create-lobby-header .lead.small {
   max-width: 760px;
-  margin: 8px 0 0;
-  line-height: 1.36;
+  margin: 4px 0 0;
+  line-height: 1.28;
 }
 
 .create-lobby-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.82fr) minmax(620px, 1.18fr);
-  gap: clamp(14px, 1.7vw, 22px);
+  grid-template-columns: minmax(300px, 0.72fr) minmax(660px, 1.28fr);
+  gap: var(--create-gap);
   align-items: stretch;
   overflow: visible;
 }
@@ -4976,11 +4974,11 @@ body[data-screen="createLobbySetup"] .app-shell {
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-rows: auto minmax(170px, 1fr) auto auto auto;
-  gap: clamp(11px, 1.45vh, 16px);
-  min-height: clamp(500px, 58vh, 640px);
+  grid-template-rows: auto minmax(104px, 0.75fr) auto auto auto;
+  gap: clamp(7px, 0.9vh, 10px);
+  min-height: clamp(360px, 45vh, 470px);
   overflow: hidden;
-  padding: clamp(18px, 2vw, 28px);
+  padding: clamp(13px, 1.35vw, 18px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--create-radius);
   background:
@@ -5076,7 +5074,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   display: grid;
   align-content: center;
   min-width: 0;
-  gap: 10px;
+  gap: 6px;
 }
 
 .preview-kicker {
@@ -5091,9 +5089,9 @@ body[data-screen="createLobbySetup"] .app-shell {
   display: -webkit-box;
   overflow: hidden;
   max-width: 100%;
-  min-height: 2.02em;
+  min-height: 1.8em;
   color: #fff;
-  font-size: clamp(2.1rem, 4vw, 4.05rem);
+  font-size: clamp(1.8rem, 3vw, 3.1rem);
   line-height: 0.98;
   letter-spacing: -0.07em;
   text-wrap: balance;
@@ -5115,8 +5113,8 @@ body[data-screen="createLobbySetup"] .app-shell {
 .preview-mode-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid rgba(var(--accent-rgb), 0.34);
   border-radius: 22px;
   background: rgba(0, 0, 0, 0.28);
@@ -5125,8 +5123,8 @@ body[data-screen="createLobbySetup"] .app-shell {
 }
 
 .mode-pulse {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 16px;
   background: radial-gradient(circle, #fff 0 12%, var(--accent) 15% 46%, transparent 50%);
   box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.55);
@@ -5155,12 +5153,12 @@ body[data-screen="createLobbySetup"] .app-shell {
 .preview-stat-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 7px;
 }
 
 .preview-stat-grid div {
   min-width: 0;
-  padding: 12px 10px;
+  padding: 9px 8px;
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 18px;
   background: rgba(0,0,0,0.25);
@@ -5178,7 +5176,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 
 .preview-note {
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px;
   background: rgba(0,0,0,0.2);
@@ -5198,11 +5196,11 @@ body[data-screen="createLobbySetup"] .app-shell {
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  gap: 7px;
   overflow: visible;
-  padding: 12px;
+  padding: 9px;
   border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 24px;
+  border-radius: 20px;
   background:
     radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.14), transparent 42%),
     var(--create-panel-bg);
@@ -5222,7 +5220,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 
 .room-group {
   grid-column: 1 / -1;
-  grid-template-columns: minmax(260px, 1.15fr) minmax(170px, 0.62fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(240px, 1.05fr) minmax(150px, 0.58fr) minmax(300px, 1.15fr);
 }
 
 .match-group,
@@ -5239,9 +5237,9 @@ body[data-screen="createLobbySetup"] .app-shell {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 22px;
-  padding-bottom: 1px;
+  gap: 10px;
+  min-height: 20px;
+  padding-bottom: 0;
 }
 
 .create-settings-group .settings-title strong {
@@ -5260,11 +5258,11 @@ body[data-screen="createLobbySetup"] .app-shell {
 
 .create-settings-group .setting-control {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.105);
-  border-radius: 18px;
+  border-radius: 15px;
   background: rgba(0, 0, 0, 0.21);
   transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
 }
@@ -5296,8 +5294,8 @@ body[data-screen="createLobbySetup"] .app-shell {
 .create-settings-group input,
 .create-settings-group select,
 .custom-select-trigger {
-  min-height: 42px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--create-control-radius);
   background:
@@ -5460,7 +5458,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   display: grid;
   grid-template-columns: minmax(150px, 0.23fr) minmax(260px, 0.42fr);
   justify-content: end;
-  gap: 12px;
+  gap: var(--create-gap);
   margin-top: 0;
 }
 
@@ -5468,7 +5466,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   position: relative;
   overflow: hidden;
   width: 100%;
-  min-height: 50px;
+  min-height: 44px;
   border-radius: 18px;
   letter-spacing: 0.03em;
 }
@@ -6575,6 +6573,10 @@ body[data-screen="lobby"] .app-shell {
   font-size: 0.72rem;
 }
 
+.account-toggle.guest-locked::after {
+  content: none;
+}
+
 body[data-role="civilian"] {
   --bg: #031121;
   --panel: rgba(7, 20, 38, 0.86);
@@ -6798,4 +6800,17 @@ body[data-effects-density="low"] .sound-toggle {
   .effects-density-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* Requested compact sound control: 5% smaller than the shared corner pill. */
+.volume-control .sound-toggle {
+  min-height: 42px;
+  padding: 7.6px 12.35px;
+  gap: 0.52rem;
+  font-size: 0.97rem;
+}
+
+.volume-control .sound-toggle strong {
+  font-size: 0.712rem;
 }
