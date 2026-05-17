@@ -15,6 +15,19 @@
   --surface-rgb: 15, 12, 28;
   --surface-strong-rgb: 22, 18, 38;
   --on-accent: #ffffff;
+  --theme-line: rgba(var(--accent-rgb), 0.16);
+  --theme-line-strong: rgba(var(--accent-rgb), 0.42);
+  --theme-text-soft: color-mix(in srgb, var(--text) 70%, transparent);
+  --theme-text-faint: color-mix(in srgb, var(--text) 54%, transparent);
+  --theme-panel-bg: linear-gradient(145deg, color-mix(in srgb, var(--text) 8.8%, transparent), color-mix(in srgb, var(--text) 2.6%, transparent));
+  --theme-surface: rgba(var(--surface-rgb), 0.74);
+  --theme-surface-strong: rgba(var(--surface-strong-rgb), 0.98);
+  --theme-control-bg: linear-gradient(180deg, color-mix(in srgb, var(--text) 7.8%, transparent), color-mix(in srgb, var(--text) 2.2%, transparent)), var(--theme-surface);
+  --theme-active-bg: rgba(var(--accent-rgb), 0.2);
+  --theme-active-bg-strong: rgba(var(--accent-rgb), 0.34);
+  --theme-glow-soft: rgba(var(--accent-rgb), 0.14);
+  --theme-glow: rgba(var(--accent-rgb), 0.24);
+  --theme-glow-strong: rgba(var(--accent-rgb), 0.38);
 }
 
 body[data-role="civilian"] {
@@ -4947,43 +4960,23 @@ body[data-screen="createLobbySetup"] .app-shell {
   padding: clamp(6px, 1vh, 10px) 0;
 }
 
-:root {
-  --create-gap: clamp(7px, 0.85vw, 11px);
-  --create-radius: 24px;
-  --create-control-radius: 14px;
-  --create-panel-padding: clamp(10px, 1.05vw, 14px);
-  --create-line: rgba(var(--accent-rgb), 0.16);
-  --create-line-strong: rgba(var(--accent-rgb), 0.42);
-  --create-text-soft: color-mix(in srgb, var(--text) 70%, transparent);
-  --create-text-faint: color-mix(in srgb, var(--text) 54%, transparent);
-  --create-panel-bg: linear-gradient(145deg, rgba(255,255,255,0.088), rgba(255,255,255,0.026));
-  --create-panel-surface: rgba(var(--surface-rgb), 0.74);
-  --create-panel-surface-strong: rgba(var(--surface-strong-rgb), 0.98);
-  --create-control-bg: linear-gradient(180deg, rgba(255,255,255,0.078), rgba(255,255,255,0.022)), var(--create-panel-surface);
-  --create-active-bg: rgba(var(--accent-rgb), 0.2);
-  --create-active-bg-strong: rgba(var(--accent-rgb), 0.34);
-  --create-glow-soft: rgba(var(--accent-rgb), 0.14);
-  --create-glow: rgba(var(--accent-rgb), 0.24);
-  --create-glow-strong: rgba(var(--accent-rgb), 0.38);
-}
-
 .create-lobby-card {
   position: relative;
   isolation: isolate;
   width: min(100%, 1320px);
   overflow: visible;
   padding: clamp(10px, 1.05vw, 16px);
-  border-color: var(--create-line);
+  border-color: var(--theme-line);
   border-radius: 28px;
   background:
     radial-gradient(circle at 18% 5%, rgba(var(--accent-rgb), 0.2), transparent 26rem),
     radial-gradient(circle at 86% 14%, rgba(var(--accent-rgb), 0.13), transparent 24rem),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.112), rgba(255, 255, 255, 0.028)),
+    linear-gradient(135deg, color-mix(in srgb, var(--text) 11.2%, transparent), color-mix(in srgb, var(--text) 2.8%, transparent)),
     rgba(var(--surface-rgb), 0.91);
   box-shadow:
-    0 34px 120px rgba(0, 0, 0, 0.6),
-    0 0 90px var(--create-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+    0 34px 120px color-mix(in srgb, var(--bg) 60%, transparent),
+    0 0 90px var(--theme-glow),
+    inset 0 1px 0 color-mix(in srgb, var(--text) 13%, transparent);
   text-align: left;
 }
 
@@ -4994,8 +4987,8 @@ body[data-screen="createLobbySetup"] .app-shell {
   z-index: -1;
   border-radius: inherit;
   background:
-    linear-gradient(90deg, transparent, var(--create-glow), transparent) top / 100% 1px no-repeat,
-    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.06), transparent 42%);
+    linear-gradient(90deg, transparent, var(--theme-glow), transparent) top / 100% 1px no-repeat,
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--text) 6%, transparent), transparent 42%);
   pointer-events: none;
 }
 
@@ -5003,7 +4996,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   display: grid;
   grid-template-columns: minmax(300px, 0.72fr) minmax(660px, 1.28fr);
   grid-template-rows: auto auto auto auto;
-  gap: var(--create-gap);
+  gap: clamp(7px, 0.85vw, 11px);
   align-items: start;
 }
 
@@ -5045,17 +5038,17 @@ body[data-screen="createLobbySetup"] .app-shell {
   gap: clamp(7px, 0.9vh, 10px);
   min-height: clamp(360px, 45vh, 470px);
   overflow: hidden;
-  padding: var(--create-panel-padding);
-  border: 1px solid var(--create-line);
-  border-radius: var(--create-radius);
+  padding: clamp(10px, 1.05vw, 14px);
+  border: 1px solid var(--theme-line);
+  border-radius: 24px;
   background:
     radial-gradient(circle at 14% 0%, rgba(var(--accent-rgb), 0.46), transparent 36%),
     radial-gradient(circle at 86% 22%, rgba(var(--accent-rgb), 0.2), transparent 34%),
-    linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035));
+    linear-gradient(145deg, color-mix(in srgb, var(--text) 12%, transparent), color-mix(in srgb, var(--text) 3.5%, transparent));
   box-shadow:
-    0 28px 76px rgba(0,0,0,0.46),
-    0 0 56px var(--create-glow-soft),
-    inset 0 1px 0 rgba(255,255,255,0.14);
+    0 28px 76px color-mix(in srgb, var(--bg) 46%, transparent),
+    0 0 56px var(--theme-glow-soft),
+    inset 0 1px 0 color-mix(in srgb, var(--text) 14%, transparent);
 }
 
 .create-lobby-preview::before,
@@ -5068,7 +5061,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 
 .create-lobby-preview::before {
   inset: -30%;
-  background: conic-gradient(from 120deg, transparent, var(--create-glow), transparent, var(--create-glow-soft), transparent);
+  background: conic-gradient(from 120deg, transparent, var(--theme-glow), transparent, var(--theme-glow-soft), transparent);
   animation: preview-aurora 9s linear infinite;
 }
 
@@ -5076,15 +5069,15 @@ body[data-screen="createLobbySetup"] .app-shell {
   inset: 1px;
   border-radius: inherit;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.26)),
-    radial-gradient(circle at 50% 100%, rgba(255,255,255,0.08), transparent 44%);
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, transparent), color-mix(in srgb, var(--bg) 26%, transparent)),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--text) 8%, transparent), transparent 44%);
 }
 
 .preview-scanline {
   position: absolute;
   inset: 0;
   opacity: 0.15;
-  background: repeating-linear-gradient(180deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 7px);
+  background: repeating-linear-gradient(180deg, color-mix(in srgb, var(--text) 18%, transparent) 0 1px, transparent 1px 7px);
   mix-blend-mode: screen;
 }
 
@@ -5112,7 +5105,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   gap: 8px;
   min-width: max-content;
   padding: 8px 11px;
-  border: 1px solid var(--create-line);
+  border: 1px solid var(--theme-line);
   border-radius: 999px;
   background: rgba(var(--surface-rgb), 0.54);
   color: var(--text);
@@ -5120,7 +5113,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  box-shadow: 0 0 22px var(--create-active-bg);
+  box-shadow: 0 0 22px var(--theme-active-bg);
   backdrop-filter: blur(14px);
 }
 
@@ -5146,7 +5139,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 }
 
 .preview-kicker {
-  color: var(--create-text-faint);
+  color: var(--theme-text-faint);
   font-size: 0.73rem;
   font-weight: 900;
   letter-spacing: 0.18em;
@@ -5166,7 +5159,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   overflow-wrap: anywhere;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  text-shadow: 0 0 34px var(--create-glow-strong);
+  text-shadow: 0 0 34px var(--theme-glow-strong);
 }
 
 .create-lobby-preview span#createLobbyPreviewMeta {
@@ -5183,10 +5176,10 @@ body[data-screen="createLobbySetup"] .app-shell {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border: 1px solid var(--create-line-strong);
+  border: 1px solid var(--theme-line-strong);
   border-radius: 22px;
-  background: rgba(0, 0, 0, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 0 30px var(--create-glow-soft);
+  background: color-mix(in srgb, var(--bg) 28%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 9%, transparent), 0 0 30px var(--theme-glow-soft);
   backdrop-filter: blur(16px);
 }
 
@@ -5227,9 +5220,9 @@ body[data-screen="createLobbySetup"] .app-shell {
 .preview-stat-grid div {
   min-width: 0;
   padding: 9px 8px;
-  border: 1px solid var(--create-line);
+  border: 1px solid var(--theme-line);
   border-radius: 18px;
-  background: rgba(0,0,0,0.25);
+  background: color-mix(in srgb, var(--bg) 25%, transparent);
   text-align: center;
   backdrop-filter: blur(14px);
 }
@@ -5245,9 +5238,9 @@ body[data-screen="createLobbySetup"] .app-shell {
 .preview-note {
   margin: 0;
   padding: 8px 10px;
-  border: 1px solid var(--create-line);
+  border: 1px solid var(--theme-line);
   border-radius: 16px;
-  background: rgba(0,0,0,0.2);
+  background: color-mix(in srgb, var(--bg) 20%, transparent);
   font-size: 0.81rem;
   line-height: 1.42;
 }
@@ -5257,7 +5250,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   grid-column: 2;
   grid-row: 2;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--create-gap);
+  gap: clamp(7px, 0.85vw, 11px);
   align-content: start;
   overflow: visible;
 }
@@ -5268,13 +5261,13 @@ body[data-screen="createLobbySetup"] .app-shell {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
   overflow: visible;
-  padding: var(--create-panel-padding);
-  border: 1px solid var(--create-line);
+  padding: clamp(10px, 1.05vw, 14px);
+  border: 1px solid var(--theme-line);
   border-radius: 20px;
   background:
-    radial-gradient(circle at top left, var(--create-glow-soft), transparent 42%),
-    var(--create-panel-bg);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 42px rgba(0,0,0,0.23);
+    radial-gradient(circle at top left, var(--theme-glow-soft), transparent 42%),
+    var(--theme-panel-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent), 0 18px 42px color-mix(in srgb, var(--bg) 23%, transparent);
   backdrop-filter: blur(18px);
 }
 
@@ -5283,7 +5276,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(120deg, rgba(255,255,255,0.09), transparent 36%, rgba(var(--accent-rgb),0.08));
+  background: linear-gradient(120deg, color-mix(in srgb, var(--text) 9%, transparent), transparent 36%, rgba(var(--accent-rgb),0.08));
   opacity: 0.55;
   pointer-events: none;
 }
@@ -5336,23 +5329,23 @@ body[data-screen="createLobbySetup"] .app-shell {
   gap: 4px;
   min-width: 0;
   padding: 8px;
-  border: 1px solid var(--create-line);
+  border: 1px solid var(--theme-line);
   border-radius: 15px;
-  background: rgba(0, 0, 0, 0.21);
+  background: color-mix(in srgb, var(--bg) 21%, transparent);
   transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
 }
 
 .create-settings-group .setting-control:hover,
 .create-settings-group .setting-control:focus-within {
   transform: translateY(-1px);
-  border-color: var(--create-line-strong);
+  border-color: var(--theme-line-strong);
   background: rgba(var(--surface-rgb), 0.68);
-  box-shadow: 0 0 24px var(--create-glow-soft);
+  box-shadow: 0 0 24px var(--theme-glow-soft);
 }
 
 .create-settings-group .setting-control span {
   margin-bottom: 0;
-  color: var(--create-text-soft);
+  color: var(--theme-text-soft);
   font-size: 0.67rem;
   letter-spacing: 0.11em;
 }
@@ -5371,24 +5364,24 @@ body[data-screen="createLobbySetup"] .app-shell {
 .custom-select-trigger {
   min-height: 38px;
   padding: 8px 10px;
-  border: 1px solid var(--create-line);
-  border-radius: var(--create-control-radius);
-  background: var(--create-control-bg);
+  border: 1px solid var(--theme-line);
+  border-radius: 14px;
+  background: var(--theme-control-bg);
   color: var(--text);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
 }
 
 .create-settings-group input::placeholder { color: color-mix(in srgb, var(--muted) 54%, transparent); }
 
 .create-settings-group input:hover,
 .custom-select-trigger:hover {
-  border-color: var(--create-line-strong);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 0 18px var(--create-glow-soft);
+  border-color: var(--theme-line-strong);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 9%, transparent), 0 0 18px var(--theme-glow-soft);
 }
 
 .create-settings-group input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--create-active-bg), 0 0 24px var(--create-active-bg);
+  box-shadow: 0 0 0 3px var(--theme-active-bg), 0 0 24px var(--theme-active-bg);
 }
 
 .custom-select-native {
@@ -5435,8 +5428,8 @@ body[data-screen="createLobbySetup"] .app-shell {
   width: 9px;
   height: 9px;
   flex: 0 0 auto;
-  border-right: 2px solid rgba(255,255,255,0.72);
-  border-bottom: 2px solid rgba(255,255,255,0.72);
+  border-right: 2px solid color-mix(in srgb, var(--text) 72%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--text) 72%, transparent);
   transform: translateY(-2px) rotate(45deg);
   transition: transform 0.22s ease, border-color 0.22s ease;
 }
@@ -5444,7 +5437,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 .custom-select.open .custom-select-trigger,
 .custom-select-trigger:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--create-active-bg), 0 0 28px var(--create-active-bg);
+  box-shadow: 0 0 0 3px var(--theme-active-bg), 0 0 28px var(--theme-active-bg);
   outline: none;
 }
 
@@ -5462,12 +5455,12 @@ body[data-screen="createLobbySetup"] .app-shell {
   max-height: var(--custom-select-menu-max-height, 260px);
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid var(--create-line-strong);
+  border: 1px solid var(--theme-line-strong);
   border-radius: 17px;
   background:
-    radial-gradient(circle at top left, var(--create-glow), transparent 42%),
-    linear-gradient(145deg, var(--create-panel-surface-strong), rgba(var(--surface-rgb), 0.98));
-  box-shadow: 0 24px 54px rgba(0,0,0,0.62), 0 0 38px var(--create-glow), inset 0 1px 0 rgba(255,255,255,0.12);
+    radial-gradient(circle at top left, var(--theme-glow), transparent 42%),
+    linear-gradient(145deg, var(--theme-surface-strong), rgba(var(--surface-rgb), 0.98));
+  box-shadow: 0 24px 54px color-mix(in srgb, var(--bg) 62%, transparent), 0 0 38px var(--theme-glow), inset 0 1px 0 color-mix(in srgb, var(--text) 12%, transparent);
   backdrop-filter: blur(22px);
   opacity: 0;
   transform: translateY(-7px) scale(0.98);
@@ -5490,7 +5483,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 }
 
 .custom-select-menu::-webkit-scrollbar { width: 8px; }
-.custom-select-menu::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 999px; }
+.custom-select-menu::-webkit-scrollbar-track { background: color-mix(in srgb, var(--text) 5%, transparent); border-radius: 999px; }
 .custom-select-menu::-webkit-scrollbar-thumb { border-radius: 999px; background: linear-gradient(180deg, var(--accent), rgba(var(--accent-rgb), 0.42)); }
 
 .custom-select-option {
@@ -5514,16 +5507,16 @@ body[data-screen="createLobbySetup"] .app-shell {
 .custom-select-option:focus-visible,
 .custom-select-option.focused {
   transform: translateX(2px);
-  border-color: var(--create-line-strong);
-  background: var(--create-active-bg);
+  border-color: var(--theme-line-strong);
+  background: var(--theme-active-bg);
   color: var(--text);
-  box-shadow: 0 0 18px var(--create-glow-soft);
+  box-shadow: 0 0 18px var(--theme-glow-soft);
   outline: none;
 }
 
 .custom-select-option.selected {
-  border-color: rgba(255,255,255,0.22);
-  background: linear-gradient(90deg, var(--create-active-bg-strong), var(--create-glow-soft));
+  border-color: color-mix(in srgb, var(--text) 22%, transparent);
+  background: linear-gradient(90deg, var(--theme-active-bg-strong), var(--theme-glow-soft));
   color: var(--text);
 }
 
@@ -5533,7 +5526,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   grid-row: 3;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
-  gap: var(--create-gap);
+  gap: clamp(7px, 0.85vw, 11px);
   margin-top: 0;
 }
 
@@ -5547,17 +5540,17 @@ body[data-screen="createLobbySetup"] .app-shell {
 }
 
 .create-lobby-actions .primary {
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.2), transparent 25%),
-    linear-gradient(135deg, var(--accent), var(--accent-dark) 52%, rgba(var(--accent-rgb), 0.72));
-  box-shadow: 0 18px 44px var(--create-active-bg-strong), 0 0 28px var(--create-glow), inset 0 1px 0 rgba(255,255,255,0.22);
+    linear-gradient(135deg, color-mix(in srgb, var(--text) 20%, transparent), transparent 25%),
+    linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 72%, var(--bg)) 52%, rgba(var(--accent-rgb), 0.72));
+  box-shadow: 0 18px 44px var(--theme-active-bg-strong), 0 0 28px var(--theme-glow), inset 0 1px 0 color-mix(in srgb, var(--text) 22%, transparent);
   text-transform: uppercase;
 }
 
 .create-lobby-actions .secondary {
-  border-color: var(--create-line);
-  background: rgba(255,255,255,0.07);
+  border-color: var(--theme-line);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
   backdrop-filter: blur(14px);
 }
 
