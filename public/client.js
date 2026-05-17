@@ -751,11 +751,32 @@ function showScreen(id) {
   if (previousPhase !== id) playSoundCue("screen");
 }
 
+const TOAST_STATUS_IDS = new Set(["lobbyStatus"]);
+const toastTimers = new Map();
+
 function setStatus(id, message = "", isError = false) {
   const el = $(id);
   if (!el) return;
-  el.textContent = t(message);
+  const translatedMessage = t(message);
+  el.textContent = translatedMessage;
   el.classList.toggle("error", isError);
+
+  if (!TOAST_STATUS_IDS.has(id)) return;
+
+  if (toastTimers.has(id)) {
+    window.clearTimeout(toastTimers.get(id));
+    toastTimers.delete(id);
+  }
+
+  el.classList.add("toast-status");
+  el.classList.toggle("is-visible", Boolean(translatedMessage));
+
+  if (translatedMessage) {
+    toastTimers.set(id, window.setTimeout(() => {
+      el.classList.remove("is-visible");
+      toastTimers.delete(id);
+    }, 3200));
+  }
 }
 
 function clearCinematicTimers() {
