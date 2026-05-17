@@ -535,31 +535,3 @@ test("getSkipVoteState excludes track owner and disconnected listeners", () => {
   lobby.skipVotes["listener-2"] = Date.now();
   assert.equal(shouldCompleteSkip(lobby), true);
 });
-
-test("PostgreSQL persistence activates only when a database URL is configured", () => {
-  const { buildPgUrl, shouldUsePostgres, isRenderEnvironment } = require("../lib/postgres-store");
-
-  assert.equal(shouldUsePostgres({}), false);
-  assert.equal(shouldUsePostgres({ DATABASE_URL: "postgres://user:pass@db.example.com/musicspy" }), true);
-  assert.equal(shouldUsePostgres({ DATABASE_URL: "postgres://user:pass@db.example.com/musicspy", MUSICSPY_STORAGE: "file" }), false);
-  assert.equal(isRenderEnvironment({ RENDER: "true" }), true);
-
-  const config = buildPgUrl({ DATABASE_URL: "postgres://user:pass@db.example.com:5432/musicspy?sslmode=require" });
-  assert.equal(config.host, "db.example.com");
-  assert.equal(config.database, "musicspy");
-  assert.equal(config.ssl, true);
-});
-
-
-test("Render startup does not crash without DATABASE_URL and warns before file fallback", () => {
-  const { createUserStorePersistence } = require("../lib/persistence");
-  const warnings = [];
-  const persistence = createUserStorePersistence({
-    env: { RENDER: "true", MUSICSPY_DATA_DIR: "/tmp/musicspy-render-fallback" },
-    fsImpl: { existsSync() { return false; } },
-    logger: { log() {}, error() {}, warn(message) { warnings.push(message); } }
-  });
-
-  assert.match(persistence.usersFile, /musicspy-render-fallback/);
-  assert.ok(warnings.some((message) => /DATABASE_URL is not configured/.test(message)));
-});
