@@ -1460,11 +1460,16 @@ function updateAccountToggle(displayName, user) {
   const avatar = $("accountToggleAvatar");
   const label = $("accountToggleLabel");
   const oauthLocked = isOAuthProfile(user);
+  const guestLocked = !user;
+  const locked = oauthLocked || guestLocked;
   if (toggle) {
-    toggle.disabled = oauthLocked;
-    toggle.classList.toggle("locked", oauthLocked);
-    toggle.title = oauthLocked ? t("Аккаунт уже подключен через Google или Discord") : t("Аккаунт и статистика");
-    toggle.setAttribute("aria-disabled", String(oauthLocked));
+    toggle.disabled = locked;
+    toggle.classList.toggle("locked", locked);
+    toggle.classList.toggle("guest-locked", guestLocked);
+    toggle.title = oauthLocked
+      ? t("Аккаунт уже подключен через Google или Discord")
+      : (guestLocked ? t("Гость") : t("Аккаунт и статистика"));
+    toggle.setAttribute("aria-disabled", String(locked));
   }
   if (label) label.textContent = user ? displayName : t("Гость");
   if (!avatar) return;
@@ -1918,7 +1923,8 @@ function resetCreateLobbyForm() {
     createSettingSpyMode: preset.spyMode || "auto",
     createSettingAnonymousVoting: String(preset.anonymousVoting),
     createSettingVotingTime: preset.votingTime,
-    createSettingRunoffOnTie: String(preset.runoffOnTie)
+    createSettingRunoffOnTie: String(preset.runoffOnTie),
+    createSettingVisualEffects: state.gamePreferences.effectsDensity || "ultra"
   };
 
   for (const [id, value] of Object.entries(fields)) {
@@ -1960,10 +1966,17 @@ function changeCreateGameMode() {
   if ($("createSettingAnonymousVoting")) $("createSettingAnonymousVoting").value = String(preset.anonymousVoting);
   if ($("createSettingVotingTime")) $("createSettingVotingTime").value = String(preset.votingTime);
   if ($("createSettingRunoffOnTie")) $("createSettingRunoffOnTie").value = String(preset.runoffOnTie);
+  if ($("createSettingVisualEffects")) $("createSettingVisualEffects").value = state.gamePreferences.effectsDensity || "ultra";
   if ($("createSettingMaxPlayers")) $("createSettingMaxPlayers").value = String(preset.maxPlayers || 9);
   updateCreateGameModeHint(preset);
   refreshCustomSelects();
   updateCreateLobbyPreview();
+}
+
+function updateCreateVisualEffectsPreference() {
+  const density = $("createSettingVisualEffects")?.value || state.gamePreferences.effectsDensity || "ultra";
+  setEffectsDensityPreference(density);
+  refreshCustomSelects();
 }
 
 function updateCreateGameModeHint(preset = null) {
@@ -2011,7 +2024,7 @@ function renderOpenLobbies(lobbies = []) {
 
   if (!state.openLobbies.length) {
     list.classList.add("empty");
-    list.textContent = t("Открытых комнат пока нет. Создай лобби и позови друзей!");
+    list.textContent = "";
     return;
   }
 
