@@ -5821,10 +5821,9 @@ body[data-screen="lobby"] .app-shell {
 .lobby-chat-panel .chat-input-area {
   position: sticky;
   bottom: 0;
-  background:
-    linear-gradient(180deg, rgba(25, 20, 52, 0.48), rgba(13, 10, 30, 0.72)),
-    rgba(16, 12, 36, 0.56);
-  backdrop-filter: blur(18px) saturate(130%);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .lobby-theme-control {
@@ -5834,11 +5833,10 @@ body[data-screen="lobby"] .app-shell {
 .lobby-theme-control {
   gap: 8px;
   padding: 10px;
-  border-color: rgba(255,255,255,0.105);
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.072), rgba(255,255,255,0.025)),
-    rgba(18, 14, 41, 0.42);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.08);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   overflow: hidden;
 }
 
@@ -5846,13 +5844,17 @@ body[data-screen="lobby"] .app-shell {
   width: 100%;
 }
 
-#lobby .chat-form input,
+#lobby .chat-form input {
+  border-color: rgba(255,255,255,0.12);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+
 #lobby .lobby-theme-control select {
-  border-color: rgba(255,255,255,0.14);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
-    rgba(20, 16, 44, 0.58);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+  background: transparent;
+  box-shadow: none;
   color: var(--text);
 }
 
@@ -5860,12 +5862,14 @@ body[data-screen="lobby"] .app-shell {
   color: rgba(231, 226, 255, 0.58);
 }
 
-#lobby .chat-form input:focus,
+#lobby .chat-form input:focus {
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: none;
+}
+
 #lobby .lobby-theme-control select:focus {
-  border-color: rgba(var(--accent-rgb), 0.72);
-  box-shadow:
-    0 0 0 4px rgba(var(--accent-rgb), 0.14),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: none;
 }
 
 .lobby-roster-panel {
@@ -6124,6 +6128,36 @@ body[data-screen="lobby"] .app-shell {
 
 .action-stack-muted .status:empty {
   display: none;
+}
+
+.toast-status {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10050;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 48px));
+  min-height: 0;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  background: rgba(14, 11, 32, 0.92);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 12px, 0);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.toast-status.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.toast-status.error {
+  border-color: rgba(255, 31, 45, 0.38);
 }
 
 .invite-qr-modal {
