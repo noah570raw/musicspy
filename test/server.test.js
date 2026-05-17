@@ -535,3 +535,27 @@ test("getSkipVoteState excludes track owner and disconnected listeners", () => {
   lobby.skipVotes["listener-2"] = Date.now();
   assert.equal(shouldCompleteSkip(lobby), true);
 });
+
+test("PostgreSQL persistence activates only when a database URL is configured", () => {
+  const { buildPgUrl, shouldUsePostgres, isRenderEnvironment } = require("../lib/postgres-store");
+
+  assert.equal(shouldUsePostgres({}), false);
+  assert.equal(shouldUsePostgres({ DATABASE_URL: "postgres://user:pass@db.example.com/musicspy" }), true);
+  assert.equal(shouldUsePostgres({ DATABASE_URL: "postgres://user:pass@db.example.com/musicspy", MUSICSPY_STORAGE: "file" }), false);
+  assert.equal(isRenderEnvironment({ RENDER: "true" }), true);
+
+  const config = buildPgUrl({ DATABASE_URL: "postgres://user:pass@db.example.com:5432/musicspy?sslmode=require" });
+  assert.equal(config.host, "db.example.com");
+  assert.equal(config.database, "musicspy");
+  assert.equal(config.ssl, true);
+});
+
+
+test("Render production refuses ephemeral file storage without DATABASE_URL", () => {
+  const { createUserStorePersistence } = require("../lib/persistence");
+
+  assert.throws(
+    () => createUserStorePersistence({ env: { RENDER: "true" }, logger: { log() {}, error() {} } }),
+    /requires DATABASE_URL/
+  );
+});
