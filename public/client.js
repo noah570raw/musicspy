@@ -118,11 +118,12 @@ function initFriendsSystem() {
   state.friendRequests = [];
   state.outgoingFriendRequests = [];
   state.lobbyInvites = [];
-  renderFriendsSystem();
-  requestSocialState();
+  if (state.authResolved) requestSocialState();
+  else renderFriendsSystem();
 }
 
 function requestSocialState() {
+  if (!state.authResolved) return;
   if (!socket.connected || !state.profile) {
     renderFriendsSystem();
     return;
@@ -566,6 +567,7 @@ function setLanguage(lang) {
     toggle.setAttribute("aria-pressed", String(state.lang === "en"));
     toggle.title = state.lang === "en" ? "Переключить на русский" : "Switch to English";
   }
+  persistServerBackedSettings();
   localizeStaticDom();
   refreshCustomSelects();
   renderAppearanceControls();
@@ -1345,6 +1347,7 @@ function setVisualThemePreference(theme) {
   if (!INTERFACE_THEMES.some((item) => item.id === theme)) return;
   applyLocalAppearanceTheme(theme);
   saveAppearancePreference();
+  persistServerBackedSettings();
   renderAppearanceControls();
 }
 
@@ -1353,6 +1356,7 @@ function setAccentColorPreference(colorId) {
   state.accentColor = colorId;
   applyAccentColor();
   saveAppearancePreference();
+  persistServerBackedSettings();
   renderAppearanceControls();
 }
 
@@ -1361,6 +1365,7 @@ function setSecondaryAccentColorPreference(colorId) {
   state.secondaryAccentColor = colorId;
   applyAccentColor();
   saveAppearancePreference();
+  persistServerBackedSettings();
   renderAppearanceControls();
 }
 
@@ -1443,6 +1448,7 @@ function setEffectsDensityPreference(density) {
   if (!EFFECTS_DENSITIES.some((item) => item.id === density)) return;
   applyEffectsDensity(density);
   saveGamePreferences();
+  persistServerBackedSettings();
   renderEffectsDensityControls();
 }
 
@@ -1454,6 +1460,7 @@ function updateGamePreference(key, value) {
   }
   state.gamePreferences[key] = Boolean(value);
   saveGamePreferences();
+  persistServerBackedSettings();
 }
 
 function showScreen(id) {
@@ -1758,24 +1765,46 @@ function updateLobbyRenameControls() {
 }
 
 function getStoredAuthToken() {
-  return window.localStorage.getItem(AUTH_TOKEN_KEY) || "";
+  return window.sessionStorage.getItem(AUTH_TOKEN_KEY)
+    || window.localStorage.getItem(AUTH_TOKEN_KEY)
+    || window.localStorage.getItem(LEGACY_AUTH_TOKEN_KEY)
+    || "";
+}
+
+function getStoredRefreshToken() {
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY) || "";
+}
+
+function storeAuthTokens(tokens = {}) {
+  const accessToken = tokens.accessToken || tokens.token || "";
+  if (accessToken) {
+    window.sessionStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+    window.localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+  }
+  if (tokens.refreshToken) window.localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
 }
 
 function storeAuthToken(token) {
-  if (token) window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+  storeAuthTokens({ accessToken: token });
 }
 
 function clearStoredAuthToken() {
+  window.sessionStorage.removeItem(AUTH_TOKEN_KEY);
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  window.localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
+  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 function consumeOAuthRedirectParams() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get("auth_token");
+  const token = params.get("auth_access_token") || params.get("auth_token");
+  const refreshToken = params.get("auth_refresh_token");
   const error = params.get("auth_error");
-  if (!token && !error) return;
+  if (!token && !refreshToken && !error) return;
 
-  if (token) storeAuthToken(token);
+  if (token || refreshToken) storeAuthTokens({ accessToken: token, refreshToken });
+  params.delete("auth_access_token");
+  params.delete("auth_refresh_token");
   params.delete("auth_token");
   params.delete("auth_error");
   const nextSearch = params.toString();
@@ -1974,6 +2003,43 @@ function loginWithOAuth(provider) {
   window.location.href = `/auth/${normalizedProvider}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
+function restoreServerBackedSettings(user) {
+  const settings = user?.settings || {};
+  if (settings.appearance && typeof settings.appearance === "object") {
+    if (settings.appearance.visualTheme) state.visualTheme = settings.appearance.visualTheme;
+    if (settings.appearance.accentColor) state.accentColor = settings.appearance.accentColor;
+    if (settings.appearance.secondaryAccentColor) state.secondaryAccentColor = settings.appearance.secondaryAccentColor;
+    applyAppearanceTheme();
+    renderAppearanceControls();
+  }
+  if (settings.gamePreferences && typeof settings.gamePreferences === "object") {
+    state.gamePreferences = { ...state.gamePreferences, ...settings.gamePreferences };
+    applyEffectsDensity();
+    syncGamePreferenceToggles();
+  }
+  if (settings.lang && settings.lang !== state.lang) {
+    state.lang = settings.lang;
+    applyTranslations();
+  }
+}
+
+function persistServerBackedSettings() {
+  if (!state.profile || !socket.connected) return;
+  socket.emit("settings:update", {
+    settings: {
+      appearance: {
+        visualTheme: state.visualTheme,
+        accentColor: state.accentColor,
+        secondaryAccentColor: state.secondaryAccentColor
+      },
+      gamePreferences: state.gamePreferences,
+      lang: state.lang
+    }
+  }, (res) => {
+    if (res?.success && res.profile?.user) state.profile = res.profile.user;
+  });
+}
+
 function applyProfile(profileData = { user: null, guest: true }) {
   state.profile = profileData.user || null;
   state.authGuest = Boolean(profileData.guest);
@@ -1995,7 +2061,9 @@ function applyProfile(profileData = { user: null, guest: true }) {
   renderProfileStats();
   syncNameInput();
   updateLobbyRenameControls();
-  requestSocialState();
+  if (profileData.social) applySocialState(profileData.social);
+  else requestSocialState();
+  restoreServerBackedSettings(user);
   attemptReconnectToGame();
   attemptAutoJoinFromInvite();
 }
@@ -2062,21 +2130,40 @@ function renderProfileStats() {
   `).join("");
 }
 
-function authenticateWithStoredToken() {
-  const token = getStoredAuthToken();
-  if (!token) {
+function finishAuthenticatedRestore(res, welcome = "С возвращением!") {
+  storeAuthTokens(res || {});
+  applyProfile({ ...(res.profile || {}), social: res.social });
+  hideAuthModal();
+  setAuthStatus(welcome);
+}
+
+function refreshAuthSession() {
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) {
+    clearStoredAuthToken();
     continueAsGuest({ silent: true });
     return;
   }
-  socket.emit("auth:session", { token }, (res) => {
-    if (res?.success) {
-      applyProfile(res.profile);
-      hideAuthModal();
-      setAuthStatus("С возвращением!");
-    } else {
-      clearStoredAuthToken();
-      continueAsGuest({ silent: true });
-    }
+  console.info("[auth] attempting silent refresh");
+  socket.emit("auth:refresh", { refreshToken }, (res) => {
+    if (res?.success) return finishAuthenticatedRestore(res, "Сессия восстановлена");
+    clearStoredAuthToken();
+    continueAsGuest({ silent: true });
+  });
+}
+
+function authenticateWithStoredToken() {
+  const token = getStoredAuthToken();
+  const refreshToken = getStoredRefreshToken();
+  if (!token && !refreshToken) {
+    continueAsGuest({ silent: true });
+    return;
+  }
+  if (!token && refreshToken) return refreshAuthSession();
+  console.info("[auth] attempting access-token restore");
+  socket.emit("auth:session", { accessToken: token, token }, (res) => {
+    if (res?.success) return finishAuthenticatedRestore(res);
+    refreshAuthSession();
   });
 }
 
@@ -2092,8 +2179,8 @@ function loginAccount() {
   setAuthStatus();
   socket.emit("auth:login", authPayload(), (res) => {
     if (res?.error) return setAuthStatus(res.error, true);
-    storeAuthToken(res.token);
-    applyProfile(res.profile);
+    storeAuthTokens(res);
+    applyProfile({ ...(res.profile || {}), social: res.social });
     hideAuthModal();
     setAuthStatus("Вход выполнен");
   });
@@ -2116,7 +2203,7 @@ function continueAsGuest({ silent = false } = {}) {
 
 function logoutAccount() {
   clearStoredAuthToken();
-  socket.emit("auth:logout", () => {
+  socket.emit("auth:logout", { refreshToken: getStoredRefreshToken() }, () => {
     applyProfile({ user: null, guest: true });
     hideAuthModal();
     setAuthStatus("Ты вышел из аккаунта");

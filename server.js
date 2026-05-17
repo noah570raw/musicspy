@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const http = require("http");
 const { Server } = require("socket.io");
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const { createUserStorePersistence, resolveDataDir } = require("./lib/persistence");
+const { createUserStorePersistence, friendshipKey, resolveDataDir } = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
   buildOAuthSuccessRedirect,
@@ -15,6 +15,8 @@ const {
   normalizeOAuthProfile,
   normalizeUsername,
   parseOAuthResponse,
+  refreshSession: refreshAuthSession,
+  revokeRefreshToken,
   validatePassword,
   verifyPassword
 } = require("./lib/auth");
@@ -104,7 +106,16 @@ function saveUsersStore() {
 }
 
 function createSession(user) {
-  return createAuthSession(user, { save: saveUsersStore });
+  const session = createAuthSession(user, { save: saveUsersStore });
+  console.info(`[auth] created persistent session for user=${user.id} accessExpiresAt=${session.accessExpiresAt} refreshExpiresAt=${session.refreshExpiresAt}`);
+  return session;
+}
+
+function refreshSession(refreshToken) {
+  const refreshed = refreshAuthSession(usersStore.users, refreshToken, { save: saveUsersStore });
+  if (refreshed) console.info(`[auth] refreshed session for user=${refreshed.user.id} accessExpiresAt=${refreshed.tokens.accessExpiresAt}`);
+  else console.warn("[auth] refresh failed: token missing, expired, or revoked");
+  return refreshed;
 }
 
 function findUserByToken(token) {
@@ -133,16 +144,20 @@ function publicUser(user) {
     avatar: user.avatar || "",
     authProviders: Array.from(new Set((user.oauth || []).map((identity) => identity.provider).filter(Boolean))),
     createdAt: user.createdAt,
-    stats: { ...defaultStats(), ...(user.stats || {}) }
+    stats: { ...defaultStats(), ...(user.stats || {}) },
+    settings: { ...(user.settings || {}) }
   };
 }
 
 
 function ensureSocialCollections() {
+  if (!Array.isArray(usersStore.friendships)) usersStore.friendships = [];
   if (!Array.isArray(usersStore.friendRequests)) usersStore.friendRequests = [];
   if (!Array.isArray(usersStore.directMessages)) usersStore.directMessages = [];
   for (const user of usersStore.users) {
-    if (!Array.isArray(user.friends)) user.friends = [];
+    user.friends = friendIdsForUser(user.id);
+    if (!user.stats) user.stats = defaultStats();
+    if (!user.settings) user.settings = {};
   }
 }
 
@@ -160,9 +175,16 @@ function findUserByNicknameOrUsername(value) {
     || null;
 }
 
+function friendIdsForUser(userId) {
+  const id = String(userId || "");
+  return (usersStore.friendships || [])
+    .filter((friendship) => friendship.userAId === id || friendship.userBId === id)
+    .map((friendship) => friendship.userAId === id ? friendship.userBId : friendship.userAId);
+}
+
 function usersAreFriends(userAId, userBId) {
-  const userA = findUserById(userAId);
-  return Boolean(userA && (userA.friends || []).includes(userBId));
+  const key = friendshipKey(userAId, userBId);
+  return (usersStore.friendships || []).some((friendship) => friendship.id === key || friendshipKey(friendship.userAId, friendship.userBId) === key);
 }
 
 function getPendingFriendRequest(senderId, receiverId) {
@@ -208,7 +230,8 @@ function getSocialState(userId) {
   ensureSocialCollections();
   const user = findUserById(userId);
   if (!user) return { friends: [], incomingRequests: [], outgoingRequests: [] };
-  const friends = (user.friends || []).map(findUserById).filter(Boolean).map((friend) => publicSocialUser(friend, userId));
+  const friends = friendIdsForUser(userId).map(findUserById).filter(Boolean).map((friend) => publicSocialUser(friend, userId));
+  console.info(`[social] read state user=${userId} friends=${friends.length} incoming=${usersStore.friendRequests.filter((request) => request.status === "pending" && request.receiverId === userId).length}`);
   const incomingRequests = usersStore.friendRequests
     .filter((request) => request.status === "pending" && request.receiverId === userId)
     .map((request) => ({ request, user: findUserById(request.senderId) }))
@@ -228,17 +251,21 @@ function emitSocialState(userId) {
 }
 
 function emitSocialForUserAndFriends(userId) {
-  const user = findUserById(userId);
   emitSocialState(userId);
-  for (const friendId of user?.friends || []) emitSocialState(friendId);
+  for (const friendId of friendIdsForUser(userId)) emitSocialState(friendId);
 }
 
 function addFriendship(userAId, userBId) {
   const userA = findUserById(userAId);
   const userB = findUserById(userBId);
-  if (!userA || !userB) return false;
-  userA.friends = Array.from(new Set([...(userA.friends || []), userBId]));
-  userB.friends = Array.from(new Set([...(userB.friends || []), userAId]));
+  if (!userA || !userB || userAId === userBId) return false;
+  const key = friendshipKey(userAId, userBId);
+  if (!(usersStore.friendships || []).some((friendship) => friendship.id === key || friendshipKey(friendship.userAId, friendship.userBId) === key)) {
+    usersStore.friendships.push({ id: key, userAId: key.split(":")[0], userBId: key.split(":")[1], createdAt: new Date().toISOString() });
+    console.info(`[db] friendship insert confirmed userA=${userAId} userB=${userBId}`);
+  }
+  userA.friends = friendIdsForUser(userAId);
+  userB.friends = friendIdsForUser(userBId);
   userA.updatedAt = new Date().toISOString();
   userB.updatedAt = userA.updatedAt;
   return true;
@@ -266,6 +293,7 @@ function createFriendRequest(senderId, receiverId) {
   const request = { id: crypto.randomUUID(), senderId, receiverId, status: "pending", createdAt: new Date().toISOString() };
   usersStore.friendRequests.push(request);
   saveUsersStore();
+  console.info(`[db] friend request insert confirmed sender=${senderId} receiver=${receiverId}`);
   emitSocialState(senderId);
   emitSocialState(receiverId);
   io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:request", message: `Новая заявка от ${sender.displayName || sender.username}` });
@@ -280,6 +308,7 @@ function acceptFriendRequest(receiverId, requestId) {
   request.respondedAt = new Date().toISOString();
   addFriendship(request.senderId, request.receiverId);
   saveUsersStore();
+  console.info(`[db] friend request accepted id=${requestId}`);
   emitSocialForUserAndFriends(request.senderId);
   emitSocialForUserAndFriends(request.receiverId);
   const receiver = findUserById(receiverId);
@@ -294,6 +323,7 @@ function declineFriendRequest(receiverId, requestId) {
   request.status = "declined";
   request.respondedAt = new Date().toISOString();
   saveUsersStore();
+  console.info(`[db] friend request declined id=${requestId}`);
   emitSocialState(request.senderId);
   emitSocialState(request.receiverId);
   return { success: true };
@@ -303,8 +333,11 @@ function removeFriend(userId, friendId) {
   const user = findUserById(userId);
   const friend = findUserById(friendId);
   if (!user || !friend || !usersAreFriends(userId, friendId)) return { error: "Друг не найден" };
-  user.friends = (user.friends || []).filter((id) => id !== friendId);
-  friend.friends = (friend.friends || []).filter((id) => id !== userId);
+  const key = friendshipKey(userId, friendId);
+  usersStore.friendships = (usersStore.friendships || []).filter((friendship) => friendship.id !== key && friendshipKey(friendship.userAId, friendship.userBId) !== key);
+  user.friends = friendIdsForUser(userId);
+  friend.friends = friendIdsForUser(friendId);
+  console.info(`[db] friendship delete confirmed user=${userId} friend=${friendId}`);
   user.updatedAt = new Date().toISOString();
   friend.updatedAt = user.updatedAt;
   saveUsersStore();
@@ -1030,8 +1063,8 @@ async function handleOAuthCallback(provider, req, res) {
     if (!userResponse.ok) throw oauthError(provider, "profile request", userResponse, rawProfile);
     const profile = normalizeOAuthProfile(provider, rawProfile);
     const user = upsertOAuthUser(provider, profile);
-    const sessionToken = createSession(user);
-    return res.redirect(buildOAuthSuccessRedirect(returnTo, sessionToken));
+    const session = createSession(user);
+    return res.redirect(buildOAuthSuccessRedirect(returnTo, session));
   } catch (error) {
     console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
     return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
@@ -1658,11 +1691,22 @@ function createLobbyState(code, hostId, player, options = {}) {
 io.on("connection", (socket) => {
   socket.data.user = null;
 
-  socket.on("auth:session", ({ token } = {}, cb = () => {}) => {
-    const user = findUserByToken(token);
-    if (!user) return cb({ error: "Сессия не найдена" });
+  socket.on("auth:session", ({ token, accessToken } = {}, cb = () => {}) => {
+    const user = findUserByToken(accessToken || token);
+    if (!user) {
+      console.warn("[auth] access restore failed: token missing or expired");
+      return cb({ error: "Сессия не найдена" });
+    }
     registerAuthenticatedSocket(socket, user);
-    cb({ success: true, profile: profileForSocket(socket) });
+    console.info(`[auth] restored access session for user=${user.id}`);
+    cb({ success: true, profile: profileForSocket(socket), social: getSocialState(user.id) });
+  });
+
+  socket.on("auth:refresh", ({ refreshToken } = {}, cb = () => {}) => {
+    const refreshed = refreshSession(refreshToken);
+    if (!refreshed) return cb({ error: "Сессия истекла" });
+    registerAuthenticatedSocket(socket, refreshed.user);
+    cb({ success: true, ...refreshed.tokens, token: refreshed.tokens.accessToken, profile: profileForSocket(socket), social: getSocialState(refreshed.user.id) });
   });
 
   socket.on("auth:guest", ({ name } = {}, cb = () => {}) => {
@@ -1694,8 +1738,8 @@ io.on("connection", (socket) => {
     };
     usersStore.users.push(user);
     registerAuthenticatedSocket(socket, user);
-    const token = createSession(user);
-    cb({ success: true, token, profile: profileForSocket(socket) });
+    const tokens = createSession(user);
+    cb({ success: true, ...tokens, token: tokens.accessToken, profile: profileForSocket(socket) });
   });
 
   socket.on("auth:login", ({ username, password } = {}, cb = () => {}) => {
@@ -1703,11 +1747,13 @@ io.on("connection", (socket) => {
     const user = usersStore.users.find((item) => item.username === normalizedUsername);
     if (!user || !verifyPassword(password, user)) return cb({ error: "Неверный логин или пароль" });
     registerAuthenticatedSocket(socket, user);
-    const token = createSession(user);
-    cb({ success: true, token, profile: profileForSocket(socket) });
+    const tokens = createSession(user);
+    cb({ success: true, ...tokens, token: tokens.accessToken, profile: profileForSocket(socket) });
   });
 
-  socket.on("auth:logout", (cb = () => {}) => {
+  socket.on("auth:logout", ({ refreshToken } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (user && refreshToken) revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
     unregisterAuthenticatedSocket(socket);
     cb({ success: true, profile: profileForSocket(socket) });
   });
@@ -1725,6 +1771,22 @@ io.on("connection", (socket) => {
     } catch (error) {
       cb({ error: error.message || "Не удалось обновить профиль" });
     }
+  });
+
+  socket.on("settings:update", ({ settings } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы сохранять настройки" });
+    const safeSettings = settings && typeof settings === "object" ? settings : {};
+    user.settings = {
+      ...(user.settings || {}),
+      appearance: safeSettings.appearance && typeof safeSettings.appearance === "object" ? safeSettings.appearance : user.settings?.appearance,
+      gamePreferences: safeSettings.gamePreferences && typeof safeSettings.gamePreferences === "object" ? safeSettings.gamePreferences : user.settings?.gamePreferences,
+      lang: typeof safeSettings.lang === "string" ? safeSettings.lang.slice(0, 8) : user.settings?.lang
+    };
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    console.info(`[db] settings write confirmed user=${user.id}`);
+    cb({ success: true, profile: profileForSocket(socket) });
   });
 
 
@@ -1807,6 +1869,7 @@ io.on("connection", (socket) => {
     usersStore.directMessages.push(message);
     if (usersStore.directMessages.length > MAX_DIRECT_MESSAGES) usersStore.directMessages = usersStore.directMessages.slice(-MAX_DIRECT_MESSAGES);
     saveUsersStore();
+    console.info(`[db] direct message insert confirmed conversation=${message.conversationId} message=${message.id}`);
     const senderPayload = { ...message, mine: true };
     const receiverPayload = { ...message, mine: false };
     cb({ success: true, message: senderPayload });
