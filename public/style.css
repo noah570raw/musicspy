@@ -7339,21 +7339,25 @@ body[data-effects-density="low"] .sound-toggle {
 .site-menu-card .language-settings-block {
   display: grid;
   grid-template-areas:
-    "title"
-    "switch";
-  grid-template-rows: auto minmax(250px, 1fr);
-  gap: clamp(14px, 2.2vh, 22px);
+    "title switch"
+    "orbit orbit";
+  grid-template-columns: minmax(0, auto) auto;
+  grid-template-rows: auto minmax(210px, 1fr);
+  column-gap: clamp(18px, 3vw, 34px);
+  row-gap: clamp(18px, 2.4vh, 26px);
   min-height: 0;
   height: 100%;
   overflow: hidden;
   place-items: center;
-  align-content: center;
-  text-align: center;
+  align-content: start;
+  justify-content: center;
+  padding-top: clamp(14px, 3vh, 30px);
+  text-align: left;
 }
 
 .language-orbit {
   position: relative;
-  grid-area: switch;
+  grid-area: orbit;
   place-self: center;
   width: clamp(250px, 34vw, 330px);
   aspect-ratio: 1;
@@ -7368,7 +7372,8 @@ body[data-effects-density="low"] .sound-toggle {
   position: relative;
   z-index: 1;
   grid-area: title;
-  justify-items: center;
+  justify-items: start;
+  align-self: start;
   max-width: 25rem;
 }
 
@@ -7376,7 +7381,7 @@ body[data-effects-density="low"] .sound-toggle {
   position: relative;
   z-index: 1;
   grid-area: switch;
-  place-self: center;
+  place-self: start center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7384,6 +7389,7 @@ body[data-effects-density="low"] .sound-toggle {
   margin: 0;
   padding: 0.9rem 1.12rem;
   line-height: 1;
+  transform: translateY(clamp(0.42rem, 0.9vw, 0.68rem));
   border-color: rgba(var(--accent-rgb), 0.3);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
@@ -7425,6 +7431,29 @@ body[data-effects-density="low"] .sound-toggle {
 
 html[lang="en"] .site-menu-card .language-toggle-knob {
   transform: translateX(calc(var(--language-toggle-width) - var(--language-toggle-knob) - (var(--language-toggle-pad) * 2)));
+}
+
+@media (max-width: 620px) {
+  .site-menu-card .language-settings-block {
+    grid-template-areas:
+      "title"
+      "switch"
+      "orbit";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(170px, 1fr);
+    align-content: start;
+    padding-top: clamp(10px, 2vh, 18px);
+    text-align: center;
+  }
+
+  .language-title {
+    justify-items: center;
+  }
+
+  .site-menu-card .language-switcher {
+    place-self: center;
+    transform: translateY(0.3rem);
+  }
 }
 
 .effects-density-option {
