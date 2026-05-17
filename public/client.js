@@ -2137,14 +2137,27 @@ function finishAuthenticatedRestore(res, welcome = "С возвращением!
   setAuthStatus(welcome);
 }
 
-function refreshAuthSession() {
+async function refreshAuthSession() {
   const refreshToken = getStoredRefreshToken();
+  console.info("[auth] attempting silent refresh");
+  try {
+    const response = await fetch("/auth/refresh", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken })
+    });
+    const res = await response.json().catch(() => ({}));
+    if (response.ok && res?.success) return finishAuthenticatedRestore(res, "Сессия восстановлена");
+  } catch (error) {
+    console.warn("[auth] HTTP refresh failed, falling back to socket", error);
+  }
+
   if (!refreshToken) {
     clearStoredAuthToken();
     continueAsGuest({ silent: true });
     return;
   }
-  console.info("[auth] attempting silent refresh");
   socket.emit("auth:refresh", { refreshToken }, (res) => {
     if (res?.success) return finishAuthenticatedRestore(res, "Сессия восстановлена");
     clearStoredAuthToken();
@@ -2156,8 +2169,7 @@ function authenticateWithStoredToken() {
   const token = getStoredAuthToken();
   const refreshToken = getStoredRefreshToken();
   if (!token && !refreshToken) {
-    continueAsGuest({ silent: true });
-    return;
+    return refreshAuthSession();
   }
   if (!token && refreshToken) return refreshAuthSession();
   console.info("[auth] attempting access-token restore");
@@ -2202,8 +2214,15 @@ function continueAsGuest({ silent = false } = {}) {
 }
 
 function logoutAccount() {
+  const refreshToken = getStoredRefreshToken();
   clearStoredAuthToken();
-  socket.emit("auth:logout", { refreshToken: getStoredRefreshToken() }, () => {
+  fetch("/auth/logout", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken })
+  }).catch(() => {});
+  socket.emit("auth:logout", { refreshToken }, () => {
     applyProfile({ user: null, guest: true });
     hideAuthModal();
     setAuthStatus("Ты вышел из аккаунта");
