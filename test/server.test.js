@@ -476,33 +476,38 @@ test("persistence normalizes missing social collections and writes atomically", 
   });
 
   files.set("/tmp/musicspy-test/users.json", JSON.stringify({ users: [{ id: "u1" }] }));
-  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendRequests: [], directMessages: [] });
+  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [] });
 
-  persistence.write({ users: [], friendRequests: [{ id: "r1" }], directMessages: [{ id: "m1" }] });
+  persistence.write({ users: [], friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2" }], friendRequests: [{ id: "r1" }], directMessages: [{ id: "m1" }] });
   assert.equal(files.has(`/tmp/musicspy-test/users.json.${process.pid}.tmp`), false);
   assert.deepEqual(JSON.parse(files.get("/tmp/musicspy-test/users.json")), {
     users: [],
+    friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2", createdAt: "1970-01-01T00:00:00.000Z" }],
     friendRequests: [{ id: "r1" }],
     directMessages: [{ id: "m1" }]
   });
   assert.ok(mkdirs.includes("/tmp/musicspy-test"));
 });
 
-test("auth sessions are capped and token lookup uses hashed tokens", () => {
-  const { createSession, findUserByToken, hashSessionToken } = require("../lib/auth");
-  const user = {
-    id: "u1",
-    sessions: Array.from({ length: 6 }, (_, index) => ({ tokenHash: `old-${index}` }))
-  };
-  let saved = false;
+test("auth sessions persist refresh tokens and access lookup uses hashed tokens", () => {
+  const { createSession, findUserByToken, hashSessionToken, refreshSession } = require("../lib/auth");
+  const user = { id: "u1", sessions: [] };
+  let saved = 0;
 
-  const token = createSession(user, { save: () => { saved = true; } });
+  const tokens = createSession(user, { save: () => { saved += 1; } });
 
-  assert.equal(saved, true);
-  assert.equal(user.sessions.length, 5);
-  assert.equal(user.sessions[0].tokenHash, hashSessionToken(token));
-  assert.equal(findUserByToken([user], token), user);
+  assert.equal(saved, 1);
+  assert.equal(user.sessions.length, 1);
+  assert.equal(user.sessions[0].accessTokenHash, hashSessionToken(tokens.accessToken));
+  assert.equal(user.sessions[0].refreshTokenHash, hashSessionToken(tokens.refreshToken));
+  assert.equal(findUserByToken([user], tokens.accessToken), user);
   assert.equal(findUserByToken([user], "wrong-token"), null);
+
+  const refreshed = refreshSession([user], tokens.refreshToken, { save: () => { saved += 1; } });
+  assert.equal(refreshed.user, user);
+  assert.equal(saved, 2);
+  assert.equal(findUserByToken([user], refreshed.tokens.accessToken), user);
+  assert.equal(refreshSession([user], tokens.refreshToken), null);
 });
 
 test("getSkipVoteState excludes track owner and disconnected listeners", () => {
