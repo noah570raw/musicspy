@@ -59,11 +59,12 @@ Persisted entities include:
 
 ### Render setup
 
-1. Create a managed PostgreSQL database in Render.
-2. Add its external/internal connection string to the web service environment as `DATABASE_URL`.
+1. Create the service from `render.yaml` so Render provisions `musicspy-postgres` and injects its internal connection string into `DATABASE_URL` automatically.
+2. If the service already exists, create a managed PostgreSQL database in Render and add its internal connection string to the web service environment as `DATABASE_URL`.
 3. Keep `NODE_ENV=production` for production services.
-4. Do **not** rely on repo files, in-memory arrays, or Render's ephemeral filesystem for player data.
+4. Use `/healthz` as the health check so Render only routes traffic after the persistent store is ready.
+5. Do **not** rely on repo files, in-memory arrays, or Render's ephemeral filesystem for player data.
 
-On startup the server runs idempotent migrations (`CREATE TABLE IF NOT EXISTS ...`) and then loads data from PostgreSQL before accepting requests or socket connections. If a legacy `data/users.json` exists and the database is empty, the first PostgreSQL startup imports it once.
+On startup the server runs idempotent migrations (`CREATE TABLE IF NOT EXISTS ...` plus safe `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...`) and then loads data from PostgreSQL before accepting requests or socket connections. If a legacy `data/users.json` exists and the database is empty, the first PostgreSQL startup imports it once. During Render shutdown/redeploy the server stops accepting traffic, flushes queued writes, and closes the database pool before exit.
 
 Local development without `DATABASE_URL` still uses `data/users.json` for convenience, but that mode is logged as development/test only and is blocked automatically in production/Render.
