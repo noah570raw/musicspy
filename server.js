@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const http = require("http");
 const { Server } = require("socket.io");
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const { createUserStorePersistence, friendshipKey, resolveDataDir, shouldUsePostgres } = require("./lib/persistence");
+const { createUserStorePersistence, friendshipKey, resolveDataDir } = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
   buildOAuthSuccessRedirect,
@@ -26,20 +26,6 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.set("trust proxy", 1);
-app.use((req, res, next) => {
-  const allowed = String(process.env.CORS_ORIGIN || process.env.PUBLIC_URL || process.env.APP_URL || "").trim().replace(/\/$/, "");
-  const origin = String(req.headers.origin || "").replace(/\/$/, "");
-  if (allowed && origin === allowed) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  }
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  return next();
-});
-app.use(express.json({ limit: "32kb" }));
 registerSocialAssetRoutes(app);
 app.use(express.static("public"));
 
@@ -65,87 +51,8 @@ const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 const lobbies = {};
 const timers = {};
+const oauthStates = new Map();
 const userSockets = new Map();
-
-
-const AUTH_ACCESS_COOKIE = "musicspy_access";
-const AUTH_REFRESH_COOKIE = "musicspy_refresh";
-const CSRF_COOKIE = "musicspy_csrf";
-
-function isProduction() {
-  return process.env.NODE_ENV === "production" || Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_HOSTNAME);
-}
-
-function stableRenderFallbackSecret() {
-  const stableParts = [
-    process.env.RENDER_SERVICE_ID,
-    process.env.RENDER_EXTERNAL_HOSTNAME,
-    process.env.PUBLIC_URL,
-    process.env.APP_URL
-  ].map((part) => String(part || "").trim()).filter(Boolean);
-  if (!stableParts.length) return "";
-  return crypto.createHash("sha256").update(`musicspy-render-fallback:${stableParts.join(":")}`).digest("hex");
-}
-
-function sessionSecret() {
-  const configured = String(process.env.SESSION_SECRET || process.env.AUTH_SECRET || "").trim();
-  if (configured) return configured;
-  return stableRenderFallbackSecret();
-}
-
-function requireProductionSecrets() {
-  if (!isProduction()) return;
-  const configured = String(process.env.SESSION_SECRET || process.env.AUTH_SECRET || "").trim();
-  if (configured.length >= 32) return;
-  if (sessionSecret().length >= 32) {
-    console.warn("[auth] SESSION_SECRET is missing; using a stable Render service-derived fallback. Set SESSION_SECRET to a 32+ character secret for hardened production auth.");
-    return;
-  }
-  console.warn("[auth] SESSION_SECRET is missing or shorter than 32 characters. Set a stable SESSION_SECRET to keep OAuth state hardened across deploys.");
-}
-
-function parseCookieHeader(header = "") {
-  return Object.fromEntries(String(header || "").split(";").map((part) => {
-    const index = part.indexOf("=");
-    if (index < 0) return null;
-    const key = part.slice(0, index).trim();
-    if (!key) return null;
-    return [key, decodeURIComponent(part.slice(index + 1).trim())];
-  }).filter(Boolean));
-}
-
-function cookieValueFromSocket(socket, name) {
-  return parseCookieHeader(socket.handshake?.headers?.cookie || "")[name] || "";
-}
-
-function cookieOptions({ maxAgeMs = 0, httpOnly = true } = {}) {
-  return {
-    httpOnly,
-    secure: isProduction(),
-    sameSite: "lax",
-    path: "/",
-    maxAge: maxAgeMs > 0 ? Math.floor(maxAgeMs) : 0
-  };
-}
-
-function setAuthCookies(res, tokens) {
-  if (!tokens) return;
-  res.cookie(AUTH_ACCESS_COOKIE, tokens.accessToken, cookieOptions({ maxAgeMs: Math.max(0, Date.parse(tokens.accessExpiresAt || "") - Date.now()) || 15 * 60 * 1000 }));
-  res.cookie(AUTH_REFRESH_COOKIE, tokens.refreshToken, cookieOptions({ maxAgeMs: Math.max(0, Date.parse(tokens.refreshExpiresAt || "") - Date.now()) || 180 * 24 * 60 * 60 * 1000 }));
-  res.cookie(CSRF_COOKIE, crypto.randomBytes(16).toString("hex"), cookieOptions({ maxAgeMs: 180 * 24 * 60 * 60 * 1000, httpOnly: false }));
-}
-
-function clearAuthCookies(res) {
-  for (const name of [AUTH_ACCESS_COOKIE, AUTH_REFRESH_COOKIE, CSRF_COOKIE]) {
-    res.clearCookie(name, { path: "/", sameSite: "lax", secure: isProduction() });
-  }
-}
-
-function authSuccessRedirect(returnTo = "/") {
-  const url = new URL(String(returnTo || "/"), "http://musicspy.local");
-  url.searchParams.set("auth", "success");
-  return `${url.pathname}${url.search}${url.hash}`;
-}
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 
@@ -194,22 +101,8 @@ const SIMILAR_THEME_GROUPS = [
 let usersStore = userStorePersistence.read();
 ensureSocialCollections();
 
-async function initializePersistence() {
-  requireProductionSecrets();
-  if (typeof userStorePersistence.init === "function") {
-    usersStore = await userStorePersistence.init();
-    ensureSocialCollections();
-  }
-  const mode = userStorePersistence.mode || (shouldUsePostgres(process.env) ? "postgres" : "file");
-  console.log(`[db] persistence mode=${mode} location=${USERS_FILE}`);
-}
-
 function saveUsersStore() {
-  const pendingWrite = userStorePersistence.write(usersStore);
-  if (pendingWrite && typeof pendingWrite.catch === "function") {
-    pendingWrite.catch((error) => console.error("[db] persistent write failed", error));
-  }
-  return pendingWrite;
+  userStorePersistence.write(usersStore);
 }
 
 function createSession(user) {
@@ -238,9 +131,7 @@ function defaultStats() {
     civilianGames: 0,
     civilianWins: 0,
     winStreak: 0,
-    bestWinStreak: 0,
-    mmr: 1000,
-    rank: "bronze"
+    bestWinStreak: 0
   };
 }
 
@@ -541,14 +432,8 @@ function oauthProviderLabel(provider) {
   return provider === "google" ? "Google" : "Discord";
 }
 
-function providerIdField(provider) {
-  return provider === "google" ? "googleId" : "discordId";
-}
-
 function userHasOAuthIdentity(user, provider, providerId) {
-  const stableField = providerIdField(provider);
-  return user?.[stableField] === providerId
-    || (user.oauth || []).some((identity) => identity.provider === provider && identity.providerId === providerId);
+  return (user.oauth || []).some((identity) => identity.provider === provider && identity.providerId === providerId);
 }
 
 function upsertOAuthUser(provider, profile) {
@@ -568,7 +453,6 @@ function upsertOAuthUser(provider, profile) {
       displayName,
       avatar: profile.avatar || "",
       stats: defaultStats(),
-      [providerIdField(provider)]: providerId,
       oauth: [{ provider, providerId, email, linkedAt: now }],
       sessions: [],
       createdAt: now,
@@ -578,20 +462,12 @@ function upsertOAuthUser(provider, profile) {
   } else {
     user.displayName = user.displayName || displayName;
     if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
-    user[providerIdField(provider)] = providerId;
-    user.oauth = Array.isArray(user.oauth) ? user.oauth : [];
-    let identity = user.oauth.find((item) => item.provider === provider && item.providerId === providerId);
-    if (!identity) {
-      identity = { provider, providerId, email, linkedAt: now };
-      user.oauth.push(identity);
-    }
-    identity.email = email || identity.email || "";
+    const identity = (user.oauth || []).find((item) => item.provider === provider && item.providerId === providerId);
+    if (identity) identity.email = email || identity.email || "";
     user.updatedAt = now;
   }
 
-  // The OAuth callback immediately creates and persists a refresh session for this user.
-  // Avoid an intermediate write with an empty sessions array, which could revoke
-  // existing sessions for the same account during a deploy/restart login flow.
+  saveUsersStore();
   return user;
 }
 
@@ -606,32 +482,19 @@ function oauthRedirectUri(req, provider) {
   return String(process.env[envKey] || "").trim() || `${getPublicBaseUrl(req)}/auth/${provider}/callback`;
 }
 
-function signOAuthStatePayload(payload) {
-  const secret = sessionSecret() || "development-oauth-state-secret";
-  return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
-}
-
 function createOAuthState(provider, returnTo = "/") {
+  const state = crypto.randomBytes(24).toString("hex");
   const safeReturnTo = String(returnTo || "/").startsWith("/") ? String(returnTo || "/") : "/";
-  const payload = Buffer.from(JSON.stringify({
-    provider,
-    returnTo: safeReturnTo,
-    exp: Date.now() + OAUTH_STATE_TTL_MS,
-    nonce: crypto.randomBytes(16).toString("hex")
-  })).toString("base64url");
-  return `${payload}.${signOAuthStatePayload(payload)}`;
+  oauthStates.set(state, { provider, returnTo: safeReturnTo, createdAt: Date.now() });
+  return state;
 }
 
 function consumeOAuthState(state, provider) {
-  const [payload, signature] = String(state || "").split(".");
-  if (!payload || !signature || signature !== signOAuthStatePayload(payload)) return null;
-  try {
-    const entry = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (entry.provider !== provider || Number(entry.exp || 0) <= Date.now()) return null;
-    return entry;
-  } catch {
-    return null;
-  }
+  const entry = oauthStates.get(String(state || ""));
+  oauthStates.delete(String(state || ""));
+  if (!entry || entry.provider !== provider) return null;
+  if (Date.now() - entry.createdAt > OAUTH_STATE_TTL_MS) return null;
+  return entry;
 }
 
 function oauthConfig(provider, req) {
@@ -1201,35 +1064,12 @@ async function handleOAuthCallback(provider, req, res) {
     const profile = normalizeOAuthProfile(provider, rawProfile);
     const user = upsertOAuthUser(provider, profile);
     const session = createSession(user);
-    setAuthCookies(res, session);
-    return res.redirect(authSuccessRedirect(returnTo));
+    return res.redirect(buildOAuthSuccessRedirect(returnTo, session));
   } catch (error) {
     console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
     return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
   }
 }
-
-app.post("/auth/refresh", (req, res) => {
-  const refreshToken = String(req.body?.refreshToken || req.cookies?.[AUTH_REFRESH_COOKIE] || parseCookieHeader(req.headers.cookie || "")[AUTH_REFRESH_COOKIE] || "");
-  const refreshed = refreshSession(refreshToken);
-  if (!refreshed) {
-    clearAuthCookies(res);
-    return res.status(401).json({ error: "Сессия истекла" });
-  }
-  setAuthCookies(res, refreshed.tokens);
-  return res.json({ success: true, ...refreshed.tokens, token: refreshed.tokens.accessToken, profile: { user: publicUser(refreshed.user), guest: false }, social: getSocialState(refreshed.user.id) });
-});
-
-app.post("/auth/logout", (req, res) => {
-  const refreshToken = String(req.body?.refreshToken || parseCookieHeader(req.headers.cookie || "")[AUTH_REFRESH_COOKIE] || "");
-  if (refreshToken) {
-    for (const user of usersStore.users || []) {
-      revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
-    }
-  }
-  clearAuthCookies(res);
-  return res.json({ success: true });
-});
 
 app.get("/auth/google", (req, res) => redirectToOAuth("google", req, res));
 app.get("/auth/google/callback", (req, res) => handleOAuthCallback("google", req, res));
@@ -1645,29 +1485,8 @@ function updateUserStatsForGame(lobby, civiliansWin) {
       stats.civilianGames += 1;
       stats.civilianWins += won ? 1 : 0;
     }
-    stats.mmr = Number(stats.mmr || 1000) + (won ? 25 : -15);
-    stats.rank = stats.mmr >= 1400 ? "gold" : (stats.mmr >= 1200 ? "silver" : "bronze");
     user.stats = stats;
-    const matchRecord = {
-      id: crypto.randomUUID(),
-      lobbyCode: lobby.code,
-      theme: lobby.theme,
-      role: isSpy ? "spy" : "civilian",
-      won,
-      civiliansWin,
-      players: lobby.players.map((item) => ({ accountId: item.accountId || null, name: item.name, guest: Boolean(item.guest) })),
-      settings: lobby.settings,
-      trackHistory: lobby.trackHistory || [],
-      createdAt: new Date().toISOString()
-    };
-    user.matchHistory = [...(Array.isArray(user.matchHistory) ? user.matchHistory : []), matchRecord].slice(-100);
-    user.progression = {
-      ...(user.progression || {}),
-      mmr: stats.mmr,
-      rank: stats.rank,
-      lastMatchAt: matchRecord.createdAt
-    };
-    user.updatedAt = matchRecord.createdAt;
+    user.updatedAt = new Date().toISOString();
     changed = true;
   }
   if (changed) saveUsersStore();
@@ -1873,7 +1692,7 @@ io.on("connection", (socket) => {
   socket.data.user = null;
 
   socket.on("auth:session", ({ token, accessToken } = {}, cb = () => {}) => {
-    const user = findUserByToken(accessToken || token || cookieValueFromSocket(socket, AUTH_ACCESS_COOKIE));
+    const user = findUserByToken(accessToken || token);
     if (!user) {
       console.warn("[auth] access restore failed: token missing or expired");
       return cb({ error: "Сессия не найдена" });
@@ -1884,7 +1703,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:refresh", ({ refreshToken } = {}, cb = () => {}) => {
-    const refreshed = refreshSession(refreshToken || cookieValueFromSocket(socket, AUTH_REFRESH_COOKIE));
+    const refreshed = refreshSession(refreshToken);
     if (!refreshed) return cb({ error: "Сессия истекла" });
     registerAuthenticatedSocket(socket, refreshed.user);
     cb({ success: true, ...refreshed.tokens, token: refreshed.tokens.accessToken, profile: profileForSocket(socket), social: getSocialState(refreshed.user.id) });
@@ -2578,16 +2397,9 @@ function pickTheme() {
 }
 
 if (require.main === module) {
-  initializePersistence()
-    .then(() => {
-      server.listen(process.env.PORT || 3000, () => {
-        console.log(`Music Spy server running; users store: ${USERS_FILE}`);
-      });
-    })
-    .catch((error) => {
-      console.error("Failed to initialize persistent storage", error);
-      process.exit(1);
-    });
+  server.listen(process.env.PORT || 3000, () => {
+    console.log(`Music Spy server running; users store: ${USERS_FILE}`);
+  });
 }
 
 module.exports = {
@@ -2617,7 +2429,6 @@ module.exports = {
   buildOAuthTokenRequest,
   buildOAuthSuccessRedirect,
   buildOAuthErrorRedirect,
-  initializePersistence,
   resolveDataDir,
   createFriendRequest,
   acceptFriendRequest,

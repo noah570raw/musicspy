@@ -2137,27 +2137,14 @@ function finishAuthenticatedRestore(res, welcome = "С возвращением!
   setAuthStatus(welcome);
 }
 
-async function refreshAuthSession() {
+function refreshAuthSession() {
   const refreshToken = getStoredRefreshToken();
-  console.info("[auth] attempting silent refresh");
-  try {
-    const response = await fetch("/auth/refresh", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken })
-    });
-    const res = await response.json().catch(() => ({}));
-    if (response.ok && res?.success) return finishAuthenticatedRestore(res, "Сессия восстановлена");
-  } catch (error) {
-    console.warn("[auth] HTTP refresh failed, falling back to socket", error);
-  }
-
   if (!refreshToken) {
     clearStoredAuthToken();
     continueAsGuest({ silent: true });
     return;
   }
+  console.info("[auth] attempting silent refresh");
   socket.emit("auth:refresh", { refreshToken }, (res) => {
     if (res?.success) return finishAuthenticatedRestore(res, "Сессия восстановлена");
     clearStoredAuthToken();
@@ -2169,7 +2156,8 @@ function authenticateWithStoredToken() {
   const token = getStoredAuthToken();
   const refreshToken = getStoredRefreshToken();
   if (!token && !refreshToken) {
-    return refreshAuthSession();
+    continueAsGuest({ silent: true });
+    return;
   }
   if (!token && refreshToken) return refreshAuthSession();
   console.info("[auth] attempting access-token restore");
@@ -2214,15 +2202,8 @@ function continueAsGuest({ silent = false } = {}) {
 }
 
 function logoutAccount() {
-  const refreshToken = getStoredRefreshToken();
   clearStoredAuthToken();
-  fetch("/auth/logout", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken })
-  }).catch(() => {});
-  socket.emit("auth:logout", { refreshToken }, () => {
+  socket.emit("auth:logout", { refreshToken: getStoredRefreshToken() }, () => {
     applyProfile({ user: null, guest: true });
     hideAuthModal();
     setAuthStatus("Ты вышел из аккаунта");
@@ -3551,7 +3532,6 @@ function renderSkipVote(animate = false) {
   const progressPercent = requiredVotes ? Math.min(100, (voteCount / requiredVotes) * 100) : 0;
 
   panel.classList.toggle("hidden", !visible);
-  panel.closest(".track-form")?.classList.toggle("skip-vote-active", visible);
   panel.classList.toggle("skip-vote-owner", visible && isOwner);
   panel.classList.toggle("skip-vote-pulse", visible && eligible && requiredVotes - voteCount === 1 && !hasVoted);
   panel.classList.toggle("skip-vote-updated", animate);
