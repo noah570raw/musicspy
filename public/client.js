@@ -1315,6 +1315,7 @@ function setAuthStatus(message = "", isError = false) {
 function showAuthModal(mode = "choice") {
   selectAuthMode(mode);
   $("authModal").classList.remove("hidden");
+  document.body.classList.add("site-menu-modal-open");
 }
 
 function openSettingsSection(section = "profile") {
@@ -1343,6 +1344,7 @@ function openAccountPanel() {
 
 function hideAuthModal() {
   $("authModal").classList.add("hidden");
+  document.body.classList.remove("site-menu-modal-open");
   setAuthStatus();
 }
 
@@ -2263,7 +2265,10 @@ function closeTransientOverlays() {
   closeSpyReviewModal();
   hideHowToPlay();
   const authModal = $("authModal");
-  if (authModal) authModal.classList.add("hidden");
+  if (authModal) {
+    authModal.classList.add("hidden");
+    document.body.classList.remove("site-menu-modal-open");
+  }
 }
 
 function hostSetTurn(playerId) {
