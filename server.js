@@ -76,15 +76,32 @@ function isProduction() {
   return process.env.NODE_ENV === "production" || Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_HOSTNAME);
 }
 
+function stableRenderFallbackSecret() {
+  const stableParts = [
+    process.env.RENDER_SERVICE_ID,
+    process.env.RENDER_EXTERNAL_HOSTNAME,
+    process.env.PUBLIC_URL,
+    process.env.APP_URL
+  ].map((part) => String(part || "").trim()).filter(Boolean);
+  if (!stableParts.length) return "";
+  return crypto.createHash("sha256").update(`musicspy-render-fallback:${stableParts.join(":")}`).digest("hex");
+}
+
 function sessionSecret() {
-  return String(process.env.SESSION_SECRET || process.env.AUTH_SECRET || "").trim();
+  const configured = String(process.env.SESSION_SECRET || process.env.AUTH_SECRET || "").trim();
+  if (configured) return configured;
+  return stableRenderFallbackSecret();
 }
 
 function requireProductionSecrets() {
   if (!isProduction()) return;
-  if (!sessionSecret() || sessionSecret().length < 32) {
-    throw new Error("Production auth requires a stable SESSION_SECRET of at least 32 characters; refusing to start with deploy-volatile auth");
+  const configured = String(process.env.SESSION_SECRET || process.env.AUTH_SECRET || "").trim();
+  if (configured.length >= 32) return;
+  if (sessionSecret().length >= 32) {
+    console.warn("[auth] SESSION_SECRET is missing; using a stable Render service-derived fallback. Set SESSION_SECRET to a 32+ character secret for hardened production auth.");
+    return;
   }
+  console.warn("[auth] SESSION_SECRET is missing or shorter than 32 characters. Set a stable SESSION_SECRET to keep OAuth state hardened across deploys.");
 }
 
 function parseCookieHeader(header = "") {
@@ -572,7 +589,9 @@ function upsertOAuthUser(provider, profile) {
     user.updatedAt = now;
   }
 
-  saveUsersStore();
+  // The OAuth callback immediately creates and persists a refresh session for this user.
+  // Avoid an intermediate write with an empty sessions array, which could revoke
+  // existing sessions for the same account during a deploy/restart login flow.
   return user;
 }
 

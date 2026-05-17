@@ -551,11 +551,15 @@ test("PostgreSQL persistence activates only when a database URL is configured", 
 });
 
 
-test("Render production refuses ephemeral file storage without DATABASE_URL", () => {
+test("Render startup does not crash without DATABASE_URL and warns before file fallback", () => {
   const { createUserStorePersistence } = require("../lib/persistence");
+  const warnings = [];
+  const persistence = createUserStorePersistence({
+    env: { RENDER: "true", MUSICSPY_DATA_DIR: "/tmp/musicspy-render-fallback" },
+    fsImpl: { existsSync() { return false; } },
+    logger: { log() {}, error() {}, warn(message) { warnings.push(message); } }
+  });
 
-  assert.throws(
-    () => createUserStorePersistence({ env: { RENDER: "true" }, logger: { log() {}, error() {} } }),
-    /requires DATABASE_URL/
-  );
+  assert.match(persistence.usersFile, /musicspy-render-fallback/);
+  assert.ok(warnings.some((message) => /DATABASE_URL is not configured/.test(message)));
 });
