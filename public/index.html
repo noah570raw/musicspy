@@ -271,69 +271,34 @@
 
   <main class="app-shell">
     <section id="menu" class="screen card hero-card">
-      <div class="hero-copy">
-        <p class="eyebrow">Шпион помузыкальски</p>
-        <h1>Music Spy</h1>
-        <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+      <p class="eyebrow">ночная музыкальная операция</p>
+      <h1>Music Spy</h1>
+      <p class="lead">Собери комнату, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
 
-        <div class="form-grid hero-form-grid">
-          <label>
-            <span>Никнейм</span>
-            <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-          </label>
-          <label>
-            <span>Код комнаты</span>
-            <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-          </label>
-        </div>
-
-        <div class="actions two-col hero-actions">
-          <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
-          <button class="secondary" onclick="joinLobby()">Войти по коду</button>
-          <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
-          <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
-        </div>
-
-        <div class="rules hero-rules">
-          <div><strong>3+</strong><span>игрока</span></div>
-          <div><strong>30с</strong><span>на трек</span></div>
-          <div><strong>3</strong><span>круга</span></div>
-        </div>
-        <p id="menuError" class="status error"></p>
+      <div class="form-grid">
+        <label>
+          <span>Никнейм</span>
+          <input id="name" maxlength="18" placeholder="твой сценический ник" autocomplete="nickname">
+        </label>
+        <label>
+          <span>Код комнаты</span>
+          <input id="code" maxlength="5" placeholder="код доступа" autocomplete="off">
+        </label>
       </div>
 
-      <aside class="hero-visual" aria-label="Премиальный виниловый пульт Music Spy">
-        <div class="turntable-deck" aria-hidden="true">
-          <div class="deck-screw screw-one"></div>
-          <div class="deck-screw screw-two"></div>
-          <div class="hero-vinyl">
-            <span class="vinyl-label"></span>
-            <span class="vinyl-hole"></span>
-          </div>
-          <div class="tonearm-base">
-            <span></span>
-          </div>
-          <div class="tonearm">
-            <span class="tonearm-head"></span>
-          </div>
-          <div class="platter-shadow"></div>
-        </div>
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
+        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
+        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
+      </div>
 
-        <div class="audio-control-strip" aria-hidden="true">
-          <div class="vu-cluster">
-            <div class="vu-meter"><span></span><i></i></div>
-            <div class="vu-meter"><span></span><i></i></div>
-          </div>
-          <div class="knob-bank">
-            <span></span><span></span><span></span>
-          </div>
-          <div class="slider-bank">
-            <span><i></i></span>
-            <span><i></i></span>
-            <span><i></i></span>
-          </div>
-        </div>
-      </aside>
+      <div class="rules">
+        <div><strong>3+</strong><span>игрока</span></div>
+        <div><strong>30с</strong><span>на трек</span></div>
+        <div><strong>3</strong><span>круга</span></div>
+      </div>
+      <p id="menuError" class="status error"></p>
     </section>
 
     <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">
@@ -385,10 +350,6 @@
 
     <section id="createLobbySetup" class="screen card create-lobby-card hidden" aria-labelledby="createLobbySetupTitle">
       <div class="create-lobby-shell">
-        <div class="create-lobby-brand" aria-label="Music Spy">
-          <span class="create-lobby-brand-mark" aria-hidden="true">♪</span>
-          <strong>Music Spy</strong>
-        </div>
         <div class="section-header create-lobby-header">
           <div>
             <p class="eyebrow">операция: новая комната</p>
@@ -399,39 +360,6 @@
         </div>
 
         <div class="create-lobby-layout">
-          <aside class="create-lobby-console" aria-label="Виниловый пульт Music Spy">
-            <div class="turntable-deck create-turntable-deck" aria-hidden="true">
-              <div class="deck-screw screw-one"></div>
-              <div class="deck-screw screw-two"></div>
-              <div class="hero-vinyl">
-                <span class="vinyl-label"></span>
-                <span class="vinyl-hole"></span>
-              </div>
-              <div class="tonearm-base">
-                <span></span>
-              </div>
-              <div class="tonearm">
-                <span class="tonearm-head"></span>
-              </div>
-              <div class="platter-shadow"></div>
-            </div>
-
-            <div class="audio-control-strip create-audio-control-strip" aria-hidden="true">
-              <div class="vu-cluster">
-                <div class="vu-meter"><span></span><i></i></div>
-                <div class="vu-meter"><span></span><i></i></div>
-              </div>
-              <div class="knob-bank">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="slider-bank">
-                <span><i></i></span>
-                <span><i></i></span>
-                <span><i></i></span>
-              </div>
-            </div>
-          </aside>
-
           <aside class="create-lobby-preview" aria-label="Превью будущего лобби">
             <div class="preview-scanline" aria-hidden="true"></div>
             <div class="preview-topline">
