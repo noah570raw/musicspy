@@ -552,19 +552,24 @@ test("PostgreSQL persistence activates only when a database URL is configured", 
 
 
 test("Render can boot without DATABASE_URL while warning about file storage", () => {
-  const { createUserStorePersistence } = require("../lib/persistence");
+  const { createUserStorePersistence, hasConfiguredDatabaseUrl } = require("../lib/persistence");
   const warnings = [];
   const persistence = createUserStorePersistence({
     env: { RENDER: "true", MUSICSPY_DATA_DIR: "/tmp/musicspy-render-fallback" },
     logger: { log() {}, warn(message) { warnings.push(message); }, error() {} }
   });
 
+  assert.equal(hasConfiguredDatabaseUrl({ DATABASE_URL: "postgres://user:pass@db/musicspy" }), true);
+  assert.equal(hasConfiguredDatabaseUrl({}), false);
   assert.equal(persistence.usersFile, "/tmp/musicspy-render-fallback/users.json");
   assert.match(warnings[0], /Render detected without DATABASE_URL/);
 });
 
 test("database requirement remains opt-in for strict production environments", () => {
-  const { createUserStorePersistence } = require("../lib/persistence");
+  const { createUserStorePersistence, isStrictDatabaseRequired } = require("../lib/persistence");
+
+  assert.equal(isStrictDatabaseRequired({ MUSICSPY_REQUIRE_DATABASE: "true" }), true);
+  assert.equal(isStrictDatabaseRequired({}), false);
 
   assert.throws(
     () => createUserStorePersistence({ env: { RENDER: "true", MUSICSPY_REQUIRE_DATABASE: "true" }, logger: { log() {}, error() {} } }),
