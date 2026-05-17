@@ -4905,6 +4905,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   --create-gap: clamp(7px, 0.85vw, 11px);
   --create-radius: 24px;
   --create-control-radius: 14px;
+  --create-panel-padding: clamp(10px, 1.05vw, 14px);
   --create-panel-bg: linear-gradient(145deg, rgba(255,255,255,0.088), rgba(255,255,255,0.026));
 }
 
@@ -4943,7 +4944,9 @@ body[data-screen="createLobbySetup"] .app-shell {
 .create-lobby-shell {
   display: grid;
   grid-template-columns: minmax(300px, 0.72fr) minmax(660px, 1.28fr);
+  grid-template-rows: auto auto auto auto;
   gap: var(--create-gap);
+  align-items: start;
 }
 
 .create-lobby-header,
@@ -4974,7 +4977,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 
 .create-lobby-preview {
   grid-column: 1;
-  grid-row: 2 / 5;
+  grid-row: 2 / 4;
   align-self: stretch;
   position: relative;
   isolation: isolate;
@@ -4984,7 +4987,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   gap: clamp(7px, 0.9vh, 10px);
   min-height: clamp(360px, 45vh, 470px);
   overflow: hidden;
-  padding: clamp(13px, 1.35vw, 18px);
+  padding: var(--create-panel-padding);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--create-radius);
   background:
@@ -5206,7 +5209,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
   overflow: visible;
-  padding: 9px;
+  padding: var(--create-panel-padding);
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 20px;
   background:

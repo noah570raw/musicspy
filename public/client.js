@@ -2105,6 +2105,10 @@ function createLobby() {
     if (res.error) return setStatus(statusId, res.error, true);
     state.currentCode = res.code;
     state.myId = res.playerId || socket.id;
+    if (payload.settings) {
+      state.settings = { ...state.settings, ...payload.settings };
+      applyRoomTheme(state.settings.roomTheme || state.visualTheme || "neon");
+    }
     storeReconnectState(state.currentCode);
     $("code").value = res.code;
     showScreen("lobby");
@@ -2614,7 +2618,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
   updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
   const settingsHint = $("settingsHint");
   if (settingsHint) settingsHint.textContent = isHost ? t("ты можешь менять") : t("меняет хост");
-  applyRoomTheme(state.visualTheme || "neon");
+  applyRoomTheme(settings.roomTheme || state.settings.roomTheme || state.visualTheme || "neon");
   refreshCustomSelects();
 }
 
@@ -2651,7 +2655,7 @@ function renderLobby(lobby) {
   state.hostId = lobby.host || state.hostId;
   state.chatMessages = lobby.chatMessages || state.chatMessages;
   state.finalComments = lobby.finalComments || state.finalComments;
-  applyRoomTheme(state.visualTheme || "neon");
+  applyRoomTheme(state.settings.roomTheme || state.visualTheme || "neon");
 
   updateInviteSecretsVisibility();
   const inviteLink = buildInviteLink();
