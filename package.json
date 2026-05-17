@@ -5,17 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --check server.js && node --check lib/persistence.js && node --check lib/auth.js && node --check scripts/init-db.js && node --check public/client-config.js && node --check public/i18n-data.js && node --check public/client.js && node --test",
-    "db:init": "node scripts/init-db.js"
+    "test": "node --check server.js && node --check lib/persistence.js && node --check lib/auth.js && node --check public/client-config.js && node --check public/i18n-data.js && node --check public/client.js && node --test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "dotenv": "^16.4.7",
     "express": "^5.2.1",
-    "pg": "^8.13.1",
     "socket.io": "^4.8.3"
   }
 }

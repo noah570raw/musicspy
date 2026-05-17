@@ -46,7 +46,6 @@ const state = {
   pendingAvatar: undefined,
   authFormMode: "choice",
   authResolved: false,
-  authRestoring: false,
   pendingInviteCode: "",
   inviteAutoJoinAttempted: false,
   volumePanelOpen: false,
@@ -1866,19 +1865,6 @@ function setAuthStatus(message = "", isError = false) {
   setStatus("accountStatus", message, isError);
 }
 
-function setAuthRestoring(isRestoring, message = "Восстанавливаем сессию...") {
-  state.authRestoring = Boolean(isRestoring);
-  const accountToggle = $("accountToggle");
-  const submitBtn = $("authSubmitBtn");
-  if (accountToggle) {
-    accountToggle.disabled = state.authRestoring || !state.profile;
-    accountToggle.classList.toggle("loading", state.authRestoring);
-    accountToggle.setAttribute("aria-busy", String(state.authRestoring));
-  }
-  if (submitBtn) submitBtn.disabled = state.authRestoring;
-  if (state.authRestoring) setAuthStatus(message);
-}
-
 function showAuthModal(mode = "choice") {
   selectAuthMode(mode);
   $("authModal").classList.remove("hidden");
@@ -2058,7 +2044,6 @@ function applyProfile(profileData = { user: null, guest: true }) {
   state.profile = profileData.user || null;
   state.authGuest = Boolean(profileData.guest);
   state.authResolved = true;
-  setAuthRestoring(false);
   const user = state.profile;
   const displayName = user?.displayName || $("name").value.trim() || t("Гость");
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
@@ -2096,7 +2081,7 @@ function updateAccountToggle(displayName, user) {
   const guestLocked = !user;
   const locked = oauthLocked || guestLocked;
   if (toggle) {
-    toggle.disabled = state.authRestoring || locked;
+    toggle.disabled = locked;
     toggle.classList.toggle("locked", locked);
     toggle.classList.toggle("guest-locked", guestLocked);
     toggle.title = oauthLocked
@@ -2104,7 +2089,7 @@ function updateAccountToggle(displayName, user) {
       : (guestLocked ? t("Гость") : t("Аккаунт и статистика"));
     toggle.setAttribute("aria-disabled", String(locked));
   }
-  if (label) label.textContent = state.authRestoring ? t("Загрузка") : (user ? displayName : t("Гость"));
+  if (label) label.textContent = user ? displayName : t("Гость");
   if (!avatar) return;
   avatar.innerHTML = user?.avatar
     ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
@@ -2153,7 +2138,6 @@ function finishAuthenticatedRestore(res, welcome = "С возвращением!
 }
 
 function refreshAuthSession() {
-  setAuthRestoring(true);
   const refreshToken = getStoredRefreshToken();
   if (!refreshToken) {
     clearStoredAuthToken();
@@ -2169,7 +2153,6 @@ function refreshAuthSession() {
 }
 
 function authenticateWithStoredToken() {
-  setAuthRestoring(true);
   const token = getStoredAuthToken();
   const refreshToken = getStoredRefreshToken();
   if (!token && !refreshToken) {

@@ -3,14 +3,7 @@ const crypto = require("crypto");
 const http = require("http");
 const { Server } = require("socket.io");
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const {
-  createUserStorePersistence,
-  friendshipKey,
-  isProductionRuntime,
-  isRenderEnvironment,
-  resolveDataDir,
-  resolveDatabaseUrl
-} = require("./lib/persistence");
+const { createUserStorePersistence, friendshipKey, resolveDataDir } = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
   buildOAuthSuccessRedirect,
@@ -34,23 +27,6 @@ const io = new Server(server);
 
 app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
-app.get("/healthz", (req, res) => {
-  const dbConfigured = Boolean(resolveDatabaseUrl());
-  const writable = persistenceAllowsWrites();
-  res.status(persistenceReady && writable ? 200 : 503).json({
-    ok: persistenceReady && writable,
-    store: userStorePersistence.kind,
-    persistent: userStorePersistence.kind === "postgres",
-    databaseConfigured: dbConfigured,
-    production: isProductionRuntime(),
-    render: isRenderEnvironment(),
-    auth: authEnvironmentSnapshot(req)
-  });
-});
-app.use((req, res, next) => {
-  if (persistenceReady || req.path.startsWith("/social-assets")) return next();
-  res.status(503).json({ error: "Persistent database is still starting" });
-});
 app.use(express.static("public"));
 
 const userStorePersistence = createUserStorePersistence();
@@ -72,7 +48,6 @@ const DEFAULT_MAX_PLAYERS = 9;
 const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8, 9];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const OAUTH_STATE_VERSION = 1;
 
 const lobbies = {};
 const timers = {};
@@ -123,47 +98,11 @@ const SIMILAR_THEME_GROUPS = [
 ];
 
 
-let usersStore = { users: [], friendships: [], friendRequests: [], directMessages: [], lobbyHistory: [], matchHistory: [], playerProgression: [] };
-let persistenceReady = false;
-let pendingUsersStoreWrite = Promise.resolve();
-
-function persistenceAllowsWrites() {
-  return userStorePersistence.kind === "postgres" || userStorePersistence.kind === "file";
-}
-
-function missingDatabaseMessage() {
-  return "DATABASE_URL is missing. Create a PostgreSQL database in Render, copy Internal Database URL, and add DATABASE_URL environment variable to Web Service.";
-}
-
-function requireAccountPersistence(cb) {
-  if (persistenceAllowsWrites()) return true;
-  cb?.({ error: missingDatabaseMessage() });
-  return false;
-}
-
-async function loadUsersStore() {
-  await userStorePersistence.init?.();
-  usersStore = await userStorePersistence.read();
-  ensureSocialCollections();
-  persistenceReady = true;
-  console.log(`[db] environment: ${isProductionRuntime() ? "production" : "development"}${isRenderEnvironment() ? " on Render" : ""}`);
-  console.log(`[db] database connection status: ${userStorePersistence.kind === "postgres" ? "connected" : userStorePersistence.kind === "unconfigured-postgres" ? "missing DATABASE_URL" : "local file fallback"}`);
-  console.log(`[db] persistence mode: ${userStorePersistence.kind}`);
-  if (userStorePersistence.kind === "file") console.log(`[db] local development JSON store: ${userStorePersistence.usersFile}`);
-  return usersStore;
-}
+let usersStore = userStorePersistence.read();
+ensureSocialCollections();
 
 function saveUsersStore() {
-  if (!persistenceAllowsWrites()) {
-    const error = new Error(missingDatabaseMessage());
-    console.error("[db] persistent write blocked", error.message);
-    return Promise.reject(error);
-  }
-  const write = () => Promise.resolve(userStorePersistence.write(usersStore));
-  pendingUsersStoreWrite = pendingUsersStoreWrite.then(write, write).catch((error) => {
-    console.error("[db] persistent write failed", error);
-  });
-  return pendingUsersStoreWrite;
+  userStorePersistence.write(usersStore);
 }
 
 function createSession(user) {
@@ -497,42 +436,14 @@ function userHasOAuthIdentity(user, provider, providerId) {
   return (user.oauth || []).some((identity) => identity.provider === provider && identity.providerId === providerId);
 }
 
-function identityProviderId(user, provider) {
-  const field = provider === "google" ? "googleId" : "discordId";
-  return String(user?.[field] || "").trim();
-}
-
-function findUserByOAuthIdentity(provider, providerId, email = "") {
-  const stableId = String(providerId || "").trim();
-  const normalizedEmail = String(email || "").trim().toLowerCase();
-  return usersStore.users.find((user) => userHasOAuthIdentity(user, provider, stableId))
-    || usersStore.users.find((user) => identityProviderId(user, provider) === stableId)
-    || (normalizedEmail
-      ? usersStore.users.find((user) => (user.oauth || []).some((identity) => String(identity.email || "").trim().toLowerCase() === normalizedEmail))
-      : null)
-    || null;
-}
-
-function linkOAuthIdentity(user, provider, providerId, email, now) {
-  if (!Array.isArray(user.oauth)) user.oauth = [];
-  const existing = user.oauth.find((item) => item.provider === provider && item.providerId === providerId);
-  if (existing) {
-    existing.email = email || existing.email || "";
-    return false;
-  }
-  user.oauth.push({ provider, providerId, email, linkedAt: now });
-  return true;
-}
-
-async function upsertOAuthUser(provider, profile) {
-  if (!persistenceAllowsWrites()) throw new Error(missingDatabaseMessage());
+function upsertOAuthUser(provider, profile) {
   const providerId = String(profile.providerId || "").trim();
   if (!providerId) throw new Error("OAuth profile id is missing");
 
   const now = new Date().toISOString();
   const email = String(profile.email || "").trim().toLowerCase();
   const displayName = sanitizeDisplayName(profile.displayName || email.split("@")[0], oauthProviderLabel(provider));
-  let user = findUserByOAuthIdentity(provider, providerId, email);
+  let user = usersStore.users.find((item) => userHasOAuthIdentity(item, provider, providerId));
 
   if (!user) {
     const usernameBase = profile.username || email.split("@")[0] || `${provider}_${providerId}`;
@@ -542,38 +453,26 @@ async function upsertOAuthUser(provider, profile) {
       displayName,
       avatar: profile.avatar || "",
       stats: defaultStats(),
-      settings: {},
       oauth: [{ provider, providerId, email, linkedAt: now }],
       sessions: [],
       createdAt: now,
       updatedAt: now
     };
     usersStore.users.push(user);
-    console.info(`[auth:${provider}] DB lookup: created account user=${user.id} providerId=${providerId}`);
   } else {
-    const linked = linkOAuthIdentity(user, provider, providerId, email, now);
     user.displayName = user.displayName || displayName;
     if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
-    if (!user.stats) user.stats = defaultStats();
-    if (!user.settings) user.settings = {};
-    if (!Array.isArray(user.sessions)) user.sessions = [];
+    const identity = (user.oauth || []).find((item) => item.provider === provider && item.providerId === providerId);
+    if (identity) identity.email = email || identity.email || "";
     user.updatedAt = now;
-    console.info(`[auth:${provider}] DB lookup: restored account user=${user.id} providerId=${providerId}${linked ? " linkedIdentity=true" : ""}`);
   }
 
-  await saveUsersStore();
+  saveUsersStore();
   return user;
 }
 
 function getPublicBaseUrl(req) {
-  const configured = String(
-    process.env.PUBLIC_URL
-    || process.env.APP_URL
-    || process.env.SERVER_URL
-    || process.env.RENDER_EXTERNAL_URL
-    || process.env.CLIENT_URL
-    || ""
-  ).trim().replace(/\/$/, "");
+  const configured = String(process.env.PUBLIC_URL || process.env.APP_URL || "").trim().replace(/\/$/, "");
   if (configured) return configured;
   return `${req.protocol}://${req.get("host")}`;
 }
@@ -583,69 +482,19 @@ function oauthRedirectUri(req, provider) {
   return String(process.env[envKey] || "").trim() || `${getPublicBaseUrl(req)}/auth/${provider}/callback`;
 }
 
-function oauthStateSecret() {
-  return String(
-    process.env.SESSION_SECRET
-    || process.env.OAUTH_STATE_SECRET
-    || process.env.GOOGLE_CLIENT_SECRET
-    || process.env.DISCORD_CLIENT_SECRET
-    || "musicspy-development-oauth-state"
-  );
-}
-
-function signOAuthStatePayload(payload) {
-  return crypto.createHmac("sha256", oauthStateSecret()).update(payload).digest("base64url");
-}
-
-function encodeOAuthState(entry) {
-  const payload = Buffer.from(JSON.stringify(entry)).toString("base64url");
-  return `${payload}.${signOAuthStatePayload(payload)}`;
-}
-
-function decodeOAuthState(state) {
-  const value = String(state || "");
-  const [payload, signature, extra] = value.split(".");
-  if (!payload || !signature || extra !== undefined) return null;
-  const expected = signOAuthStatePayload(payload);
-  const left = Buffer.from(signature);
-  const right = Buffer.from(expected);
-  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) return null;
-  try {
-    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
-
-function sanitizeReturnTo(returnTo = "/") {
-  const value = String(returnTo || "/");
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-}
-
 function createOAuthState(provider, returnTo = "/") {
-  const stateId = crypto.randomBytes(24).toString("hex");
-  const entry = {
-    v: OAUTH_STATE_VERSION,
-    id: stateId,
-    provider,
-    returnTo: sanitizeReturnTo(returnTo),
-    createdAt: Date.now()
-  };
-  const state = encodeOAuthState(entry);
-  oauthStates.set(stateId, entry);
+  const state = crypto.randomBytes(24).toString("hex");
+  const safeReturnTo = String(returnTo || "/").startsWith("/") ? String(returnTo || "/") : "/";
+  oauthStates.set(state, { provider, returnTo: safeReturnTo, createdAt: Date.now() });
   return state;
 }
 
 function consumeOAuthState(state, provider) {
-  const decoded = decodeOAuthState(state);
-  const stateId = decoded?.id || String(state || "");
-  const memoryEntry = oauthStates.get(stateId);
-  oauthStates.delete(stateId);
-  const entry = memoryEntry || decoded;
+  const entry = oauthStates.get(String(state || ""));
+  oauthStates.delete(String(state || ""));
   if (!entry || entry.provider !== provider) return null;
-  if (Date.now() - Number(entry.createdAt || 0) > OAUTH_STATE_TTL_MS) return null;
-  return { ...entry, returnTo: sanitizeReturnTo(entry.returnTo) };
+  if (Date.now() - entry.createdAt > OAUTH_STATE_TTL_MS) return null;
+  return entry;
 }
 
 function oauthConfig(provider, req) {
@@ -672,45 +521,13 @@ function oauthConfig(provider, req) {
     userUrl: "https://discord.com/api/v10/users/@me",
     scope: "identify email",
     prompt: "consent",
-    tokenAuthStyle: "body"
+    tokenAuthStyle: "basic"
   };
 }
 
 function oauthError(provider, step, response, payload) {
   const details = payload?.error_description || payload?.error || payload?.message || payload?.raw || "empty response";
   return new Error(`${oauthProviderLabel(provider)} ${step} failed with ${response.status}: ${details}`);
-}
-
-
-function authEnvironmentSnapshot(req = null) {
-  const baseUrl = req ? getPublicBaseUrl(req) : String(
-    process.env.PUBLIC_URL
-    || process.env.APP_URL
-    || process.env.SERVER_URL
-    || process.env.RENDER_EXTERNAL_URL
-    || process.env.CLIENT_URL
-    || "http://localhost:3000"
-  ).trim().replace(/\/$/, "");
-  return {
-    baseUrl,
-    googleConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-    discordConfigured: Boolean(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
-    databaseConfigured: Boolean(resolveDatabaseUrl()),
-    sessionSecretConfigured: Boolean(process.env.SESSION_SECRET),
-    clientUrlConfigured: Boolean(process.env.CLIENT_URL),
-    googleCallbackUrl: String(process.env.GOOGLE_REDIRECT_URI || "").trim() || `${baseUrl}/auth/google/callback`,
-    discordCallbackUrl: String(process.env.DISCORD_REDIRECT_URI || "").trim() || `${baseUrl}/auth/discord/callback`
-  };
-}
-
-function logAuthDeploymentConfig() {
-  const snapshot = authEnvironmentSnapshot();
-  console.info(`[auth] env configured google=${snapshot.googleConfigured} discord=${snapshot.discordConfigured} database=${snapshot.databaseConfigured} sessionSecret=${snapshot.sessionSecretConfigured} clientUrl=${snapshot.clientUrlConfigured}`);
-  console.info(`[auth] expected Google callback URL: ${snapshot.googleCallbackUrl}`);
-  console.info(`[auth] expected Discord callback URL: ${snapshot.discordCallbackUrl}`);
-  if (isRenderEnvironment()) {
-    console.info("[auth] Render OAuth checklist: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DATABASE_URL, SESSION_SECRET, and CLIENT_URL must be set; provider callback URLs must exactly match the logged HTTPS callback URLs.");
-  }
 }
 
 function profileForSocket(socket) {
@@ -1206,9 +1023,7 @@ function publicLobby(lobby) {
 function redirectToOAuth(provider, req, res) {
   const config = oauthConfig(provider, req);
   const returnTo = req.query.returnTo || "/";
-  console.info(`[auth:${provider}] OAuth start returnTo=${sanitizeReturnTo(returnTo)} redirectUri=${config.redirectUri}`);
   if (!config.clientId || !config.clientSecret) {
-    console.error(`[auth:${provider}] OAuth start blocked: missing ${provider.toUpperCase()}_CLIENT_ID or ${provider.toUpperCase()}_CLIENT_SECRET`);
     return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
   }
 
@@ -1220,54 +1035,39 @@ function redirectToOAuth(provider, req, res) {
   authUrl.searchParams.set("scope", config.scope);
   authUrl.searchParams.set("state", state);
   if (config.prompt) authUrl.searchParams.set("prompt", config.prompt);
-  console.info(`[auth:${provider}] OAuth redirect prepared scopes="${config.scope}"`);
   return res.redirect(authUrl.toString());
 }
 
 async function handleOAuthCallback(provider, req, res) {
-  console.info(`[auth:${provider}] callback received code=${req.query.code ? "present" : "missing"} state=${req.query.state ? "present" : "missing"} error=${req.query.error || "none"}`);
   const stateEntry = consumeOAuthState(req.query.state, provider);
   const returnTo = stateEntry?.returnTo || "/";
-  if (req.query.error) {
-    const providerError = req.query.error_description || req.query.error;
-    console.error(`[auth:${provider}] provider rejected login: ${providerError}`);
-    return res.redirect(buildOAuthErrorRedirect(returnTo, `OAuth ошибка: ${providerError}`));
-  }
   if (!stateEntry || !req.query.code) {
-    console.error(`[auth:${provider}] state validation failed or authorization code missing`);
     return res.redirect(buildOAuthErrorRedirect(returnTo, "OAuth-сессия устарела. Попробуй еще раз."));
   }
 
   const config = oauthConfig(provider, req);
   if (!config.clientId || !config.clientSecret) {
-    console.error(`[auth:${provider}] callback blocked: missing ${provider.toUpperCase()}_CLIENT_ID or ${provider.toUpperCase()}_CLIENT_SECRET`);
     return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
   }
 
   try {
-    console.info(`[auth:${provider}] token exchange started redirectUri=${config.redirectUri}`);
     const tokenResponse = await fetch(config.tokenUrl, buildOAuthTokenRequest(config, req.query.code));
     const tokenData = await parseOAuthResponse(tokenResponse);
-    console.info(`[auth:${provider}] token exchange completed status=${tokenResponse.status} accessToken=${tokenData.access_token ? "present" : "missing"}`);
     if (!tokenResponse.ok) throw oauthError(provider, "token exchange", tokenResponse, tokenData);
     if (!tokenData.access_token) throw new Error("OAuth provider did not return an access token");
 
-    console.info(`[auth:${provider}] profile request started`);
     const userResponse = await fetch(config.userUrl, {
       headers: { Authorization: `${tokenData.token_type || "Bearer"} ${tokenData.access_token}`, Accept: "application/json" }
     });
     const rawProfile = await parseOAuthResponse(userResponse);
-    console.info(`[auth:${provider}] profile request completed status=${userResponse.status}`);
     if (!userResponse.ok) throw oauthError(provider, "profile request", userResponse, rawProfile);
     const profile = normalizeOAuthProfile(provider, rawProfile);
-    console.info(`[auth:${provider}] DB lookup started providerId=${profile.providerId || "missing"}`);
-    const user = await upsertOAuthUser(provider, profile);
+    const user = upsertOAuthUser(provider, profile);
     const session = createSession(user);
-    console.info(`[auth:${provider}] session creation complete user=${user.id} redirect=${returnTo}`);
     return res.redirect(buildOAuthSuccessRedirect(returnTo, session));
   } catch (error) {
-    console.error(`[auth:${provider}] OAuth failed: ${error.stack || error.message || error}`);
-    return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}: ${error.message || "ошибка OAuth"}`));
+    console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
   }
 }
 
@@ -1692,65 +1492,6 @@ function updateUserStatsForGame(lobby, civiliansWin) {
   if (changed) saveUsersStore();
 }
 
-function recordLobbyAndMatchHistory(lobby, civiliansWin, suspected, finalVotes, finalSpyGuess, breakdown) {
-  ensureSocialCollections();
-  const endedAt = new Date().toISOString();
-  const hostPlayer = lobby.players.find((player) => player.id === lobby.host) || lobby.players[0];
-  const lobbyHistoryId = crypto.randomUUID();
-  const result = {
-    civiliansWin,
-    suspected,
-    votes: finalVotes,
-    spyGuess: finalSpyGuess,
-    spies: lobby.spies,
-    theme: lobby.theme,
-    trackHistory: lobby.trackHistory || [],
-    breakdown
-  };
-  usersStore.lobbyHistory.push({
-    id: lobbyHistoryId,
-    lobbyCode: lobby.code,
-    lobbyName: lobby.name || "",
-    hostUserId: hostPlayer?.accountId || null,
-    settings: lobby.settings || {},
-    result,
-    createdAt: lobby.createdAt || endedAt,
-    endedAt
-  });
-
-  for (const player of lobby.players || []) {
-    if (!player.accountId) continue;
-    const user = findUserById(player.accountId);
-    if (!user) continue;
-    const isSpy = lobby.spies.includes(player.id);
-    const won = isSpy ? !civiliansWin : civiliansWin;
-    usersStore.matchHistory.push({
-      id: crypto.randomUUID(),
-      lobbyHistoryId,
-      userId: user.id,
-      lobbyCode: lobby.code,
-      role: isSpy ? "spy" : "civilian",
-      won,
-      statsAfter: { ...defaultStats(), ...(user.stats || {}) },
-      result,
-      createdAt: endedAt
-    });
-    usersStore.playerProgression.push({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      type: "match_completed",
-      payload: { lobbyHistoryId, lobbyCode: lobby.code, won, role: isSpy ? "spy" : "civilian", stats: user.stats || defaultStats() },
-      createdAt: endedAt
-    });
-  }
-
-  usersStore.lobbyHistory = usersStore.lobbyHistory.slice(-500);
-  usersStore.matchHistory = usersStore.matchHistory.slice(-5000);
-  usersStore.playerProgression = usersStore.playerProgression.slice(-5000);
-  saveUsersStore();
-  console.info(`[db] match history write queued lobby=${lobby.code} matches=${(lobby.players || []).filter((player) => player.accountId).length}`);
-}
-
 function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const lobby = lobbies[code];
   if (!lobby) return;
@@ -1765,7 +1506,6 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
   updateUserStatsForGame(lobby, civiliansWin);
-  recordLobbyAndMatchHistory(lobby, civiliansWin, suspected, finalVotes, finalSpyGuess, breakdown);
   lobby.phase = "ended";
   clearTimer(code);
 
@@ -1952,7 +1692,6 @@ io.on("connection", (socket) => {
   socket.data.user = null;
 
   socket.on("auth:session", ({ token, accessToken } = {}, cb = () => {}) => {
-    if (!requireAccountPersistence(cb)) return;
     const user = findUserByToken(accessToken || token);
     if (!user) {
       console.warn("[auth] access restore failed: token missing or expired");
@@ -1964,7 +1703,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:refresh", ({ refreshToken } = {}, cb = () => {}) => {
-    if (!requireAccountPersistence(cb)) return;
     const refreshed = refreshSession(refreshToken);
     if (!refreshed) return cb({ error: "Сессия истекла" });
     registerAuthenticatedSocket(socket, refreshed.user);
@@ -1977,7 +1715,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:register", ({ username, password, displayName } = {}, cb = () => {}) => {
-    if (!requireAccountPersistence(cb)) return;
     const normalizedUsername = normalizeUsername(username);
     if (normalizedUsername.length < 3) return cb({ error: "Логин должен быть от 3 символов: латиница, цифры, _ или -" });
     if (!validatePassword(password)) return cb({ error: "Пароль должен быть от 6 до 72 символов" });
@@ -2006,7 +1743,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:login", ({ username, password } = {}, cb = () => {}) => {
-    if (!requireAccountPersistence(cb)) return;
     const normalizedUsername = normalizeUsername(username);
     const user = usersStore.users.find((item) => item.username === normalizedUsername);
     if (!user || !verifyPassword(password, user)) return cb({ error: "Неверный логин или пароль" });
@@ -2660,56 +2396,9 @@ function pickTheme() {
   return THEMES[Math.floor(Math.random() * THEMES.length)];
 }
 
-async function flushAndClosePersistence() {
-  await pendingUsersStoreWrite;
-  await userStorePersistence.close?.();
-}
-
-function installGracefulShutdown(listener) {
-  let closing = false;
-  const shutdown = (signal) => {
-    if (closing) return;
-    closing = true;
-    console.log(`[db] ${signal} received; flushing persistent user store before shutdown`);
-    listener.close(async () => {
-      try {
-        await flushAndClosePersistence();
-        process.exit(0);
-      } catch (error) {
-        console.error("[db] failed to flush persistent store during shutdown", error);
-        process.exit(1);
-      }
-    });
-    setTimeout(() => {
-      console.error("[db] shutdown timed out before persistent flush completed");
-      process.exit(1);
-    }, 25_000).unref();
-  };
-  process.once("SIGTERM", () => shutdown("SIGTERM"));
-  process.once("SIGINT", () => shutdown("SIGINT"));
-}
-
-async function startServer() {
-  await loadUsersStore();
-  const listener = server.listen(process.env.PORT || 3000, () => {
-    console.log(`Music Spy server running; persistent store: ${USERS_FILE}`);
-    logAuthDeploymentConfig();
-    if (userStorePersistence.kind === "unconfigured-postgres") {
-      console.warn(`[db] ${missingDatabaseMessage()}`);
-    }
-  });
-  installGracefulShutdown(listener);
-  return listener;
-}
-
 if (require.main === module) {
-  startServer().catch((error) => {
-    console.error("Music Spy failed to start persistent storage", error);
-    process.exit(1);
-  });
-} else {
-  loadUsersStore().catch((error) => {
-    console.error("Music Spy failed to initialize persistent storage", error);
+  server.listen(process.env.PORT || 3000, () => {
+    console.log(`Music Spy server running; users store: ${USERS_FILE}`);
   });
 }
 
@@ -2749,7 +2438,5 @@ module.exports = {
   pauseTurnTimer,
   resumeTurnTimer,
   adjustTurnTimer,
-  publicOpenLobbies,
-  loadUsersStore,
-  startServer
+  publicOpenLobbies
 };
