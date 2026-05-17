@@ -338,6 +338,18 @@ button:disabled {
   font-size: 1.3rem;
 }
 
+body[data-screen="playRooms"] {
+  background:
+    radial-gradient(circle at 14% 16%, rgba(var(--accent-rgb), 0.3), transparent 30rem),
+    radial-gradient(circle at 86% 22%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 26rem),
+    radial-gradient(circle at 50% 90%, rgba(var(--accent-rgb), 0.1), transparent 28rem),
+    var(--bg);
+}
+
+body[data-screen="playRooms"] .app-shell {
+  width: min(1080px, calc(100% - 32px));
+}
+
 .play-rooms-card {
   position: relative;
   isolation: isolate;
@@ -345,17 +357,18 @@ button:disabled {
   width: min(100%, 1020px);
   min-height: min(620px, calc(100dvh - 40px));
   padding: clamp(16px, 2.4vw, 28px);
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--theme-line);
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035) 44%, rgba(6,4,15,0.64)),
-    radial-gradient(circle at 18% 18%, rgba(139, 92, 246, 0.34), transparent 34rem),
-    radial-gradient(circle at 90% 18%, rgba(47, 128, 255, 0.22), transparent 28rem),
-    radial-gradient(circle at 72% 86%, rgba(229, 9, 20, 0.18), transparent 25rem),
-    rgba(10, 7, 22, 0.88);
+    linear-gradient(135deg, color-mix(in srgb, var(--text) 11%, transparent), color-mix(in srgb, var(--text) 3.5%, transparent) 44%, color-mix(in srgb, var(--bg) 64%, transparent)),
+    radial-gradient(circle at 18% 18%, rgba(var(--accent-rgb), 0.34), transparent 34rem),
+    radial-gradient(circle at 90% 18%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 28rem),
+    radial-gradient(circle at 72% 86%, rgba(var(--accent-rgb), 0.16), transparent 25rem),
+    rgba(var(--surface-rgb), 0.88);
   box-shadow:
-    0 34px 110px rgba(0, 0, 0, 0.68),
-    0 0 0 1px rgba(255,255,255,0.05) inset,
-    0 1px 0 rgba(255,255,255,0.18) inset;
+    0 34px 110px color-mix(in srgb, var(--bg) 68%, transparent),
+    0 0 62px var(--theme-glow),
+    0 0 0 1px color-mix(in srgb, var(--text) 5%, transparent) inset,
+    0 1px 0 color-mix(in srgb, var(--text) 18%, transparent) inset;
 }
 
 .play-rooms-card::before,
@@ -369,15 +382,15 @@ button:disabled {
 
 .play-rooms-card::before {
   background:
-    linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.038) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--text) 4.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text) 3.8%, transparent) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(circle at 62% 48%, black, transparent 74%);
   opacity: 0.34;
 }
 
 .play-rooms-card::after {
-  background: radial-gradient(ellipse at center, transparent 44%, rgba(0, 0, 0, 0.52));
+  background: radial-gradient(ellipse at center, transparent 44%, color-mix(in srgb, var(--bg) 52%, transparent));
 }
 
 .play-rooms-ambient,
@@ -403,7 +416,7 @@ button:disabled {
 .play-rooms-ambient span:nth-child(1) {
   left: -4rem;
   top: 12%;
-  background: #8b5cf6;
+  background: var(--accent);
 }
 
 .play-rooms-ambient span:nth-child(2) {
@@ -411,14 +424,14 @@ button:disabled {
   top: -5rem;
   width: 12rem;
   height: 12rem;
-  background: #2f80ff;
+  background: var(--accent-2);
   animation-delay: -3s;
 }
 
 .play-rooms-ambient span:nth-child(3) {
   right: -5rem;
   bottom: 6%;
-  background: #e50914;
+  background: color-mix(in srgb, var(--accent) 72%, var(--bg));
   animation-delay: -5s;
 }
 
@@ -432,7 +445,7 @@ button:disabled {
   top: clamp(14px, 2vw, 24px);
   right: clamp(14px, 2vw, 24px);
   z-index: 2;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   backdrop-filter: blur(16px);
 }
 
@@ -446,9 +459,9 @@ button:disabled {
 
 .play-rooms-hero,
 .open-lobbies-panel {
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  background: linear-gradient(145deg, rgba(255,255,255,0.105), rgba(255,255,255,0.035));
-  box-shadow: 0 22px 54px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.1);
+  border: 1px solid var(--theme-line);
+  background: var(--theme-panel-bg);
+  box-shadow: 0 22px 54px color-mix(in srgb, var(--bg) 34%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent);
   backdrop-filter: blur(24px);
 }
 
@@ -467,13 +480,13 @@ button:disabled {
   font-size: clamp(2.55rem, 5.8vw, 4.8rem);
   line-height: 0.86;
   letter-spacing: -0.08em;
-  text-shadow: 0 18px 48px rgba(139, 92, 246, 0.24);
+  text-shadow: 0 18px 48px var(--theme-glow);
 }
 
 .play-rooms-hero .lead.small {
   max-width: 28rem;
   margin: 16px 0 0;
-  color: rgba(248, 246, 255, 0.78);
+  color: var(--theme-text-soft);
   font-size: 1rem;
 }
 
@@ -484,10 +497,10 @@ button:disabled {
   width: fit-content;
   margin-top: 22px;
   padding: 9px 12px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--theme-line);
   border-radius: 999px;
-  background: rgba(0,0,0,0.24);
-  color: rgba(248,246,255,0.74);
+  background: rgba(var(--surface-rgb), 0.44);
+  color: var(--theme-text-soft);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -499,8 +512,8 @@ button:disabled {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #64ffb1;
-  box-shadow: 0 0 0 5px rgba(100, 255, 177, 0.12), 0 0 18px rgba(100, 255, 177, 0.72);
+  background: var(--accent);
+  box-shadow: 0 0 0 5px var(--theme-active-bg), 0 0 18px rgba(var(--accent-rgb), 0.72);
 }
 
 .play-room-actions {
@@ -517,13 +530,15 @@ button:disabled {
   justify-content: center;
   min-height: 60px;
   padding: 16px 18px 16px 20px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: linear-gradient(135deg, #a78bfa, #7c3aed 48%, #db2777);
-  box-shadow: 0 18px 50px rgba(124, 58, 237, 0.42), inset 0 1px 0 rgba(255,255,255,0.28);
+  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--text) 20%, transparent), transparent 25%),
+    linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 72%, var(--bg)) 52%, rgba(var(--accent-rgb), 0.72));
+  box-shadow: 0 18px 50px var(--theme-active-bg-strong), inset 0 1px 0 color-mix(in srgb, var(--text) 28%, transparent);
 }
 
 .play-primary small {
-  color: rgba(255,255,255,0.7);
+  color: color-mix(in srgb, var(--on-accent) 70%, transparent);
   font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -531,13 +546,13 @@ button:disabled {
 
 .play-secondary,
 .open-lobby-row button {
-  border: 1px solid rgba(255,255,255,0.13);
-  background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  border: 1px solid var(--theme-line);
+  background: var(--theme-control-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
 }
 
 .play-primary:hover:not(:disabled) {
-  box-shadow: 0 22px 64px rgba(124, 58, 237, 0.54), 0 0 0 4px rgba(167,139,250,0.12), inset 0 1px 0 rgba(255,255,255,0.34);
+  box-shadow: 0 22px 64px var(--theme-active-bg-strong), 0 0 0 4px var(--theme-active-bg), inset 0 1px 0 color-mix(in srgb, var(--text) 34%, transparent);
 }
 
 .play-rooms-stats {
@@ -549,9 +564,9 @@ button:disabled {
 
 .play-rooms-stats div {
   padding: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--theme-line);
   border-radius: 18px;
-  background: rgba(0,0,0,0.22);
+  background: rgba(var(--surface-rgb), 0.4);
 }
 
 .play-rooms-stats strong,
@@ -603,10 +618,10 @@ button:disabled {
   flex: none;
   margin-left: auto;
   padding: 8px 11px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--theme-line);
   border-radius: 999px;
-  background: rgba(0,0,0,0.24);
-  color: rgba(248,246,255,0.74);
+  background: rgba(var(--surface-rgb), 0.44);
+  color: var(--theme-text-soft);
   font-size: 0.76rem;
   font-weight: 800;
 }
@@ -635,10 +650,10 @@ button:disabled {
   gap: 16px;
   align-items: center;
   padding: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--theme-line);
   border-radius: 22px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.085), rgba(255,255,255,0.028));
-  box-shadow: 0 14px 34px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+  background: var(--theme-control-bg);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--bg) 28%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
@@ -647,15 +662,15 @@ button:disabled {
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  background: linear-gradient(#64ffb1, #8b5cf6);
+  background: linear-gradient(var(--accent-2), var(--accent));
   opacity: 0.82;
 }
 
 .open-lobby-row:hover {
   transform: translateY(-3px);
-  border-color: rgba(167,139,250,0.44);
-  background: linear-gradient(135deg, rgba(139,92,246,0.16), rgba(255,255,255,0.045));
-  box-shadow: 0 20px 50px rgba(0,0,0,0.32), 0 0 0 4px rgba(139,92,246,0.08), inset 0 1px 0 rgba(255,255,255,0.12);
+  border-color: var(--theme-line-strong);
+  background: linear-gradient(135deg, var(--theme-active-bg), color-mix(in srgb, var(--text) 4.5%, transparent));
+  box-shadow: 0 20px 50px color-mix(in srgb, var(--bg) 38%, transparent), 0 0 0 4px var(--theme-glow-soft), inset 0 1px 0 color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .open-lobby-main {
@@ -694,15 +709,15 @@ button:disabled {
 
 .open-lobby-code {
   padding: 6px 8px;
-  border: 1px solid rgba(255,255,255,0.13);
-  background: rgba(0,0,0,0.24);
-  color: rgba(248,246,255,0.72);
+  border: 1px solid var(--theme-line);
+  background: rgba(var(--surface-rgb), 0.44);
+  color: var(--theme-text-soft);
 }
 
 .open-lobby-live {
   padding: 5px 8px;
-  background: rgba(100,255,177,0.12);
-  color: #b9ffd9;
+  background: var(--theme-active-bg);
+  color: color-mix(in srgb, var(--accent-2) 76%, var(--text));
 }
 
 .open-lobby-row small {
@@ -727,13 +742,13 @@ button:disabled {
   width: 26px;
   height: 26px;
   margin-left: -8px;
-  border: 1px solid rgba(255,255,255,0.38);
+  border: 1px solid color-mix(in srgb, var(--text) 38%, transparent);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(139,92,246,0.9), rgba(47,128,255,0.7));
-  color: white;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.9), color-mix(in srgb, var(--accent-2) 70%, transparent));
+  color: var(--on-accent);
   font-size: 0.68rem;
   font-weight: 900;
-  box-shadow: 0 7px 18px rgba(0,0,0,0.24);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--bg) 28%, transparent);
 }
 
 .open-lobby-footer small {
