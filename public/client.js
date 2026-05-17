@@ -52,6 +52,7 @@ const state = {
   oauthRedirectError: "",
   latestResult: null,
   finalComments: [],
+  backgroundFadeFrame: null,
   mobileTurnLabel: "",
   openLobbies: [],
   lobbyName: "",
@@ -364,15 +365,52 @@ function getBackgroundAudioVolume() {
   return (state.siteVolume / 100) * getBackgroundMusicVolume();
 }
 
-function syncBackgroundAudio() {
-  const media = getBackgroundMusicElement();
-  if (!media) return;
-  media.volume = getBackgroundAudioVolume();
-  media.muted = !shouldPlayBackgroundMusic();
+function cancelBackgroundFade() {
+  if (!state.backgroundFadeFrame) return;
+  window.cancelAnimationFrame(state.backgroundFadeFrame);
+  state.backgroundFadeFrame = null;
 }
 
-function syncAudioVolume({ fadeTime = 0.18 } = {}) {
-  syncBackgroundAudio();
+function fadeBackgroundAudioTo(targetVolume, duration = 900) {
+  const media = getBackgroundMusicElement();
+  if (!media) return;
+  cancelBackgroundFade();
+
+  const startVolume = media.volume;
+  const startTime = performance.now();
+  const safeTarget = Math.max(0, Math.min(1, targetVolume));
+  const safeDuration = Math.max(1, duration);
+
+  const step = (now) => {
+    const progress = Math.min(1, (now - startTime) / safeDuration);
+    const eased = 1 - ((1 - progress) ** 3);
+    media.volume = startVolume + ((safeTarget - startVolume) * eased);
+    if (progress < 1) {
+      state.backgroundFadeFrame = window.requestAnimationFrame(step);
+      return;
+    }
+    media.volume = safeTarget;
+    state.backgroundFadeFrame = null;
+  };
+
+  state.backgroundFadeFrame = window.requestAnimationFrame(step);
+}
+
+function syncBackgroundAudio({ fadeTime = 0 } = {}) {
+  const media = getBackgroundMusicElement();
+  if (!media) return;
+  const targetVolume = getBackgroundAudioVolume();
+  media.muted = !shouldPlayBackgroundMusic();
+  if (fadeTime > 0 && !media.muted) {
+    fadeBackgroundAudioTo(targetVolume, fadeTime * 1000);
+    return;
+  }
+  cancelBackgroundFade();
+  media.volume = targetVolume;
+}
+
+function syncAudioVolume({ fadeTime = 0.18, fadeBackground = false } = {}) {
+  syncBackgroundAudio({ fadeTime: fadeBackground ? fadeTime : 0 });
   if (!state.audio) return;
   setGainValue(state.audio.master, state.siteVolume / 100, 0.08);
   setGainValue(state.audio.musicGain, getBackgroundMusicVolume(), fadeTime);
@@ -751,10 +789,15 @@ function scheduleAmbientMusic() {
   audio.startedAt = audio.context.currentTime;
 }
 
-function startBackgroundMusic() {
+function startBackgroundMusic({ fadeIn = false } = {}) {
   const media = getBackgroundMusicElement();
   if (media) {
-    syncBackgroundAudio();
+    if (fadeIn && shouldPlayBackgroundMusic()) {
+      cancelBackgroundFade();
+      media.volume = 0;
+      media.muted = false;
+    }
+    syncBackgroundAudio({ fadeTime: fadeIn ? 1.15 : 0 });
     if (!shouldPlayBackgroundMusic()) {
       media.pause();
       return;
@@ -815,7 +858,7 @@ function toggleMusic() {
 
   unlockAudio({ startMusic: state.musicEnabled });
   if (state.musicEnabled) {
-    startBackgroundMusic();
+    startBackgroundMusic({ fadeIn: true });
     playSoundCue("confirm");
   } else {
     stopBackgroundMusic();
@@ -1030,9 +1073,9 @@ function showScreen(id) {
   if (GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(id)) {
     stopBackgroundMusic();
   } else if (state.musicEnabled) {
-    startBackgroundMusic();
+    startBackgroundMusic({ fadeIn: GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(previousPhase) });
   }
-  syncAudioVolume({ fadeTime: 0.32 });
+  syncAudioVolume({ fadeTime: 0.32, fadeBackground: GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(previousPhase) && !GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(id) });
   if (previousPhase !== id) playSoundCue("screen");
 }
 
@@ -3137,12 +3180,46 @@ function updateVoteTimer(timeLeft) {
   el.textContent = timeLeft;
 }
 
-function clearPlayer() {
+function muteTrackFrame(frame) {
+  if (!frame?.contentWindow) return;
+  const src = frame.src || "";
+  if (src.includes("youtube.com")) {
+    for (const func of ["mute", "pauseVideo", "stopVideo"]) {
+      frame.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*");
+    }
+  }
+  if (src.includes("w.soundcloud.com") && window.SC?.Widget) {
+    try {
+      const widget = window.SC.Widget(frame);
+      widget.setVolume(0);
+      widget.pause();
+    } catch {
+      // SoundCloud widget may already be unloading or not ready yet.
+    }
+  }
+}
+
+function muteActiveTrackPlayers() {
+  for (const frame of document.querySelectorAll("iframe")) {
+    if (frame.id === "trackFrame" || frame.src.includes("youtube.com") || frame.src.includes("w.soundcloud.com")) {
+      muteTrackFrame(frame);
+    }
+  }
+  for (const media of document.querySelectorAll("audio, video")) {
+    if (media.id === "backgroundMusic") continue;
+    media.muted = true;
+    if (typeof media.pause === "function") media.pause();
+  }
+}
+
+function clearPlayer({ fadeBackground = false } = {}) {
+  muteActiveTrackPlayers();
   state.currentTrackId = null;
-  syncAudioVolume({ fadeTime: 0.32 });
+  syncAudioVolume({ fadeTime: fadeBackground ? 1.15 : 0.32, fadeBackground });
   const embed = $("embed");
   const activeIframes = embed.querySelectorAll("iframe");
   activeIframes.forEach((frame) => {
+    muteTrackFrame(frame);
     frame.src = "about:blank";
   });
   embed.className = "embed empty";
@@ -3711,7 +3788,7 @@ socket.on("gameEnd", (data) => {
   state.spyGuessActive = false;
   state.pendingSpyGuess = null;
   closeSpyReviewModal();
-  clearPlayer();
+  clearPlayer({ fadeBackground: true });
   updateVoteTimer(null);
   showSpyRevealCountdown(data, () => {
     showScreen("results");
