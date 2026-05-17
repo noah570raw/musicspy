@@ -168,16 +168,20 @@
   <div id="authModal" class="auth-modal site-menu-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
     <div class="auth-modal-card site-menu-card">
       <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть меню">×</button>
-      <h2 id="authModalTitle">Меню</h2>
-      <p id="authModalText" class="auth-modal-text">Профиль, внешний вид, игра, язык и информация о Music Spy.</p>
+      <div class="site-menu-header">
+        <p class="site-menu-kicker">Music Spy Control Deck</p>
+        <h2 id="authModalTitle">Меню</h2>
+        <p id="authModalText" class="auth-modal-text">Профиль, внешний вид, игра, язык и информация о Music Spy.</p>
+      </div>
 
       <div class="site-menu-layout">
         <nav class="site-menu-tabs" aria-label="Разделы меню">
-          <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')">Профиль</button>
-          <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')">Внешний вид</button>
-          <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')">Игра</button>
-          <button id="settingsTabLanguage" class="site-menu-tab" type="button" onclick="openSettingsSection('language')">Язык</button>
-          <button id="settingsTabAbout" class="site-menu-tab" type="button" onclick="openSettingsSection('about')">О сайте</button>
+          <span class="site-menu-tabs-label">System</span>
+          <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')"><span class="site-menu-tab-icon" aria-hidden="true">◉</span><span>Профиль</span></button>
+          <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')"><span class="site-menu-tab-icon" aria-hidden="true">✦</span><span>Внешний вид</span></button>
+          <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')"><span class="site-menu-tab-icon" aria-hidden="true">≋</span><span>Игра</span></button>
+          <button id="settingsTabLanguage" class="site-menu-tab" type="button" onclick="openSettingsSection('language')"><span class="site-menu-tab-icon" aria-hidden="true">⌁</span><span>Язык</span></button>
+          <button id="settingsTabAbout" class="site-menu-tab" type="button" onclick="openSettingsSection('about')"><span class="site-menu-tab-icon" aria-hidden="true">◇</span><span>О сайте</span></button>
         </nav>
 
         <div class="site-menu-content">
@@ -253,7 +257,8 @@
           <section id="settingsPanelGame" class="site-menu-panel" data-settings-panel="game">
             <div class="settings-block">
               <div class="settings-title compact">
-                <strong>ИНТЕНСИВНОСТЬ ЭФФЕКТОВ</strong>
+                <strong>Интенсивность эффектов</strong>
+                <span>Настрой глубину свечения, частиц и кинематографичных движений интерфейса.</span>
               </div>
               <div id="effectsDensityChoices" class="effects-density-grid" role="radiogroup" aria-label="Effects Density"></div>
             </div>
@@ -261,6 +266,11 @@
 
           <section id="settingsPanelLanguage" class="site-menu-panel" data-settings-panel="language">
             <div class="settings-block language-settings-block">
+              <div class="language-orbit" aria-hidden="true"></div>
+              <div class="settings-title compact language-title">
+                <strong>Язык интерфейса</strong>
+                <span>Мгновенно переключай локализацию без выхода из партии.</span>
+              </div>
               <div class="language-switcher" aria-label="Переключатель языка">
                 <span>RU</span>
                 <button id="languageToggle" class="language-toggle" type="button" onclick="toggleLanguage()" aria-pressed="false" title="Switch to English">
