@@ -455,7 +455,6 @@ const GAME_MODES = {
     anonymousVoting: false,
     votingTime: 60,
     runoffOnTie: true,
-    roomTheme: "neon",
     maxPlayers: DEFAULT_MAX_PLAYERS
   },
   blitz: {
@@ -467,7 +466,6 @@ const GAME_MODES = {
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false,
-    roomTheme: "cyber",
     maxPlayers: DEFAULT_MAX_PLAYERS
   }
 };
@@ -481,7 +479,6 @@ const DEFAULT_SETTINGS = {
   anonymousVoting: GAME_MODES.classic.anonymousVoting,
   votingTime: GAME_MODES.classic.votingTime,
   runoffOnTie: GAME_MODES.classic.runoffOnTie,
-  roomTheme: GAME_MODES.classic.roomTheme,
   maxPlayers: GAME_MODES.classic.maxPlayers
 };
 
@@ -524,7 +521,6 @@ function normalizeSettings(input = {}) {
   next.anonymousVoting = input.anonymousVoting === undefined ? next.anonymousVoting : Boolean(input.anonymousVoting);
   next.votingTime = clampNumber(input.votingTime, [0, 30, 60, 90], next.votingTime);
   next.runoffOnTie = input.runoffOnTie === undefined ? next.runoffOnTie : input.runoffOnTie !== false;
-  next.roomTheme = ["neon", "vinyl", "cyber", "retro", "minimal", "aurora", "ocean", "forest"].includes(input.roomTheme) ? input.roomTheme : next.roomTheme;
   next.maxPlayers = clampNumber(input.maxPlayers, ALLOWED_MAX_PLAYERS, next.maxPlayers || DEFAULT_MAX_PLAYERS);
   return next;
 }
@@ -1429,7 +1425,6 @@ function publicOpenLobbies(allLobbies = lobbies) {
         modeLabel: mode.label,
         rounds: settings.rounds || DEFAULT_SETTINGS.rounds,
         listenTime: settings.listenTime || DEFAULT_SETTINGS.listenTime,
-        roomTheme: settings.roomTheme || DEFAULT_SETTINGS.roomTheme,
         maxPlayers: settings.maxPlayers || DEFAULT_SETTINGS.maxPlayers,
         createdAt: lobby.createdAt || ""
       };

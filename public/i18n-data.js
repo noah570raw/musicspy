@@ -123,7 +123,7 @@ const EN_TRANSLATIONS = {
   "видно в списке открытых комнат": "visible in the open-room list",
   "визуальный вайб": "visual vibe",
   "Оформление лобби": "Lobby look",
-  "Тема лобби обновлена": "Lobby theme updated",
+  "Тема интерфейса применяется только у тебя": "Interface theme applies only to you",
   "Доступ": "Access",
   "Закрытое": "Closed",
   "закрытое лобби доступно только по коду или ссылке": "closed lobbies are only available by code or link",

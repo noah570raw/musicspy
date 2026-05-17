@@ -773,7 +773,7 @@ function applyAccentColor() {
   document.body.style.setProperty("--accent", color.hex);
   document.body.style.setProperty("--accent-rgb", color.rgb);
   document.body.style.setProperty("--accent-dark", color.hex);
-  document.body.style.setProperty("--accent-2", "#34ffb1");
+  document.body.style.setProperty("--accent-2", color.hex);
 }
 
 function applyRoleTheme(role = "") {
@@ -786,7 +786,7 @@ function applyRoleTheme(role = "") {
   applyAccentColor();
 }
 
-function applyRoomTheme(theme = state.visualTheme || "neon") {
+function applyLocalAppearanceTheme(theme = state.visualTheme || "neon") {
   const safeTheme = INTERFACE_THEMES.some((item) => item.id === theme) ? theme : "neon";
   state.visualTheme = safeTheme;
   document.body.dataset.visualTheme = safeTheme;
@@ -813,13 +813,13 @@ function restoreAppearancePreference() {
     state.visualTheme = "neon";
     state.accentColor = "violet";
   }
-  applyRoomTheme(state.visualTheme);
+  applyLocalAppearanceTheme(state.visualTheme);
   renderAppearanceControls();
 }
 
 function setVisualThemePreference(theme) {
   if (!INTERFACE_THEMES.some((item) => item.id === theme)) return;
-  applyRoomTheme(theme);
+  applyLocalAppearanceTheme(theme);
   saveAppearancePreference();
   renderAppearanceControls();
 }
@@ -1947,7 +1947,6 @@ function readCreateSettingsFromForm() {
     anonymousVoting: ($("createSettingAnonymousVoting")?.value || "false") === "true",
     votingTime: Number($("createSettingVotingTime")?.value ?? 60),
     runoffOnTie: ($("createSettingRunoffOnTie")?.value || "true") === "true",
-    roomTheme: state.visualTheme || "neon",
     maxPlayers: Number($("createSettingMaxPlayers")?.value || 9)
   };
 }
@@ -2108,7 +2107,7 @@ function createLobby() {
     state.myId = res.playerId || socket.id;
     if (payload.settings) {
       state.settings = { ...state.settings, ...payload.settings };
-      applyRoomTheme(state.settings.roomTheme || state.visualTheme || "neon");
+      applyLocalAppearanceTheme(state.visualTheme || "neon");
     }
     storeReconnectState(state.currentCode);
     $("code").value = res.code;
@@ -2498,7 +2497,6 @@ function readSettingsFromForm() {
     anonymousVoting: $("settingAnonymousVoting").value === "true",
     votingTime: Number($("settingVotingTime").value),
     runoffOnTie: $("settingRunoffOnTie").value === "true",
-    roomTheme: state.visualTheme || "neon",
     maxPlayers: Number($("settingMaxPlayers")?.value || state.settings.maxPlayers || 9)
   };
 }
@@ -2511,7 +2509,6 @@ function changeGameMode() {
   $("settingAnonymousVoting").value = String(preset.anonymousVoting);
   $("settingVotingTime").value = String(preset.votingTime);
   $("settingRunoffOnTie").value = String(preset.runoffOnTie);
-  if ($("settingRoomTheme")) $("settingRoomTheme").value = preset.roomTheme || "neon";
   if ($("settingMaxPlayers")) $("settingMaxPlayers").value = String(state.settings.maxPlayers || preset.maxPlayers || 9);
   updateGameModeHint(preset);
   updateLobbySettings();
@@ -2536,29 +2533,14 @@ function updateLobbySettings() {
 }
 
 function updateLobbyTheme() {
-  if (!state.currentCode) return;
-  const select = $("lobbySettingRoomTheme");
-  const roomTheme = select?.value || state.settings.roomTheme || "neon";
-  socket.emit("updateSettings", { code: state.currentCode, settings: { roomTheme } }, (res) => {
-    if (res?.error) {
-      applyLobbyThemeControl(state.settings, state.hostId === socket.id);
-      return setStatus("lobbyStatus", res.error, true);
-    }
-    state.settings = res.settings || { ...state.settings, roomTheme };
-    applyRoomTheme(state.settings.roomTheme || roomTheme);
-    applyLobbyThemeControl(state.settings, true);
-    setStatus("lobbyStatus", "Тема лобби обновлена");
-  });
+  applyLocalAppearanceTheme(state.visualTheme || "neon");
+  setStatus("lobbyStatus", "Тема интерфейса применяется только у тебя");
 }
 
 function applyLobbyThemeControl(settings = {}, isHost = false) {
-  const select = $("lobbySettingRoomTheme");
-  if (select) {
-    select.value = settings.roomTheme || "neon";
-    select.disabled = !isHost;
-  }
-  const hint = $("lobbyThemeHint");
-  if (hint) hint.textContent = isHost ? t("ты можешь менять") : t("меняет хост");
+  void settings;
+  void isHost;
+  applyLocalAppearanceTheme(state.visualTheme || "neon");
   refreshCustomSelects();
 }
 
@@ -2597,7 +2579,6 @@ function applySettingsToForm(settings = {}, isHost = false) {
     settingAnonymousVoting: String(Boolean(settings.anonymousVoting)),
     settingVotingTime: settings.votingTime ?? 60,
     settingRunoffOnTie: String(settings.runoffOnTie !== false),
-    settingRoomTheme: settings.roomTheme || "neon",
     settingMaxPlayers: settings.maxPlayers || 9
   };
 
@@ -2619,7 +2600,7 @@ function applySettingsToForm(settings = {}, isHost = false) {
   updateGameModeHint(GAME_MODE_PRESETS[fields.settingGameMode]);
   const settingsHint = $("settingsHint");
   if (settingsHint) settingsHint.textContent = isHost ? t("ты можешь менять") : t("меняет хост");
-  applyRoomTheme(settings.roomTheme || state.settings.roomTheme || state.visualTheme || "neon");
+  applyLocalAppearanceTheme(state.visualTheme || "neon");
   refreshCustomSelects();
 }
 
@@ -2656,7 +2637,7 @@ function renderLobby(lobby) {
   state.hostId = lobby.host || state.hostId;
   state.chatMessages = lobby.chatMessages || state.chatMessages;
   state.finalComments = lobby.finalComments || state.finalComments;
-  applyRoomTheme(state.settings.roomTheme || state.visualTheme || "neon");
+  applyLocalAppearanceTheme(state.visualTheme || "neon");
 
   updateInviteSecretsVisibility();
   const inviteLink = buildInviteLink();
@@ -2749,7 +2730,7 @@ function renderGameState(data) {
   state.trackHistory = data.trackHistory || state.trackHistory;
   state.chatMessages = data.chatMessages || state.chatMessages;
   state.finalComments = data.finalComments || state.finalComments;
-  applyRoomTheme(state.visualTheme || "neon");
+  applyLocalAppearanceTheme(state.visualTheme || "neon");
   state.pendingSpyGuess = data.pendingSpyGuess || state.pendingSpyGuess;
   if (Array.isArray(data.spyIds)) state.spyIds = data.spyIds;
   const shouldLoadLastTrack = ["listening", "paused"].includes(data.turnStage)
@@ -3494,7 +3475,7 @@ socket.on("gameStarted", (data) => {
   state.trackHistory = data.trackHistory || [];
   state.chatMessages = data.chatMessages || [];
   state.finalComments = data.finalComments || [];
-  applyRoomTheme(state.visualTheme || "neon");
+  applyLocalAppearanceTheme(state.visualTheme || "neon");
   state.turnStage = "waiting";
   state.timeLeft = null;
   syncAudioVolume({ fadeTime: 0.32 });
