@@ -3546,22 +3546,6 @@ body[data-screen="game"][data-role="spy"] #roleTitle::before {
   color: #ff8a8a;
 }
 
-body[data-screen="game"] #roleTitle::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.18), transparent);
-  animation: passScan 2.4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes passScan {
-  0% { transform: translateY(-100%); opacity: 0; }
-  18%, 55% { opacity: 1; }
-  100% { transform: translateY(100%); opacity: 0; }
-}
-
 body[data-role="civilian"] {
   --accent: #2f80ff;
   --accent-rgb: 47, 128, 255;

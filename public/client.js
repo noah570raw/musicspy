@@ -2695,7 +2695,7 @@ function renderLobby(lobby) {
       ? t("Ждем минимум 3 игроков")
       : readyCount !== state.players.length
         ? t("Ждем готовность всех игроков")
-        : t("START GAME");
+        : t("НАЧАТЬ ИГРУ");
   }
   const forceStartBtn = $("forceStartBtn");
   if (forceStartBtn) {
@@ -2706,8 +2706,8 @@ function renderLobby(lobby) {
   const readyBtn = $("readyBtn");
   if (readyBtn) {
     readyBtn.textContent = currentLanguage() === "en"
-      ? (state.ready ? "READY ✓" : "READY")
-      : (state.ready ? "ГОТОВ ✓" : "ГОТОВ");
+      ? "READY"
+      : "ГОТОВ";
     readyBtn.classList.toggle("ready", state.ready);
   }
   const readySummary = $("readySummary");
