@@ -9,9 +9,9 @@
   --accent: #8b5cf6;
   --accent-rgb: 139, 92, 246;
   --accent-dark: #5b21b6;
-  --accent-2: #f4eeff;
+  --accent-2: #34ffb1;
   --danger: #ff1f2d;
-  --success: #ffffff;
+  --success: #34ffb1;
 }
 
 body[data-role="civilian"] {
@@ -49,7 +49,7 @@ body {
   overflow-x: hidden;
   background:
     radial-gradient(circle at 20% 10%, rgba(var(--accent-rgb), 0.22), transparent 28rem),
-    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.08), transparent 24rem),
+    radial-gradient(circle at 80% 70%, rgba(52, 255, 177, 0.07), transparent 24rem),
     var(--bg);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -77,8 +77,8 @@ button {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.23;
-  background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  opacity: 0.16;
+  background-image: linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
   background-size: 42px 42px;
   mask-image: radial-gradient(circle, black, transparent 82%);
 }
@@ -2285,9 +2285,13 @@ select:focus-visible {
 
 .account-corner .status {
   max-width: 100%;
-  margin: 8px 0 0;
+  margin: 0 0 8px;
   padding-left: 4px;
   text-align: left;
+}
+
+.account-corner .status:empty {
+  display: none;
 }
 
 @media (max-width: 720px) {
@@ -5580,10 +5584,10 @@ body[data-screen="lobby"] {
   overflow-x: hidden;
   overflow-y: auto;
   background:
-    radial-gradient(circle at 16% 8%, rgba(var(--accent-rgb), 0.34), transparent 30rem),
-    radial-gradient(circle at 76% 18%, rgba(var(--accent-rgb), 0.18), transparent 28rem),
-    radial-gradient(circle at 46% 94%, rgba(var(--accent-rgb), 0.14), transparent 28rem),
-    linear-gradient(135deg, var(--bg) 0%, rgba(var(--accent-rgb), 0.08) 48%, var(--bg) 100%);
+    radial-gradient(circle at 16% 8%, rgba(var(--accent-rgb), 0.24), transparent 28rem),
+    radial-gradient(circle at 76% 18%, rgba(52, 255, 177, 0.1), transparent 26rem),
+    radial-gradient(circle at 46% 94%, rgba(var(--accent-rgb), 0.1), transparent 28rem),
+    linear-gradient(135deg, #03020a 0%, rgba(12, 7, 28, 0.96) 46%, #05030d 100%);
 }
 
 body[data-screen="lobby"] .app-shell {
@@ -5617,8 +5621,8 @@ body[data-screen="lobby"] .app-shell {
   position: absolute;
   inset: -20%;
   background:
-    linear-gradient(115deg, transparent 0 46%, rgba(255,255,255,0.045) 47% 47.5%, transparent 48% 100%),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 92px);
+    linear-gradient(115deg, transparent 0 46%, rgba(var(--accent-rgb),0.035) 47% 47.5%, transparent 48% 100%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.014) 0 1px, transparent 1px 92px);
   mask-image: radial-gradient(circle at center, #000 0 64%, transparent 76%);
   animation: lobby-grid-drift 18s linear infinite;
 }
@@ -5629,28 +5633,28 @@ body[data-screen="lobby"] .app-shell {
   aspect-ratio: 1;
   border-radius: 999px;
   filter: blur(34px);
-  opacity: 0.46;
+  opacity: 0.34;
   animation: lobby-orb-float 7s ease-in-out infinite alternate;
 }
 
 .lobby-ambient-orb-one {
   top: -9%;
   left: -7%;
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.78), transparent 66%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.58), transparent 66%);
 }
 
 .lobby-ambient-orb-two {
   right: -10%;
   bottom: -15%;
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.42), rgba(var(--accent-rgb), 0.24) 46%, transparent 70%);
+  background: radial-gradient(circle, rgba(52, 255, 177, 0.28), rgba(var(--accent-rgb), 0.14) 46%, transparent 70%);
   animation-delay: -2.5s;
 }
 
 .lobby-scanline {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 8px);
-  opacity: 0.16;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 8px);
+  opacity: 0.1;
 }
 
 .lobby-shell {
@@ -5672,16 +5676,17 @@ body[data-screen="lobby"] .app-shell {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(151, 118, 255, 0.18);
   background:
-    radial-gradient(circle at 12% 0%, rgba(var(--accent-rgb), 0.16), transparent 38%),
-    linear-gradient(145deg, rgba(255,255,255,0.105), rgba(255,255,255,0.035)),
-    rgba(14, 11, 32, 0.62);
+    radial-gradient(circle at 12% 0%, rgba(var(--accent-rgb), 0.14), transparent 38%),
+    linear-gradient(145deg, rgba(31, 22, 63, 0.42), rgba(5, 4, 14, 0.52)),
+    rgba(9, 7, 22, 0.86);
   box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255,255,255,0.14),
+    0 30px 94px rgba(0, 0, 0, 0.58),
+    0 0 44px rgba(var(--accent-rgb), 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.07),
     inset 0 -1px 0 rgba(var(--accent-rgb), 0.08);
-  backdrop-filter: blur(24px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(118%);
 }
 
 .lobby-left-panel,
@@ -5798,9 +5803,9 @@ body[data-screen="lobby"] .app-shell {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.082), rgba(255,255,255,0.03)),
-    rgba(22, 17, 45, 0.46);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09);
+    linear-gradient(180deg, rgba(74, 50, 142, 0.18), rgba(8, 6, 20, 0.58)),
+    rgba(10, 8, 25, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 12px 28px rgba(0,0,0,0.2);
   overflow: hidden;
 }
 
@@ -5867,8 +5872,8 @@ body[data-screen="lobby"] .app-shell {
   border-radius: 20px;
   background:
     radial-gradient(circle at 16% 0%, rgba(var(--accent-rgb), 0.12), transparent 36%),
-    linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.018)),
-    rgba(13, 10, 30, 0.34);
+    linear-gradient(180deg, rgba(74,50,142,0.08), rgba(5,4,14,0.36)),
+    rgba(8, 6, 22, 0.64);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
 }
 
@@ -5899,16 +5904,16 @@ body[data-screen="lobby"] .app-shell {
 }
 
 #lobby .chat-form input {
-  border-color: rgba(255,255,255,0.12);
-  background: transparent;
-  box-shadow: none;
+  border-color: rgba(151,118,255,0.18);
+  background: rgba(4, 3, 11, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   color: var(--text);
 }
 
 #lobby .lobby-theme-control select {
-  border-color: rgba(255,255,255,0.12);
-  background: transparent;
-  box-shadow: none;
+  border-color: rgba(151,118,255,0.18);
+  background: rgba(4, 3, 11, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   color: var(--text);
 }
 
@@ -5950,8 +5955,8 @@ body[data-screen="lobby"] .app-shell {
   padding: 9px 12px;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 999px;
-  background: rgba(255,255,255,0.07);
-  color: rgba(231, 226, 255, 0.78);
+  background: rgba(52,255,177,0.08);
+  color: rgba(186,255,223,0.86);
   font-size: 0.78rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -5979,9 +5984,9 @@ body[data-screen="lobby"] .app-shell {
   border: 1px solid rgba(255,255,255,0.115);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 18% 8%, rgba(var(--accent-rgb), 0.28), transparent 38%),
-    linear-gradient(145deg, rgba(255,255,255,0.095), rgba(255,255,255,0.032));
-  box-shadow: 0 18px 48px rgba(0,0,0,0.28);
+    radial-gradient(circle at 18% 8%, rgba(var(--accent-rgb), 0.2), transparent 38%),
+    linear-gradient(145deg, rgba(44, 31, 88, 0.34), rgba(8, 6, 21, 0.72));
+  box-shadow: 0 20px 52px rgba(0,0,0,0.42);
   isolation: isolate;
   overflow: hidden;
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
@@ -5996,8 +6001,8 @@ body[data-screen="lobby"] .app-shell {
 .lobby-player-card.is-ready {
   border-color: rgba(52,255,177,0.34);
   background:
-    radial-gradient(circle at 14% 8%, rgba(52,255,177,0.25), transparent 34%),
-    linear-gradient(145deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035));
+    radial-gradient(circle at 14% 8%, rgba(52,255,177,0.2), transparent 34%),
+    linear-gradient(145deg, rgba(22, 74, 51, 0.28), rgba(8, 6, 21, 0.74));
 }
 
 .lobby-player-card.is-host {
@@ -6113,7 +6118,7 @@ body[data-screen="lobby"] .app-shell {
   min-height: 148px;
   border-style: dashed;
   border-color: rgba(255,255,255,0.11);
-  background: rgba(255,255,255,0.028);
+  background: rgba(8, 6, 21, 0.42);
   box-shadow: none;
 }
 
@@ -6176,8 +6181,8 @@ body[data-screen="lobby"] .app-shell {
 
 .action-stack-muted {
   background:
-    linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.026)),
-    rgba(18, 13, 39, 0.48);
+    linear-gradient(145deg, rgba(44,31,88,0.24), rgba(5,4,14,0.54)),
+    rgba(10, 7, 27, 0.74);
 }
 
 .action-stack-muted .status:empty {

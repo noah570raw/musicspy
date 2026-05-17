@@ -762,6 +762,15 @@ function restoreMusicPreference() {
 
 function applyAccentColor() {
   const color = ACCENT_COLORS.find((item) => item.id === state.accentColor) || ACCENT_COLORS.find((item) => item.id === "violet");
+  if (document.body.dataset.screen === "lobby") {
+    document.body.style.setProperty("--accent", "#8b5cf6");
+    document.body.style.setProperty("--accent-rgb", "139, 92, 246");
+    document.body.style.setProperty("--accent-dark", "#5b21b6");
+    document.body.style.setProperty("--accent-2", "#34ffb1");
+    document.body.style.setProperty("--success", "#34ffb1");
+    return;
+  }
+  document.body.style.removeProperty("--success");
   if (!color || document.body.dataset.role) {
     document.body.style.removeProperty("--accent");
     document.body.style.removeProperty("--accent-rgb");
@@ -772,7 +781,7 @@ function applyAccentColor() {
   document.body.style.setProperty("--accent", color.hex);
   document.body.style.setProperty("--accent-rgb", color.rgb);
   document.body.style.setProperty("--accent-dark", color.hex);
-  document.body.style.setProperty("--accent-2", color.hex);
+  document.body.style.setProperty("--accent-2", "#34ffb1");
 }
 
 function applyRoleTheme(role = "") {
