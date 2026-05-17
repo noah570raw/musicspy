@@ -445,3 +445,28 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
     createdAt: "2026-01-01T10:00:00.000Z"
   }]);
 });
+
+test("persistent user records include durable settings, social data, and expanded statistics", () => {
+  const { normalizeUserRecord } = require("../server");
+  const user = normalizeUserRecord({ id: "u1", username: "player", stats: { games: 2, wins: 1 }, settings: { ui: { language: "en" } }, social: { friends: [{ id: "f1", nickname: "Beat" }] } });
+
+  assert.equal(user.stats.games, 2);
+  assert.equal(user.stats.losses, 0);
+  assert.equal(user.settings.ui.language, "en");
+  assert.equal(user.settings.appearance.visualTheme, "neon");
+  assert.deepEqual(user.social.friends, [{ id: "f1", nickname: "Beat" }]);
+  assert.deepEqual(user.social.notifications, []);
+});
+
+test("persistent sessions store hashed expiring refresh metadata on user records", () => {
+  const { createSession } = require("../server");
+  const user = { id: "session-user", username: "session", sessions: [], stats: {}, settings: {}, social: {} };
+  const token = createSession(user);
+
+  assert.equal(typeof token, "string");
+  assert.equal(token.length, 64);
+  assert.equal(user.sessions.length, 1);
+  assert.notEqual(user.sessions[0].tokenHash, token);
+  assert.ok(user.sessions[0].expiresAt);
+  assert.ok(user.sessions[0].refreshedAt);
+});

@@ -109,55 +109,52 @@ const EFFECTS_DENSITIES = [
 ];
 
 
-const FRIENDS_MOCK_DATA = [
-  {
-    id: "aurora",
-    nickname: "AuroraBeat",
-    avatar: "A",
-    online: true,
-    activity: "В лобби",
-    lobby: { code: "MIX42", players: 4, maxPlayers: 9, canJoin: true }
-  },
-  {
-    id: "vinyl",
-    nickname: "VinylFox",
-    avatar: "V",
-    online: true,
-    activity: "Играет",
-    lobby: { code: "SPY07", players: 7, maxPlayers: 9, canJoin: false }
-  },
-  {
-    id: "mono",
-    nickname: "MonoKid",
-    avatar: "M",
-    online: true,
-    activity: "В меню",
-    lobby: null
-  },
-  {
-    id: "noir",
-    nickname: "NoirMuse",
-    avatar: "N",
-    online: false,
-    activity: "Не в сети",
-    lobby: null
+function initFriendsSystem() {
+  if (!state.profile) {
+    state.friends = [];
+    state.friendRequests = [];
+    state.lobbyInvites = [];
   }
-];
-
-const FRIEND_REQUESTS_MOCK_DATA = [
-  { id: "echo", nickname: "EchoPilot", avatar: "E" },
-  { id: "luna", nickname: "LunaBass", avatar: "L" }
-];
-
-function cloneFriendData(items) {
-  return items.map((item) => ({ ...item, lobby: item.lobby ? { ...item.lobby } : null }));
+  renderFriendsSystem();
 }
 
-function initFriendsSystem() {
-  state.friends = cloneFriendData(FRIENDS_MOCK_DATA);
-  state.friendRequests = cloneFriendData(FRIEND_REQUESTS_MOCK_DATA);
-  state.lobbyInvites = [];
-  renderFriendsSystem();
+
+function saveAccountSettings(partialSettings = {}) {
+  if (state.applyingPersistence || !state.profile || !socket.connected) return;
+  socket.emit("account:settings:update", { settings: partialSettings }, (res) => {
+    if (res?.success) applyProfile(res.profile, { skipReconnect: true });
+  });
+}
+
+function applyAccountPersistence(user = null) {
+  if (!user) {
+    initFriendsSystem();
+    return;
+  }
+  state.applyingPersistence = true;
+  try {
+    const settings = user.settings || {};
+    const appearance = settings.appearance || {};
+    const ui = settings.ui || {};
+    const audio = settings.audio || {};
+    if (INTERFACE_THEMES.some((item) => item.id === appearance.visualTheme)) state.visualTheme = appearance.visualTheme;
+    if (ACCENT_COLORS.some((item) => item.id === appearance.accentColor)) state.accentColor = appearance.accentColor;
+    if (ACCENT_COLORS.some((item) => item.id === appearance.secondaryAccentColor)) state.secondaryAccentColor = appearance.secondaryAccentColor;
+    if (ui.language) state.lang = ui.language === "en" ? "en" : "ru";
+    state.gamePreferences = { ...state.gamePreferences, ...ui };
+    if (typeof audio.musicEnabled === "boolean") state.musicEnabled = audio.musicEnabled;
+    if (Number.isFinite(Number(audio.volume))) state.siteVolume = Math.max(0, Math.min(100, Number(audio.volume)));
+    state.friends = (user.social?.friends || []).map((friend) => ({ ...friend, online: Boolean(friend.online), activity: friend.activity || "Не в сети", lobby: friend.lobby || null }));
+    state.friendRequests = user.social?.friendRequests || [];
+    state.lobbyInvites = user.social?.lobbyInvites || [];
+    applyLocalAppearanceTheme(state.visualTheme);
+    applyEffectsDensity(state.gamePreferences.effectsDensity);
+    setLanguage(state.lang);
+    updateSiteVolume(state.siteVolume);
+    renderFriendsSystem();
+  } finally {
+    state.applyingPersistence = false;
+  }
 }
 
 function friendStatusLabel(friend) {
@@ -322,35 +319,44 @@ function sendFriendRequest() {
     setFriendAddStatus("От этого игрока уже есть входящая заявка.", "error");
     return;
   }
+  if (!state.profile) return setFriendAddStatus("Войди в аккаунт, чтобы друзья сохранялись.", "error");
   if (button) button.disabled = true;
-  setFriendAddStatus("Отправляем заявку", "sending");
-  window.setTimeout(() => {
+  setFriendAddStatus("Сохраняем друга", "sending");
+  socket.emit("social:friend:add", { nickname }, (res) => {
     if (button) button.disabled = false;
-    setFriendAddStatus(`Заявка для ${nickname} отправлена.`, "success");
+    if (res?.error) return setFriendAddStatus(res.error, "error");
+    applyProfile(res.profile, { skipReconnect: true });
+    setFriendAddStatus(`${nickname} добавлен в друзья и сохранен.`, "success");
     if (input) input.value = "";
-  }, 780);
+  });
 }
 
 function acceptFriendRequest(requestId) {
   const request = state.friendRequests.find((item) => item.id === requestId);
   if (!request) return;
+  if (state.profile) {
+    socket.emit("social:request:resolve", { requestId, accept: true }, (res) => {
+      if (res?.error) return setFriendAddStatus(res.error, "error");
+      applyProfile(res.profile, { skipReconnect: true });
+      setFriendAddStatus(`${request.nickname} добавлен в друзья.`, "success");
+    });
+    return;
+  }
   state.friendRequests = state.friendRequests.filter((item) => item.id !== requestId);
-  state.friends.unshift({
-    id: request.id,
-    nickname: request.nickname,
-    avatar: request.avatar,
-    online: true,
-    activity: "В меню",
-    lobby: null
-  });
-  setFriendAddStatus(`${request.nickname} добавлен в друзья.`, "success");
   renderFriendsSystem();
 }
 
 function declineFriendRequest(requestId) {
   const request = state.friendRequests.find((item) => item.id === requestId);
+  if (state.profile) {
+    socket.emit("social:request:resolve", { requestId, accept: false }, (res) => {
+      if (res?.error) return setFriendAddStatus(res.error, "error");
+      applyProfile(res.profile, { skipReconnect: true });
+      if (request) setFriendAddStatus(`Заявка от ${request.nickname} отклонена.`, "idle");
+    });
+    return;
+  }
   state.friendRequests = state.friendRequests.filter((item) => item.id !== requestId);
-  if (request) setFriendAddStatus(`Заявка от ${request.nickname} отклонена.`, "idle");
   renderFriendsSystem();
 }
 
@@ -385,8 +391,15 @@ function messageFriend(friendId) {
 function removeFriend(friendId) {
   const friend = findFriend(friendId);
   if (!friend) return;
+  if (state.profile) {
+    socket.emit("social:friend:remove", { friendId }, (res) => {
+      if (res?.error) return setFriendAddStatus(res.error, "error");
+      applyProfile(res.profile, { skipReconnect: true });
+      setFriendAddStatus(`${friend.nickname} удален из друзей.`, "idle");
+    });
+    return;
+  }
   state.friends = state.friends.filter((item) => item.id !== friendId);
-  setFriendAddStatus(`${friend.nickname} удален из друзей.`, "idle");
   renderFriendsSystem();
 }
 
@@ -459,6 +472,7 @@ function setLanguage(lang) {
     toggle.setAttribute("aria-pressed", String(state.lang === "en"));
     toggle.title = state.lang === "en" ? "Переключить на русский" : "Switch to English";
   }
+  saveAccountSettings({ ui: { ...state.gamePreferences, language: state.lang } });
   localizeStaticDom();
   refreshCustomSelects();
   renderAppearanceControls();
@@ -1238,6 +1252,7 @@ function setVisualThemePreference(theme) {
   if (!INTERFACE_THEMES.some((item) => item.id === theme)) return;
   applyLocalAppearanceTheme(theme);
   saveAppearancePreference();
+  saveAccountSettings({ appearance: { visualTheme: state.visualTheme, accentColor: state.accentColor, secondaryAccentColor: state.secondaryAccentColor } });
   renderAppearanceControls();
 }
 
@@ -1246,6 +1261,7 @@ function setAccentColorPreference(colorId) {
   state.accentColor = colorId;
   applyAccentColor();
   saveAppearancePreference();
+  saveAccountSettings({ appearance: { visualTheme: state.visualTheme, accentColor: state.accentColor, secondaryAccentColor: state.secondaryAccentColor } });
   renderAppearanceControls();
 }
 
@@ -1254,6 +1270,7 @@ function setSecondaryAccentColorPreference(colorId) {
   state.secondaryAccentColor = colorId;
   applyAccentColor();
   saveAppearancePreference();
+  saveAccountSettings({ appearance: { visualTheme: state.visualTheme, accentColor: state.accentColor, secondaryAccentColor: state.secondaryAccentColor } });
   renderAppearanceControls();
 }
 
@@ -1336,6 +1353,7 @@ function setEffectsDensityPreference(density) {
   if (!EFFECTS_DENSITIES.some((item) => item.id === density)) return;
   applyEffectsDensity(density);
   saveGamePreferences();
+  saveAccountSettings({ ui: { ...state.gamePreferences, language: state.lang } });
   renderEffectsDensityControls();
 }
 
@@ -1347,6 +1365,7 @@ function updateGamePreference(key, value) {
   }
   state.gamePreferences[key] = Boolean(value);
   saveGamePreferences();
+  saveAccountSettings({ ui: { ...state.gamePreferences, language: state.lang } });
 }
 
 function showScreen(id) {
@@ -1569,6 +1588,7 @@ function updateSiteVolume(value) {
   } catch {
     // Ignore storage errors in private or restricted browser modes.
   }
+  saveAccountSettings({ audio: { volume: state.siteVolume, musicEnabled: state.musicEnabled } });
   applySiteVolume();
   syncAudioVolume();
 }
@@ -1867,12 +1887,13 @@ function loginWithOAuth(provider) {
   window.location.href = `/auth/${normalizedProvider}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-function applyProfile(profileData = { user: null, guest: true }) {
+function applyProfile(profileData = { user: null, guest: true }, options = {}) {
   state.profile = profileData.user || null;
+  applyAccountPersistence(state.profile);
   state.authGuest = Boolean(profileData.guest);
   state.authResolved = true;
   const user = state.profile;
-  const displayName = user?.displayName || $("name").value.trim() || t("Гость");
+  const displayName = user?.displayName || ($("name")?.value || "").trim() || t("Гость");
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
@@ -1888,8 +1909,13 @@ function applyProfile(profileData = { user: null, guest: true }) {
   renderProfileStats();
   syncNameInput();
   updateLobbyRenameControls();
-  attemptReconnectToGame();
-  attemptAutoJoinFromInvite();
+  if (!options.skipReconnect) {
+    if (profileData.activeLobby?.code) {
+      storeReconnectState(profileData.activeLobby.code);
+    }
+    attemptReconnectToGame();
+    attemptAutoJoinFromInvite();
+  }
 }
 
 function isOAuthProfile(user) {
@@ -1962,14 +1988,35 @@ function authenticateWithStoredToken() {
   }
   socket.emit("auth:session", { token }, (res) => {
     if (res?.success) {
+      if (res.token) storeAuthToken(res.token);
       applyProfile(res.profile);
       hideAuthModal();
+      startSilentAuthRefresh();
       setAuthStatus("С возвращением!");
     } else {
       clearStoredAuthToken();
       continueAsGuest({ silent: true });
     }
   });
+}
+
+
+function startSilentAuthRefresh() {
+  window.clearInterval(state.authRefreshTimer);
+  state.authRefreshTimer = window.setInterval(() => {
+    const token = getStoredAuthToken();
+    if (!token || !socket.connected || !state.profile) return;
+    socket.emit("auth:refresh", { token }, (res) => {
+      if (res?.success) {
+        applyProfile(res.profile, { skipReconnect: true });
+        return;
+      }
+      clearStoredAuthToken();
+      window.clearInterval(state.authRefreshTimer);
+      continueAsGuest({ silent: true });
+      setAuthStatus(res?.error || "Сессия истекла. Войди снова.", true);
+    });
+  }, 10 * 60 * 1000);
 }
 
 function authPayload() {
@@ -1987,6 +2034,7 @@ function loginAccount() {
     storeAuthToken(res.token);
     applyProfile(res.profile);
     hideAuthModal();
+    startSilentAuthRefresh();
     setAuthStatus("Вход выполнен");
   });
 }
@@ -2007,10 +2055,12 @@ function continueAsGuest({ silent = false } = {}) {
 }
 
 function logoutAccount() {
+  const token = getStoredAuthToken();
   clearStoredAuthToken();
-  socket.emit("auth:logout", () => {
+  socket.emit("auth:logout", { token }, () => {
     applyProfile({ user: null, guest: true });
     hideAuthModal();
+    window.clearInterval(state.authRefreshTimer);
     setAuthStatus("Ты вышел из аккаунта");
   });
 }

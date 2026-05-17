@@ -49,8 +49,9 @@ const DEFAULT_MAX_PLAYERS = 9;
 const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8, 9];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-const lobbies = {};
+let lobbies = {};
 const timers = {};
 const oauthStates = new Map();
 
@@ -102,9 +103,80 @@ function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+function defaultStats() {
+  return {
+    games: 0,
+    gamesPlayed: 0,
+    wins: 0,
+    losses: 0,
+    spyGames: 0,
+    spyWins: 0,
+    civilianGames: 0,
+    civilianWins: 0,
+    correctGuesses: 0,
+    totalGuesses: 0,
+    accuracy: 0,
+    winStreak: 0,
+    bestWinStreak: 0,
+    xp: 0,
+    rank: 1,
+    playtimeSeconds: 0,
+    tracksPlayed: 0,
+    friendsCount: 0,
+    achievements: [],
+    lobbyHistory: []
+  };
+}
+
+function defaultUserSettings() {
+  return {
+    appearance: { visualTheme: "neon", accentColor: "violet", secondaryAccentColor: "cyan" },
+    ui: { language: "ru", cinematicMode: true, reactionHints: true, autoFocusTrack: false, effectsDensity: "ultra" },
+    audio: { musicEnabled: true, volume: 60 },
+    matchmaking: { preferredGameMode: "classic", openLobbies: true }
+  };
+}
+
+function defaultSocialState() {
+  return { friends: [], friendRequests: [], messages: [], notifications: [], lobbyInvites: [] };
+}
+
+function normalizeUserRecord(user = {}) {
+  const settings = defaultUserSettings();
+  const social = defaultSocialState();
+  return {
+    ...user,
+    stats: { ...defaultStats(), ...(user.stats || {}) },
+    settings: {
+      ...settings,
+      ...(user.settings || {}),
+      appearance: { ...settings.appearance, ...(user.settings?.appearance || {}) },
+      ui: { ...settings.ui, ...(user.settings?.ui || {}) },
+      audio: { ...settings.audio, ...(user.settings?.audio || {}) },
+      matchmaking: { ...settings.matchmaking, ...(user.settings?.matchmaking || {}) }
+    },
+    social: {
+      ...social,
+      ...(user.social || {}),
+      friends: Array.isArray(user.social?.friends) ? user.social.friends : [],
+      friendRequests: Array.isArray(user.social?.friendRequests) ? user.social.friendRequests : [],
+      messages: Array.isArray(user.social?.messages) ? user.social.messages : [],
+      notifications: Array.isArray(user.social?.notifications) ? user.social.notifications : [],
+      lobbyInvites: Array.isArray(user.social?.lobbyInvites) ? user.social.lobbyInvites : []
+    },
+    sessions: Array.isArray(user.sessions) ? user.sessions : []
+  };
+}
+
 function readJsonStore(file) {
   const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
-  return { users: Array.isArray(parsed.users) ? parsed.users : [] };
+  const users = Array.isArray(parsed.users) ? parsed.users.map(normalizeUserRecord) : [];
+  return {
+    users,
+    lobbies: parsed.lobbies && typeof parsed.lobbies === "object" ? parsed.lobbies : {},
+    matchHistory: Array.isArray(parsed.matchHistory) ? parsed.matchHistory : [],
+    schemaVersion: 2
+  };
 }
 
 function readUsersStore() {
@@ -127,12 +199,31 @@ function readUsersStore() {
 }
 
 let usersStore = readUsersStore();
+lobbies = usersStore.lobbies || {};
+
+function serializeLobby(lobby) {
+  return {
+    ...lobby,
+    players: (lobby.players || []).map(({ reconnectTimer, ...player }) => ({ ...player, disconnected: Boolean(player.disconnected), disconnectedAt: player.disconnectedAt || null }))
+  };
+}
+
+function syncLobbiesIntoStore() {
+  usersStore.lobbies = Object.fromEntries(Object.entries(lobbies || {}).map(([code, lobby]) => [code, serializeLobby(lobby)]));
+}
 
 function saveUsersStore() {
   ensureDataDir();
+  if (typeof lobbies !== "undefined") syncLobbiesIntoStore();
+  usersStore.users = usersStore.users.map((user) => Object.assign(user, normalizeUserRecord(user)));
+  usersStore.schemaVersion = 2;
   const tmpFile = `${USERS_FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmpFile, JSON.stringify(usersStore, null, 2));
   fs.renameSync(tmpFile, USERS_FILE);
+}
+
+function persistState() {
+  saveUsersStore();
 }
 
 function normalizeUsername(username) {
@@ -154,39 +245,80 @@ function verifyPassword(password, user) {
   return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(user.passwordHash, "hex"));
 }
 
+function sessionExpiryFrom(createdAt) {
+  return new Date(new Date(createdAt).getTime() + SESSION_TTL_MS).toISOString();
+}
+
 function createSession(user) {
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const createdAt = new Date().toISOString();
   user.sessions = [
-    { tokenHash, createdAt: new Date().toISOString() },
-    ...(user.sessions || []).slice(0, 4)
+    { tokenHash, createdAt, refreshedAt: createdAt, expiresAt: sessionExpiryFrom(createdAt) },
+    ...(user.sessions || []).filter((session) => !isSessionExpired(session)).slice(0, 9)
   ];
-  user.updatedAt = new Date().toISOString();
+  user.updatedAt = createdAt;
   saveUsersStore();
   return token;
 }
 
-function findUserByToken(token) {
-  if (!token) return null;
-  const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
-  return usersStore.users.find((user) => (user.sessions || []).some((session) => session.tokenHash === tokenHash)) || null;
+function isSessionExpired(session) {
+  const expiresAt = session?.expiresAt || sessionExpiryFrom(session?.createdAt || 0);
+  return new Date(expiresAt).getTime() <= Date.now();
 }
 
-function defaultStats() {
-  return {
-    games: 0,
-    wins: 0,
-    spyGames: 0,
-    spyWins: 0,
-    civilianGames: 0,
-    civilianWins: 0,
-    winStreak: 0,
-    bestWinStreak: 0
-  };
+function findSessionByToken(token) {
+  if (!token) return null;
+  const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+  for (const user of usersStore.users) {
+    const session = (user.sessions || []).find((item) => item.tokenHash === tokenHash);
+    if (!session) continue;
+    if (isSessionExpired(session)) {
+      user.sessions = (user.sessions || []).filter((item) => item.tokenHash !== tokenHash);
+      user.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      return null;
+    }
+    return { user, session };
+  }
+  return null;
+}
+
+function findUserByToken(token) {
+  return findSessionByToken(token)?.user || null;
+}
+
+function refreshSession(token) {
+  const found = findSessionByToken(token);
+  if (!found) return null;
+  found.session.refreshedAt = new Date().toISOString();
+  found.session.expiresAt = sessionExpiryFrom(found.session.refreshedAt);
+  found.user.updatedAt = found.session.refreshedAt;
+  saveUsersStore();
+  return found.user;
+}
+
+function revokeSession(token) {
+  const tokenHash = crypto.createHash("sha256").update(String(token || "")).digest("hex");
+  let changed = false;
+  for (const user of usersStore.users) {
+    const nextSessions = (user.sessions || []).filter((session) => session.tokenHash !== tokenHash);
+    if (nextSessions.length !== (user.sessions || []).length) {
+      user.sessions = nextSessions;
+      user.updatedAt = new Date().toISOString();
+      changed = true;
+    }
+  }
+  if (changed) saveUsersStore();
 }
 
 function publicUser(user) {
   if (!user) return null;
+  const normalized = normalizeUserRecord(user);
+  normalized.stats.friendsCount = normalized.social.friends.length;
+  normalized.stats.gamesPlayed = Math.max(normalized.stats.gamesPlayed || 0, normalized.stats.games || 0);
+  normalized.stats.losses = Math.max(0, normalized.stats.gamesPlayed - normalized.stats.wins);
+  normalized.stats.accuracy = normalized.stats.totalGuesses ? Math.round((normalized.stats.correctGuesses / normalized.stats.totalGuesses) * 100) : 0;
   return {
     id: user.id,
     username: user.username,
@@ -194,7 +326,10 @@ function publicUser(user) {
     avatar: user.avatar || "",
     authProviders: Array.from(new Set((user.oauth || []).map((identity) => identity.provider).filter(Boolean))),
     createdAt: user.createdAt,
-    stats: { ...defaultStats(), ...(user.stats || {}) }
+    updatedAt: user.updatedAt,
+    stats: normalized.stats,
+    settings: normalized.settings,
+    social: normalized.social
   };
 }
 
@@ -242,6 +377,8 @@ function upsertOAuthUser(provider, profile) {
       displayName,
       avatar: profile.avatar || "",
       stats: defaultStats(),
+      settings: defaultUserSettings(),
+      social: defaultSocialState(),
       oauth: [{ provider, providerId, email, linkedAt: now }],
       sessions: [],
       createdAt: now,
@@ -392,10 +529,21 @@ function normalizeAvatar(avatar) {
   return value;
 }
 
+function activeLobbyForAccount(accountId) {
+  if (!accountId) return null;
+  for (const lobby of Object.values(lobbies)) {
+    const player = (lobby.players || []).find((item) => item.accountId === accountId);
+    if (player) {
+      return { code: lobby.code, started: Boolean(lobby.started), phase: lobby.phase, reconnectToken: player.reconnectToken || "" };
+    }
+  }
+  return null;
+}
+
 function profileForSocket(socket) {
   const user = socket.data.user;
-  if (user) return { user: publicUser(user), guest: false };
-  return { user: null, guest: true };
+  if (user) return { user: publicUser(user), guest: false, activeLobby: activeLobbyForAccount(user.id) };
+  return { user: null, guest: true, activeLobby: null };
 }
 
 function normalizeReconnectToken(token) {
@@ -740,10 +888,19 @@ function sendPrivateGameStart(lobby, socket) {
 }
 
 function reconnectPlayerToGame(socket, { code, reconnectToken } = {}) {
-  const lobby = lobbies[normalizeCode(code)];
-  if (!lobby || !lobby.started) return { error: "Активная игра не найдена" };
-  const normalizedToken = normalizeReconnectToken(reconnectToken);
-  const player = lobby.players.find((item) => item.reconnectToken === normalizedToken);
+  const requestedCode = normalizeCode(code);
+  let lobby = requestedCode ? lobbies[requestedCode] : null;
+  if (!lobby && socket.data.user) {
+    const active = activeLobbyForAccount(socket.data.user.id);
+    lobby = active ? lobbies[active.code] : null;
+  }
+  if (!lobby) return { error: "Активная игра не найдена" };
+
+  const normalizedToken = String(reconnectToken || "").trim();
+  const player = lobby.players.find((item) =>
+    (normalizedToken && item.reconnectToken === normalizedToken)
+      || (socket.data.user && item.accountId === socket.data.user.id)
+  );
   if (!player) return { error: "Не удалось восстановить игрока" };
 
   const oldId = player.id;
@@ -761,10 +918,10 @@ function reconnectPlayerToGame(socket, { code, reconnectToken } = {}) {
   player.disconnectedAt = null;
   clearPlayerReconnectTimer(player);
 
-  sendPrivateGameStart(lobby, socket);
+  if (lobby.started) sendPrivateGameStart(lobby, socket);
   emitLobbyUpdate(lobby.code);
   emitGameState(lobby.code);
-  return { success: true, code: lobby.code, playerId: socket.id, phase: lobby.phase };
+  return { success: true, code: lobby.code, playerId: socket.id, phase: lobby.phase, started: Boolean(lobby.started) };
 }
 
 function removePlayerFromLobby(lobby, playerId) {
@@ -875,7 +1032,11 @@ app.get("/auth/discord/callback", (req, res) => handleOAuthCallback("discord", r
 
 function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
-  if (!lobby) return;
+  if (!lobby) {
+    persistState();
+    return;
+  }
+  persistState();
   io.to(code).emit("lobbyUpdate", publicLobby(lobby));
 }
 
@@ -892,6 +1053,7 @@ function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
   if (lobby.players.length === 0) {
     clearTimer(code);
     delete lobbies[code];
+    persistState();
     return { deleted: true };
   }
 
@@ -914,6 +1076,7 @@ function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
 function emitGameState(code) {
   const lobby = lobbies[code];
   if (!lobby) return;
+  persistState();
   const currentPlayerId = lobby.order[lobby.currentTurnIndex] || null;
   const currentPlayer = lobby.players.find((player) => player.id === currentPlayerId);
 
@@ -1266,16 +1429,25 @@ function updateUserStatsForGame(lobby, civiliansWin) {
     const won = isSpy ? !civiliansWin : civiliansWin;
     const stats = { ...defaultStats(), ...(user.stats || {}) };
     stats.games += 1;
+    stats.gamesPlayed = stats.games;
     stats.wins += won ? 1 : 0;
+    stats.losses = Math.max(0, stats.games - stats.wins);
     stats.winStreak = won ? stats.winStreak + 1 : 0;
     stats.bestWinStreak = Math.max(stats.bestWinStreak || 0, stats.winStreak || 0);
+    stats.xp += won ? 100 : 35;
+    stats.rank = Math.max(1, Math.floor(stats.xp / 500) + 1);
+    stats.playtimeSeconds += Math.max(60, (lobby.settings.rounds || 1) * (lobby.settings.listenTime || 30) * Math.max(1, lobby.players.length));
+    stats.lobbyHistory = [lobby.code, ...(stats.lobbyHistory || []).filter((item) => item !== lobby.code)].slice(0, 25);
     if (isSpy) {
       stats.spyGames += 1;
       stats.spyWins += won ? 1 : 0;
+      stats.totalGuesses += 1;
+      if (!civiliansWin) stats.correctGuesses += 1;
     } else {
       stats.civilianGames += 1;
       stats.civilianWins += won ? 1 : 0;
     }
+    stats.accuracy = stats.totalGuesses ? Math.round((stats.correctGuesses / stats.totalGuesses) * 100) : 0;
     user.stats = stats;
     user.updatedAt = new Date().toISOString();
     changed = true;
@@ -1296,6 +1468,20 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const decoyReveal = !caughtSpy && suspected.length > 0;
   const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
+  usersStore.matchHistory = [
+    {
+      id: crypto.randomUUID(),
+      code: lobby.code,
+      finishedAt: new Date().toISOString(),
+      players: publicPlayers(lobby.players),
+      spyAccountIds: spyPlayers.map((player) => player.accountId).filter(Boolean),
+      civiliansWin,
+      theme: lobby.theme,
+      votes: finalVotes,
+      trackHistory: lobby.trackHistory || []
+    },
+    ...(usersStore.matchHistory || [])
+  ].slice(0, 1000);
   updateUserStatsForGame(lobby, civiliansWin);
   lobby.phase = "ended";
   clearTimer(code);
@@ -1479,10 +1665,17 @@ io.on("connection", (socket) => {
   socket.data.user = null;
 
   socket.on("auth:session", ({ token } = {}, cb = () => {}) => {
-    const user = findUserByToken(token);
-    if (!user) return cb({ error: "Сессия не найдена" });
+    const user = refreshSession(token);
+    if (!user) return cb({ error: "Сессия истекла. Войди снова." });
     socket.data.user = user;
-    cb({ success: true, profile: profileForSocket(socket) });
+    cb({ success: true, token, profile: profileForSocket(socket), expiresInMs: SESSION_TTL_MS });
+  });
+
+  socket.on("auth:refresh", ({ token } = {}, cb = () => {}) => {
+    const user = refreshSession(token);
+    if (!user) return cb({ error: "Сессия истекла. Войди снова." });
+    socket.data.user = user;
+    cb({ success: true, profile: profileForSocket(socket), expiresInMs: SESSION_TTL_MS });
   });
 
   socket.on("auth:guest", ({ name } = {}, cb = () => {}) => {
@@ -1506,6 +1699,8 @@ io.on("connection", (socket) => {
       displayName: normalizeName(displayName || username),
       avatar: "",
       stats: defaultStats(),
+      settings: defaultUserSettings(),
+      social: defaultSocialState(),
       salt,
       passwordHash: hash,
       sessions: [],
@@ -1527,7 +1722,8 @@ io.on("connection", (socket) => {
     cb({ success: true, token, profile: profileForSocket(socket) });
   });
 
-  socket.on("auth:logout", (cb = () => {}) => {
+  socket.on("auth:logout", ({ token } = {}, cb = () => {}) => {
+    revokeSession(token);
     socket.data.user = null;
     cb({ success: true, profile: profileForSocket(socket) });
   });
@@ -1545,6 +1741,63 @@ io.on("connection", (socket) => {
     } catch (error) {
       cb({ error: error.message || "Не удалось обновить профиль" });
     }
+  });
+
+  socket.on("account:settings:update", ({ settings = {} } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы сохранить настройки" });
+    const defaults = defaultUserSettings();
+    user.settings = {
+      ...normalizeUserRecord(user).settings,
+      ...(settings || {}),
+      appearance: { ...defaults.appearance, ...(user.settings?.appearance || {}), ...(settings.appearance || {}) },
+      ui: { ...defaults.ui, ...(user.settings?.ui || {}), ...(settings.ui || {}) },
+      audio: { ...defaults.audio, ...(user.settings?.audio || {}), ...(settings.audio || {}) },
+      matchmaking: { ...defaults.matchmaking, ...(user.settings?.matchmaking || {}), ...(settings.matchmaking || {}) }
+    };
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    cb({ success: true, profile: profileForSocket(socket) });
+  });
+
+  socket.on("social:friend:add", ({ nickname } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы сохранять друзей" });
+    const name = normalizeName(nickname || "");
+    const social = normalizeUserRecord(user).social;
+    if (name.length < 3) return cb({ error: "Никнейм должен быть длиннее 2 символов." });
+    if (social.friends.some((friend) => friend.nickname.toLowerCase() === name.toLowerCase())) return cb({ error: "Этот игрок уже в списке друзей." });
+    social.friends.unshift({ id: crypto.randomUUID(), nickname: name, avatar: name.slice(0, 1).toUpperCase(), accountId: null, createdAt: new Date().toISOString() });
+    user.social = social;
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    cb({ success: true, profile: profileForSocket(socket) });
+  });
+
+  socket.on("social:friend:remove", ({ friendId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы менять друзей" });
+    const social = normalizeUserRecord(user).social;
+    social.friends = social.friends.filter((friend) => friend.id !== friendId);
+    user.social = social;
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    cb({ success: true, profile: profileForSocket(socket) });
+  });
+
+  socket.on("social:request:resolve", ({ requestId, accept } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы менять заявки" });
+    const social = normalizeUserRecord(user).social;
+    const request = social.friendRequests.find((item) => item.id === requestId);
+    social.friendRequests = social.friendRequests.filter((item) => item.id !== requestId);
+    if (accept && request && !social.friends.some((friend) => friend.nickname === request.nickname)) {
+      social.friends.unshift({ ...request, createdAt: new Date().toISOString() });
+    }
+    user.social = social;
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    cb({ success: true, profile: profileForSocket(socket) });
   });
 
   socket.on("getOpenLobbies", (cb = () => {}) => {
@@ -1836,6 +2089,7 @@ io.on("connection", (socket) => {
       createdAt: Date.now()
     };
     lobby.chatMessages = [...(lobby.chatMessages || []), message].slice(-MAX_CHAT_MESSAGES);
+    persistState();
     io.to(lobby.code).emit("chat:update", { messages: lobby.chatMessages });
     cb({ success: true, message });
   });
@@ -1862,6 +2116,7 @@ io.on("connection", (socket) => {
       ...(lobby.finalComments || []).filter((item) => item.playerId !== socket.id),
       comment
     ].slice(-MAX_FINAL_COMMENTS);
+    persistState();
     io.to(lobby.code).emit("finalComments:update", { comments: lobby.finalComments });
     cb({ success: true, comment, comments: lobby.finalComments });
   });
@@ -1886,6 +2141,13 @@ io.on("connection", (socket) => {
       turnNumber: lobby.currentTurnIndex + 1
     };
     lobby.trackHistory.push({ ...lobby.lastTrack, reactions: {} });
+    if (socket.data.user) {
+      const stats = { ...defaultStats(), ...(socket.data.user.stats || {}) };
+      stats.tracksPlayed += 1;
+      socket.data.user.stats = stats;
+      socket.data.user.updatedAt = new Date().toISOString();
+    }
+    persistState();
 
     io.to(lobby.code).emit("newTrack", { ...lobby.lastTrack, reactionCounts: {} });
     cb({ success: true });
@@ -1916,6 +2178,7 @@ io.on("connection", (socket) => {
     syncLastTrackHistory(lobby);
     const reactionCounts = countReactions(lobby.currentTrackReactions);
     const selectedReaction = lobby.currentTrackReactions[socket.id] || null;
+    persistState();
     io.to(lobby.code).emit("reactionUpdate", {
       trackId: lobby.lastTrack.id,
       reactionCounts,
@@ -1932,6 +2195,7 @@ io.on("connection", (socket) => {
     if (target === socket.id) return cb({ error: "Нельзя голосовать за себя" });
 
     lobby.votes[socket.id] = target;
+    persistState();
     const voteTotals = publicVotes(lobby);
     io.to(lobby.code).emit("voteUpdate", {
       votes: lobby.settings.anonymousVoting ? {} : voteTotals,
@@ -1970,6 +2234,7 @@ io.on("connection", (socket) => {
       optionId: selectedOption.id
     };
     lobby.spyGuess = spyGuess;
+    persistState();
 
     cb({ success: true, correct: spyGuess.correct });
     io.to(lobby.code).emit("spyGuessPending", { guess: { ...spyGuess, correct: undefined } });
@@ -2068,5 +2333,12 @@ module.exports = {
   pauseTurnTimer,
   resumeTurnTimer,
   adjustTurnTimer,
-  publicOpenLobbies
+  publicOpenLobbies,
+  defaultStats,
+  defaultUserSettings,
+  normalizeUserRecord,
+  createSession,
+  findUserByToken,
+  refreshSession,
+  revokeSession
 };
