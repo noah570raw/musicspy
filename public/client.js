@@ -57,6 +57,7 @@ const state = {
   lobbyIsOpen: true,
   visualTheme: "neon",
   accentColor: "violet",
+  secondaryAccentColor: "cyan",
   gamePreferences: {
     cinematicMode: true,
     reactionHints: true,
@@ -77,7 +78,9 @@ const INTERFACE_THEMES = [
   { id: "minimal", label: "Minimal Mono" },
   { id: "aurora", label: "Aurora Pulse" },
   { id: "ocean", label: "Ocean Glass" },
-  { id: "forest", label: "Forest Bass" }
+  { id: "forest", label: "Forest Bass" },
+  { id: "galaxy", label: "Galaxy Noir" },
+  { id: "candy", label: "Candy Wave" }
 ];
 const ACCENT_COLORS = [
   { id: "red", label: "Красный", hex: "#ef4444", rgb: "239, 68, 68" },
@@ -763,6 +766,7 @@ function restoreMusicPreference() {
 
 function applyAccentColor() {
   const color = ACCENT_COLORS.find((item) => item.id === state.accentColor) || ACCENT_COLORS.find((item) => item.id === "violet");
+  const secondaryColor = ACCENT_COLORS.find((item) => item.id === state.secondaryAccentColor) || color;
   document.body.style.removeProperty("--success");
   if (!color || document.body.dataset.role) {
     document.body.style.removeProperty("--accent");
@@ -774,7 +778,7 @@ function applyAccentColor() {
   document.body.style.setProperty("--accent", color.hex);
   document.body.style.setProperty("--accent-rgb", color.rgb);
   document.body.style.setProperty("--accent-dark", color.hex);
-  document.body.style.setProperty("--accent-2", color.hex);
+  document.body.style.setProperty("--accent-2", secondaryColor.hex);
 }
 
 function applyRoleTheme(role = "") {
@@ -798,7 +802,8 @@ function saveAppearancePreference() {
   try {
     window.localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
       visualTheme: state.visualTheme,
-      accentColor: state.accentColor
+      accentColor: state.accentColor,
+      secondaryAccentColor: state.secondaryAccentColor
     }));
   } catch {
     // Ignore storage errors.
@@ -810,9 +815,11 @@ function restoreAppearancePreference() {
     const stored = JSON.parse(window.localStorage.getItem(APPEARANCE_STORAGE_KEY) || "{}");
     if (INTERFACE_THEMES.some((item) => item.id === stored.visualTheme)) state.visualTheme = stored.visualTheme;
     if (ACCENT_COLORS.some((item) => item.id === stored.accentColor)) state.accentColor = stored.accentColor;
+    if (ACCENT_COLORS.some((item) => item.id === stored.secondaryAccentColor)) state.secondaryAccentColor = stored.secondaryAccentColor;
   } catch {
     state.visualTheme = "neon";
     state.accentColor = "violet";
+    state.secondaryAccentColor = "cyan";
   }
   applyLocalAppearanceTheme(state.visualTheme);
   renderAppearanceControls();
@@ -833,6 +840,14 @@ function setAccentColorPreference(colorId) {
   renderAppearanceControls();
 }
 
+function setSecondaryAccentColorPreference(colorId) {
+  if (!ACCENT_COLORS.some((item) => item.id === colorId)) return;
+  state.secondaryAccentColor = colorId;
+  applyAccentColor();
+  saveAppearancePreference();
+  renderAppearanceControls();
+}
+
 function renderAppearanceControls() {
   const themeGrid = $("interfaceThemeChoices");
   if (themeGrid) {
@@ -844,6 +859,12 @@ function renderAppearanceControls() {
   if (colorGrid) {
     colorGrid.innerHTML = ACCENT_COLORS.map((color) => `
       <button class="accent-swatch${color.id === state.accentColor ? " selected" : ""}" type="button" onclick="setAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"></button>
+    `).join("");
+  }
+  const secondaryColorGrid = $("secondaryAccentColorChoices");
+  if (secondaryColorGrid) {
+    secondaryColorGrid.innerHTML = ACCENT_COLORS.map((color) => `
+      <button class="accent-swatch secondary-swatch${color.id === state.secondaryAccentColor ? " selected" : ""}" type="button" onclick="setSecondaryAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"></button>
     `).join("");
   }
 }
