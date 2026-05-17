@@ -48,7 +48,7 @@ Music Spy is designed to keep account progress across Render deploys, restarts, 
 
 Required Render environment variables:
 
-- `DATABASE_URL` — Render PostgreSQL connection string. Render production startup refuses ephemeral file storage when this is missing.
+- `DATABASE_URL` — Render PostgreSQL connection string. This is the production-safe path for accounts, sessions, refresh tokens, friends, messages, settings, statistics, match history, lobby history, and progression.
 - `SESSION_SECRET` — stable secret with at least 32 characters. Keep the same value across deploys so OAuth state and secure auth flows remain deploy-safe.
 - `PUBLIC_URL` or `APP_URL` — canonical HTTPS app URL, for example `https://musicspy.onrender.com`.
 - `CORS_ORIGIN` — optional explicit production origin if it differs from `PUBLIC_URL` / `APP_URL`.
@@ -56,7 +56,7 @@ Required Render environment variables:
 
 Production safety rules implemented in the backend:
 
-- Render deployments require PostgreSQL and will not fall back to runtime filesystem persistence.
+- Render deployments prefer PostgreSQL; if `DATABASE_URL` is missing, startup now warns instead of crashing so Render deploys do not fail with an ephemeral-storage exception. Attach Render PostgreSQL before handling real users; a persistent Render disk is the only acceptable non-Postgres emergency fallback.
 - Startup runs `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` migrations only; it does not drop or recreate tables.
 - Users, OAuth identities, hashed refresh sessions, friendships, direct messages, settings, statistics, match history, lobby history, and progression are written to PostgreSQL.
 - Google and Discord accounts use stable `googleId` / `discordId` identities to reconnect to the same user instead of creating duplicates after redeploys.
