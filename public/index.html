@@ -271,34 +271,70 @@
 
   <main class="app-shell">
     <section id="menu" class="screen card hero-card">
-      <p class="eyebrow">Шпион помузыкальски</p>
-      <h1>Music Spy</h1>
-      <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+      <div class="hero-copy">
+        <p class="eyebrow">Шпион помузыкальски</p>
+        <h1>Music Spy</h1>
+        <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
 
-      <div class="form-grid">
-        <label>
-          <span>Никнейм</span>
-          <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-        </label>
-        <label>
-          <span>Код комнаты</span>
-          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-        </label>
+        <div class="form-grid hero-form-grid">
+          <label>
+            <span>Никнейм</span>
+            <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
+          </label>
+          <label>
+            <span>Код комнаты</span>
+            <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="actions two-col hero-actions">
+          <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
+          <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+          <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
+          <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
+        </div>
+
+        <div class="rules hero-rules">
+          <div><strong>3+</strong><span>игрока</span></div>
+          <div><strong>30с</strong><span>на трек</span></div>
+          <div><strong>3</strong><span>круга</span></div>
+        </div>
+        <p id="menuError" class="status error"></p>
       </div>
 
-      <div class="actions two-col">
-        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
-        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
-        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
-        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
-      </div>
-
-      <div class="rules">
-        <div><strong>3+</strong><span>игрока</span></div>
-        <div><strong>30с</strong><span>на трек</span></div>
-        <div><strong>3</strong><span>круга</span></div>
-      </div>
-      <p id="menuError" class="status error"></p>
+      <aside class="hero-visual" aria-label="Превью музыкальной партии">
+        <div class="hero-visual-orbit" aria-hidden="true"></div>
+        <div class="hero-phone-card">
+          <div class="hero-phone-topbar">
+            <span></span><span></span><span></span>
+            <b>LIVE ROOM</b>
+          </div>
+          <div class="hero-track-card">
+            <div class="hero-vinyl" aria-hidden="true"><span></span></div>
+            <div>
+              <small>раунд 02 · ход 04</small>
+              <strong>секретная тема</strong>
+              <p>Слушай треки, считывай реакции и не выдавай свою роль.</p>
+            </div>
+          </div>
+          <div class="hero-equalizer" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="hero-player-list" aria-label="Игроки в комнате">
+            <div><span>М</span><b>мотя</b><em>host</em></div>
+            <div><span>А</span><b>аня</b><em>ready</em></div>
+            <div><span>?</span><b>spy</b><em>hidden</em></div>
+          </div>
+        </div>
+        <div class="hero-floating-card hero-floating-card-top">
+          <small>тема</small>
+          <strong>ностальгия</strong>
+        </div>
+        <div class="hero-floating-card hero-floating-card-bottom">
+          <small>голоса</small>
+          <strong>4 подозрения</strong>
+        </div>
+      </aside>
     </section>
 
     <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">
