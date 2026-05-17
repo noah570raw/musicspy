@@ -7823,3 +7823,390 @@ body[data-screen="menu"] .music-equalizer-bg {
     padding: 16px;
   }
 }
+
+/* Reference screenshot: full-screen create lobby turntable console. */
+body[data-screen="createLobbySetup"] {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(126, 84, 170, 0.24), transparent 29rem),
+    radial-gradient(circle at 76% 18%, rgba(255, 230, 184, 0.085), transparent 25rem),
+    linear-gradient(145deg, #020203 0%, #0a090c 48%, #171219 100%);
+}
+
+body[data-screen="createLobbySetup"] .noise {
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+body[data-screen="createLobbySetup"] .orb,
+body[data-screen="createLobbySetup"] .music-equalizer-bg {
+  opacity: 0.08;
+}
+
+body[data-screen="createLobbySetup"] .app-shell {
+  width: min(100% - 22px, 1320px);
+  min-height: 100dvh;
+  padding: 11px 0;
+  align-items: center;
+}
+
+.create-lobby-card {
+  width: min(100%, 1288px);
+  min-height: min(746px, calc(100dvh - 22px));
+  padding: clamp(14px, 1.55vw, 22px);
+  border-radius: 34px;
+  border-color: rgba(226, 215, 196, 0.15);
+  background:
+    linear-gradient(115deg, rgba(255,255,255,0.105), rgba(255,255,255,0.026) 30%, rgba(0,0,0,0.24) 58%, rgba(255,255,255,0.034)),
+    radial-gradient(circle at 22% 16%, rgba(185, 143, 255, 0.18), transparent 24rem),
+    radial-gradient(circle at 72% 12%, rgba(255, 218, 154, 0.10), transparent 16rem),
+    linear-gradient(145deg, rgba(29, 26, 25, 0.98), rgba(8, 8, 10, 0.98) 52%, rgba(19, 17, 20, 0.98));
+  box-shadow:
+    0 46px 150px rgba(0, 0, 0, 0.88),
+    0 0 0 1px rgba(255, 255, 255, 0.045) inset,
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 -18px 60px rgba(0, 0, 0, 0.48) inset;
+}
+
+.create-lobby-card::before {
+  z-index: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.035), transparent 18%, rgba(255,255,255,0.018) 50%, transparent 78%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.014) 0 1px, transparent 1px 11px);
+  opacity: 0.48;
+}
+
+.create-lobby-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: clamp(10px, 1.25vh, 14px);
+  min-height: calc(min(746px, 100dvh - 22px) - clamp(28px, 3.1vw, 44px));
+}
+
+.create-lobby-brand {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 15px;
+  border: 1px solid rgba(216, 192, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(9, 8, 11, 0.72);
+  color: #f8f3ff;
+  transform: translate(-50%, -3px);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.1);
+  backdrop-filter: blur(16px);
+}
+
+.create-lobby-brand-mark {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d8c0ff, #7c3aed 52%, #2b2038);
+  color: #fff;
+  font-weight: 950;
+  box-shadow: 0 0 18px rgba(216,192,255,0.34);
+}
+
+.create-lobby-brand strong {
+  font-size: 0.98rem;
+  letter-spacing: -0.035em;
+}
+
+.create-lobby-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  padding: 34px 6px 0;
+  text-align: center;
+}
+
+.create-lobby-header > div {
+  justify-self: center;
+}
+
+.create-lobby-header .eyebrow {
+  color: #d8c0ff;
+  margin-bottom: 7px;
+}
+
+.create-lobby-header h2 {
+  font-size: clamp(2rem, 3.25vw, 3.48rem);
+  line-height: 0.96;
+  letter-spacing: -0.065em;
+  background: linear-gradient(100deg, #fff, #d8c0ff 48%, #fff4dd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+.create-lobby-header .lead.small {
+  max-width: 540px;
+  margin: 8px auto 0;
+  color: rgba(248, 246, 255, 0.58);
+  font-size: 0.86rem;
+  line-height: 1.32;
+}
+
+.create-lobby-header .icon-button {
+  justify-self: end;
+  width: 42px;
+  min-height: 42px;
+  border-color: rgba(226,215,196,0.14);
+  background: rgba(10,9,11,0.72);
+}
+
+.create-lobby-layout {
+  display: grid;
+  grid-template-columns: minmax(390px, 1.04fr) minmax(255px, 0.67fr) minmax(410px, 1fr);
+  gap: clamp(12px, 1.45vw, 18px);
+  align-items: stretch;
+  min-height: 0;
+  overflow: visible;
+}
+
+.create-lobby-console {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 13px;
+  min-width: 0;
+}
+
+.create-turntable-deck {
+  min-height: 0;
+  height: 100%;
+  border-radius: 28px;
+}
+
+.create-turntable-deck .hero-vinyl {
+  left: 16px;
+  width: min(94%, 510px);
+  max-width: calc(100% - 96px);
+}
+
+.create-turntable-deck .tonearm-base {
+  right: 30px;
+  top: 52px;
+  width: 86px;
+  height: 86px;
+}
+
+.create-turntable-deck .tonearm-base span {
+  width: 36px;
+  height: 36px;
+}
+
+.create-turntable-deck .tonearm {
+  right: 74px;
+  top: 104px;
+  width: min(245px, 52%);
+}
+
+.create-audio-control-strip {
+  min-height: 118px;
+  padding: 12px;
+  border-radius: 24px;
+}
+
+.create-audio-control-strip .vu-meter {
+  min-height: 64px;
+}
+
+.create-lobby-preview,
+.create-settings-column {
+  min-width: 0;
+}
+
+.create-lobby-preview {
+  grid-template-rows: auto minmax(112px, 1fr) auto auto auto;
+  min-height: 0;
+  padding: clamp(15px, 1.6vw, 22px);
+  border-radius: 26px;
+  border-color: rgba(226, 215, 196, 0.14);
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.09), rgba(255,255,255,0.025) 32%, rgba(0,0,0,0.25)),
+    rgba(13, 12, 13, 0.82);
+  box-shadow: 0 24px 62px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.13);
+}
+
+.create-lobby-preview::before {
+  background: radial-gradient(circle at 20% 0%, rgba(216,192,255,0.18), transparent 55%);
+  animation: none;
+}
+
+.create-lobby-preview::after {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.22));
+}
+
+.preview-kicker,
+.preview-topline .eyebrow,
+.settings-title span,
+.setting-control small {
+  color: rgba(248, 246, 255, 0.5);
+}
+
+.create-lobby-preview strong {
+  min-height: auto;
+  color: #b6ff3b;
+  font-size: clamp(2.2rem, 3.15vw, 3.65rem);
+  letter-spacing: -0.075em;
+  text-shadow: 0 0 28px rgba(182,255,59,0.18);
+}
+
+.preview-stat-grid {
+  gap: 8px;
+}
+
+.preview-stat-grid div,
+.preview-mode-card,
+.create-settings-group,
+.create-settings-group .setting-control {
+  border-color: rgba(226, 215, 196, 0.12);
+  background: rgba(255,255,255,0.045);
+}
+
+.preview-stat-grid span,
+.preview-mode-card b {
+  color: #d8c0ff;
+}
+
+.create-settings-column {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 10px;
+  overflow: visible;
+}
+
+.create-settings-group {
+  gap: 9px;
+  padding: 12px;
+  border-radius: 24px;
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.075), rgba(255,255,255,0.022) 34%, rgba(0,0,0,0.20)),
+    rgba(13, 12, 13, 0.76);
+  box-shadow: 0 16px 42px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.09);
+}
+
+.settings-title {
+  margin-bottom: 0;
+}
+
+.settings-title strong {
+  color: #f8f3ff;
+  font-size: 0.84rem;
+}
+
+.room-group,
+.match-group,
+.advanced-group {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.room-group .settings-title,
+.match-group .settings-title,
+.advanced-group .settings-title,
+.setting-control-wide {
+  grid-column: 1 / -1;
+}
+
+.create-settings-group .setting-control {
+  min-height: auto;
+  padding: 10px;
+  border-radius: 15px;
+  box-shadow: none;
+}
+
+.create-settings-group .setting-control span {
+  margin-bottom: 6px;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+}
+
+.create-settings-group input,
+.create-settings-group select,
+.create-settings-group .custom-select-trigger {
+  min-height: 40px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.34);
+  font-size: 0.86rem;
+}
+
+.create-settings-group .custom-select-trigger {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.create-settings-group .setting-control small {
+  margin-top: 5px;
+  font-size: 0.66rem;
+}
+
+.create-lobby-actions {
+  grid-template-columns: 0.72fr 1fr;
+  width: min(100%, 430px);
+  margin: 0 0 0 auto;
+  gap: 10px;
+}
+
+.create-lobby-actions button {
+  min-height: 46px;
+  border-radius: 14px;
+}
+
+#createLobbyStatus {
+  min-height: 1.1em;
+  margin: 0;
+  text-align: right;
+}
+
+@media (max-width: 1180px) {
+  body[data-screen="createLobbySetup"] {
+    overflow-y: auto;
+  }
+
+  .create-lobby-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .create-lobby-console {
+    min-height: 600px;
+  }
+
+  .create-settings-column {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .create-lobby-header {
+    padding-top: 42px;
+  }
+
+  .create-lobby-console {
+    min-height: 500px;
+  }
+
+  .room-group,
+  .match-group,
+  .advanced-group,
+  .create-lobby-actions {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+}
+
+.create-turntable-deck .hero-vinyl {
+  min-width: 0;
+}
