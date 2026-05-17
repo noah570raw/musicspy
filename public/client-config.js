@@ -2,7 +2,7 @@
 const DEFAULT_LISTEN_TIME = 30;
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 const DEFAULT_SITE_VOLUME = 100;
-const BACKGROUND_MUSIC_VOLUME = 0.3;
+const BACKGROUND_MUSIC_VOLUME = 0.06;
 const AUTH_TOKEN_KEY = "musicspy_auth_token";
 const RECONNECT_STATE_KEY = "musicspy_reconnect_state";
 const RECONNECT_TOKEN_KEY = "musicspy_reconnect_token";

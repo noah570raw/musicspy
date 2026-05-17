@@ -1,6 +1,7 @@
 const socket = io();
 
-const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.04;
+const DUCKED_BACKGROUND_MUSIC_VOLUME = 0;
+const GAMEPLAY_BACKGROUND_MUSIC_SCREENS = new Set(["game", "voting", "spyGuess"]);
 const UI_CUE_FADE_SECONDS = 0.045;
 const state = {
   currentCode: "",
@@ -346,8 +347,12 @@ function isTrackListening() {
   return state.turnStage === "listening" && Boolean(state.currentTrackId);
 }
 
+function shouldPlayBackgroundMusic() {
+  return state.musicEnabled && state.siteVolume > 0 && !GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(state.phase);
+}
+
 function getBackgroundMusicVolume() {
-  if (!state.musicEnabled) return 0;
+  if (!shouldPlayBackgroundMusic()) return 0;
   return isTrackListening() ? DUCKED_BACKGROUND_MUSIC_VOLUME : BACKGROUND_MUSIC_VOLUME;
 }
 
@@ -363,7 +368,7 @@ function syncBackgroundAudio() {
   const media = getBackgroundMusicElement();
   if (!media) return;
   media.volume = getBackgroundAudioVolume();
-  media.muted = !state.musicEnabled || state.siteVolume === 0;
+  media.muted = !shouldPlayBackgroundMusic();
 }
 
 function syncAudioVolume({ fadeTime = 0.18 } = {}) {
@@ -407,7 +412,7 @@ function unlockAudio({ startMusic = true } = {}) {
     audio.context.resume().catch(() => {});
   }
   syncAudioVolume();
-  if (startMusic && state.musicEnabled) startBackgroundMusic();
+  if (startMusic && shouldPlayBackgroundMusic()) startBackgroundMusic();
   return audio;
 }
 
@@ -724,7 +729,7 @@ function playSoundCue(name) {
 
 function scheduleAmbientMusic() {
   const audio = state.audio;
-  if (!audio || !state.musicEnabled || state.siteVolume === 0) return;
+  if (!audio || !shouldPlayBackgroundMusic()) return;
 
   const step = audio.step;
   const chord = AMBIENT_CHORDS[step % AMBIENT_CHORDS.length];
@@ -750,7 +755,10 @@ function startBackgroundMusic() {
   const media = getBackgroundMusicElement();
   if (media) {
     syncBackgroundAudio();
-    if (!state.musicEnabled || state.siteVolume === 0) return;
+    if (!shouldPlayBackgroundMusic()) {
+      media.pause();
+      return;
+    }
     media.play().catch(() => {
       // Browsers can block autoplay until the user interacts with the page.
     });
@@ -758,7 +766,7 @@ function startBackgroundMusic() {
   }
 
   const audio = createAudioEngine();
-  if (!audio || audio.musicTimer || !state.musicEnabled) return;
+  if (!audio || audio.musicTimer || !shouldPlayBackgroundMusic()) return;
   syncAudioVolume();
   scheduleAmbientMusic();
   audio.musicTimer = window.setInterval(scheduleAmbientMusic, 6000);
@@ -1019,6 +1027,12 @@ function showScreen(id) {
   if (id === "playRooms") refreshOpenLobbies();
   updateInviteSecretsVisibility();
   updateMobileTurnBanner();
+  if (GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(id)) {
+    stopBackgroundMusic();
+  } else if (state.musicEnabled) {
+    startBackgroundMusic();
+  }
+  syncAudioVolume({ fadeTime: 0.32 });
   if (previousPhase !== id) playSoundCue("screen");
 }
 
