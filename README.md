@@ -41,3 +41,36 @@ Render
 🔗 Сайт проекта:
 
 https://musicspy.onrender.com/
+
+## Persistent data and Render PostgreSQL
+
+Music Spy now keeps account and social/game data in a real persistent database when a PostgreSQL URL is configured.
+On Render, set a managed Render PostgreSQL database and expose its connection string to the web service as `DATABASE_URL` (or `POSTGRES_URL` / `POSTGRESQL_URL`). The app detects Render with the standard `RENDER*` environment variables and uses the external database automatically, so redeploys, commits, crashes, and reboots do not wipe user data.
+
+Persisted entities include:
+
+- accounts and linked Google/Discord OAuth identities;
+- hashed access/refresh sessions for login restoration after refresh or redeploy;
+- profile settings, appearance theme, language, notification/game preferences, and future progression fields;
+- friendships, friend requests, and online/offline presence metadata;
+- direct messages and read/delivery status;
+- statistics, MMR/rank progression, per-user match history, and lobby history snapshots.
+
+### Local development
+
+Local development can still run without PostgreSQL:
+
+```bash
+npm start
+```
+
+Without `DATABASE_URL`, the server uses the local JSON store under `data/users.json` (or `MUSICSPY_DATA_DIR`) as a localhost-only development fallback. Do not use that fallback for production.
+
+### Production environment variables
+
+- `DATABASE_URL` — Render PostgreSQL external/internal connection string.
+- `PUBLIC_URL` or `APP_URL` — public app origin used to build OAuth callbacks when provider-specific redirect URIs are not set.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, optional `GOOGLE_REDIRECT_URI`.
+- `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, optional `DISCORD_REDIRECT_URI`.
+
+OAuth callback logic remains unchanged: when explicit `GOOGLE_REDIRECT_URI` or `DISCORD_REDIRECT_URI` values exist they are used as-is; otherwise callbacks are generated from the public request URL.
