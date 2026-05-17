@@ -266,6 +266,11 @@ input:disabled {
   opacity: 0.5;
 }
 
+.track-form.skip-active #url,
+.track-form.skip-active #sendBtn {
+  display: none;
+}
+
 .actions,
 .track-form {
   display: grid;
@@ -7193,16 +7198,16 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 
-/* Requested compact sound control: 5% smaller than the shared corner pill. */
+/* Requested compact sound control: 5% smaller than the previous compact pill. */
 .volume-control .sound-toggle {
-  min-height: 42px;
-  padding: 7.6px 12.35px;
-  gap: 0.52rem;
-  font-size: 0.97rem;
+  min-height: 39.9px;
+  padding: 7.22px 11.73px;
+  gap: 0.494rem;
+  font-size: 0.922rem;
 }
 
 .volume-control .sound-toggle strong {
-  font-size: 0.712rem;
+  font-size: 0.676rem;
 }
 
 /* Premium in-game settings deck: glass, depth and accent-reactive lighting. */
@@ -8600,6 +8605,14 @@ body,
 .skip-vote-panel.hidden,
 .skip-vote-btn.hidden {
   display: none;
+}
+
+.track-form .skip-vote-panel {
+  margin-top: 0;
+}
+
+.track-form.skip-active {
+  margin-top: 16px;
 }
 
 .skip-vote-meta {
