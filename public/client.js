@@ -60,7 +60,8 @@ const state = {
   gamePreferences: {
     cinematicMode: true,
     reactionHints: true,
-    autoFocusTrack: false
+    autoFocusTrack: false,
+    effectsDensity: "ultra"
   },
   settingsSection: "profile"
 };
@@ -84,6 +85,12 @@ const ACCENT_COLORS = [
   { id: "violet", label: "Фиолетовый", hex: "#8b5cf6", rgb: "139, 92, 246" },
   { id: "white", label: "Белый", hex: "#f8fafc", rgb: "248, 250, 252" },
   { id: "black", label: "Черный", hex: "#111827", rgb: "17, 24, 39" }
+];
+const EFFECTS_DENSITIES = [
+  { id: "low", label: "Low", details: "Минимум lighting: без частиц, фоновых орбов, equalizer и пульсаций UI glow." },
+  { id: "medium", label: "Medium", details: "Убирает тяжелые particles и ambient equalizer, оставляет спокойное lighting и мягкий UI glow." },
+  { id: "high", label: "High", details: "Снижает плотность ambient effects и blur, оставляя почти все подсветки интерфейса." },
+  { id: "ultra", label: "Ultra", details: "Полные lighting, particles, UI glow и ambient effects — стартовый режим для новых игроков." }
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -851,7 +858,12 @@ function restoreGamePreferences() {
   } catch {
     // Keep defaults.
   }
+  if (!EFFECTS_DENSITIES.some((item) => item.id === state.gamePreferences.effectsDensity)) {
+    state.gamePreferences.effectsDensity = "ultra";
+  }
+  applyEffectsDensity(state.gamePreferences.effectsDensity);
   syncGamePreferenceToggles();
+  renderEffectsDensityControls();
 }
 
 function syncGamePreferenceToggles() {
@@ -866,8 +878,36 @@ function syncGamePreferenceToggles() {
   }
 }
 
+function applyEffectsDensity(density = state.gamePreferences.effectsDensity || "ultra") {
+  const safeDensity = EFFECTS_DENSITIES.some((item) => item.id === density) ? density : "ultra";
+  state.gamePreferences.effectsDensity = safeDensity;
+  document.body.dataset.effectsDensity = safeDensity;
+}
+
+function renderEffectsDensityControls() {
+  const densityGrid = $("effectsDensityChoices");
+  if (!densityGrid) return;
+  densityGrid.innerHTML = EFFECTS_DENSITIES.map((density) => `
+    <button class="effects-density-option${density.id === state.gamePreferences.effectsDensity ? " selected" : ""}" type="button" role="radio" aria-checked="${density.id === state.gamePreferences.effectsDensity}" onclick="setEffectsDensityPreference('${density.id}')">
+      <strong>${escapeHtml(density.label)}</strong>
+      <small>${escapeHtml(density.details)}</small>
+    </button>
+  `).join("");
+}
+
+function setEffectsDensityPreference(density) {
+  if (!EFFECTS_DENSITIES.some((item) => item.id === density)) return;
+  applyEffectsDensity(density);
+  saveGamePreferences();
+  renderEffectsDensityControls();
+}
+
 function updateGamePreference(key, value) {
   if (!Object.hasOwn(state.gamePreferences, key)) return;
+  if (key === "effectsDensity") {
+    setEffectsDensityPreference(value);
+    return;
+  }
   state.gamePreferences[key] = Boolean(value);
   saveGamePreferences();
 }

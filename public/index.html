@@ -168,7 +168,6 @@
   <div id="authModal" class="auth-modal site-menu-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="authModalTitle">
     <div class="auth-modal-card site-menu-card">
       <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть меню">×</button>
-      <p class="eyebrow">меню</p>
       <h2 id="authModalTitle">Меню</h2>
       <p id="authModalText" class="auth-modal-text">Профиль, внешний вид, игра, язык и информация о Music Spy.</p>
 
@@ -246,6 +245,13 @@
 
           <section id="settingsPanelGame" class="site-menu-panel" data-settings-panel="game">
             <div class="settings-block">
+              <div class="settings-title compact">
+                <strong>ИНТЕНСИВНОСТЬ ЭФФЕКТОВ</strong>
+                <span>Effects Density управляет lighting, particles, UI glow и ambient effects. По умолчанию для нового игрока включен Ultra.</span>
+              </div>
+              <div id="effectsDensityChoices" class="effects-density-grid" role="radiogroup" aria-label="Effects Density"></div>
+            </div>
+            <div class="settings-block">
               <label class="menu-toggle-row">
                 <input id="cinematicModeToggle" type="checkbox" onchange="updateGamePreference('cinematicMode', this.checked)">
                 <span><strong>Кинематичные подсказки</strong><small>Показывать атмосферные микро-подсказки перед важными фазами партии.</small></span>
@@ -320,12 +326,15 @@
       <p id="spyReviewStatus" class="status"></p>
     </div>
   </div>
-  <div class="account-corner" aria-label="Аккаунт игрока">
-    <button id="accountToggle" class="corner-toggle account-toggle" type="button" onclick="openAccountPanel()" aria-label="Открыть аккаунт" title="Аккаунт и статистика">
-      <span id="accountToggleAvatar">👤</span>
-      <strong id="accountToggleLabel">Гость</strong>
-    </button>
-    <p id="accountStatus" class="status"></p>
+  <div class="top-left-controls" aria-label="Основное меню и аккаунт">
+    <button class="main-menu-button" type="button" onclick="openMainMenu()" aria-label="Открыть меню">☰ Меню</button>
+    <div class="account-corner" aria-label="Аккаунт игрока">
+      <button id="accountToggle" class="corner-toggle account-toggle" type="button" onclick="openAccountPanel()" aria-label="Открыть аккаунт" title="Аккаунт и статистика">
+        <span id="accountToggleAvatar">👤</span>
+        <strong id="accountToggleLabel">Гость</strong>
+      </button>
+      <p id="accountStatus" class="status"></p>
+    </div>
   </div>
 
   <div id="volumeControl" class="volume-control" aria-label="Громкость сайта">
@@ -345,7 +354,6 @@
       <p class="eyebrow">Шпион помузыкальски</p>
       <h1>Music Spy</h1>
       <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
-      <button class="main-menu-button" type="button" onclick="openMainMenu()">☰ Меню</button>
 
       <div class="form-grid">
         <label>

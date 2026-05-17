@@ -6601,3 +6601,179 @@ body[data-role="spy"] {
 .site-menu-card .language-switcher {
   display: inline-flex;
 }
+
+.top-left-controls {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(720px, calc(100vw - 126px));
+  pointer-events: none;
+}
+
+.top-left-controls > * {
+  pointer-events: auto;
+}
+
+.top-left-controls .main-menu-button {
+  justify-self: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0.68rem 1.05rem;
+  white-space: nowrap;
+}
+
+.top-left-controls .account-corner {
+  position: static;
+  inset: auto;
+  width: auto;
+  max-width: min(280px, calc(100vw - 36px));
+}
+
+.volume-control .sound-toggle {
+  min-height: 40px;
+  padding: 7px 12px;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+}
+
+.volume-control .sound-toggle strong {
+  font-size: 0.68rem;
+}
+
+.effects-density-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.effects-density-option {
+  display: grid;
+  gap: 6px;
+  min-height: 108px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.12), transparent 58%), rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.effects-density-option strong {
+  font-size: 0.98rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.effects-density-option small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.effects-density-option.selected,
+.effects-density-option:hover,
+.effects-density-option:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.78);
+  background: radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.24), transparent 58%), rgba(var(--accent-rgb), 0.12);
+  box-shadow: 0 18px 44px rgba(var(--accent-rgb), 0.16);
+}
+
+/* Effects Density: controls lighting, particles, UI glow, and ambient effects. */
+body[data-effects-density="high"] .noise {
+  opacity: 0.16;
+}
+
+body[data-effects-density="high"] .orb {
+  opacity: 0.32;
+  filter: blur(20px);
+}
+
+body[data-effects-density="high"] .music-equalizer-bg,
+body[data-effects-density="high"] .lobby-ambient-orb {
+  opacity: 0.1;
+}
+
+body[data-effects-density="medium"] .noise {
+  opacity: 0.08;
+}
+
+body[data-effects-density="medium"] .orb {
+  opacity: 0.18;
+  filter: blur(14px);
+  animation: none;
+}
+
+body[data-effects-density="medium"] .music-equalizer-bg,
+body[data-effects-density="medium"] .lobby-ambient-orb,
+body[data-effects-density="medium"] .reaction-burst {
+  display: none !important;
+}
+
+body[data-effects-density="medium"] .card,
+body[data-effects-density="medium"] .auth-modal-card,
+body[data-effects-density="medium"] .volume-panel,
+body[data-effects-density="medium"] .guest-account-notice,
+body[data-effects-density="medium"] .profile-view,
+body[data-effects-density="medium"] .profile-editor {
+  box-shadow: 0 14px 46px rgba(0, 0, 0, 0.34);
+}
+
+body[data-effects-density="low"] {
+  background: var(--bg);
+}
+
+body[data-effects-density="low"] .noise,
+body[data-effects-density="low"] .orb,
+body[data-effects-density="low"] .music-equalizer-bg,
+body[data-effects-density="low"] .lobby-ambient-orb,
+body[data-effects-density="low"] .reaction-burst,
+body[data-effects-density="low"] button::before,
+body[data-effects-density="low"] .vote-row::before,
+body[data-effects-density="low"] .reaction-btn::before,
+body[data-effects-density="low"] .kick-row::before,
+body[data-effects-density="low"] .code-pill::before,
+body[data-effects-density="low"] .sound-toggle::before {
+  display: none !important;
+}
+
+body[data-effects-density="low"] *,
+body[data-effects-density="low"] *::before,
+body[data-effects-density="low"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.12s !important;
+}
+
+body[data-effects-density="low"] .card,
+body[data-effects-density="low"] .auth-modal-card,
+body[data-effects-density="low"] .volume-panel,
+body[data-effects-density="low"] .guest-account-notice,
+body[data-effects-density="low"] .profile-view,
+body[data-effects-density="low"] .profile-editor,
+body[data-effects-density="low"] .main-menu-button,
+body[data-effects-density="low"] .sound-toggle {
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .top-left-controls {
+    top: 12px;
+    left: 12px;
+    width: min(720px, calc(100vw - 126px));
+    flex-wrap: wrap;
+  }
+
+  .top-left-controls .main-menu-button,
+  .top-left-controls .account-toggle,
+  .volume-control .sound-toggle {
+    min-height: 40px;
+  }
+
+  .effects-density-grid {
+    grid-template-columns: 1fr;
+  }
+}
