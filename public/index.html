@@ -484,35 +484,129 @@
   </div>
 
   <main class="app-shell">
-    <section id="menu" class="screen card hero-card">
-      <p class="eyebrow">Шпион помузыкальски</p>
-      <h1>Music Spy</h1>
-      <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
-
-      <div class="form-grid">
-        <label>
-          <span>Никнейм</span>
-          <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-        </label>
-        <label>
-          <span>Код комнаты</span>
-          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-        </label>
+    <section id="menu" class="screen music-spy-terminal" aria-label="Music Spy control center">
+      <div class="terminal-bg" aria-hidden="true">
+        <span class="terminal-star star-a"></span>
+        <span class="terminal-star star-b"></span>
+        <span class="terminal-star star-c"></span>
+        <span class="terminal-star star-d"></span>
       </div>
 
-      <div class="actions two-col">
-        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
-        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
-        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
-        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
-      </div>
+      <aside class="control-sidebar left-control" aria-label="Control navigation">
+        <div class="brand-lockup">
+          <div class="brand-vinyl" aria-hidden="true">◉</div>
+          <div>
+            <span>Music Spy</span>
+            <strong>Audio OS</strong>
+          </div>
+        </div>
 
-      <div class="rules">
-        <div><strong>3+</strong><span>игрока</span></div>
-        <div><strong>30с</strong><span>на трек</span></div>
-        <div><strong>3</strong><span>круга</span></div>
-      </div>
-      <p id="menuError" class="status error"></p>
+        <nav class="spy-nav" aria-label="Главная навигация">
+          <button class="spy-nav-item active" type="button"><span aria-hidden="true">⌂</span>Главная</button>
+          <button class="spy-nav-item" type="button" onclick="showPlayRooms()"><span aria-hidden="true">▶</span>Играть</button>
+          <button class="spy-nav-item" type="button" onclick="openMainMenu('daily')"><span aria-hidden="true">◈</span>Daily Reward</button>
+          <button class="spy-nav-item" type="button" onclick="openMainMenu('xpbooster')"><span aria-hidden="true">✦</span>XP Booster</button>
+          <button class="spy-nav-item" type="button" onclick="openMainMenu('shop')"><span aria-hidden="true">▣</span>Инвентарь</button>
+          <button class="spy-nav-item" type="button" onclick="openFriendsPanel()"><span aria-hidden="true">☷</span>Друзья</button>
+          <button class="spy-nav-item" type="button" onclick="openMainMenu('profile')"><span aria-hidden="true">◎</span>Профиль</button>
+          <button class="spy-nav-item" type="button"><span aria-hidden="true">⌁</span>Статистика</button>
+          <button class="spy-nav-item" type="button" onclick="openMainMenu('shop')"><span aria-hidden="true">◇</span>Магазин</button>
+          <button class="spy-nav-item" type="button" onclick="openMainMenu('game')"><span aria-hidden="true">⚙</span>Настройки</button>
+        </nav>
+
+        <div class="mini-profile">
+          <div class="mini-avatar" aria-hidden="true">MS</div>
+          <div class="mini-profile-copy">
+            <strong>Agent Neon</strong>
+            <span><i></i> Online</span>
+          </div>
+          <div class="xp-readout"><span></span></div>
+          <small>XP 6 420 / 8 000</small>
+        </div>
+      </aside>
+
+      <section class="main-control-deck" aria-labelledby="musicSpyHeroTitle">
+        <div class="deck-hud hud-top" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="deck-title-stack">
+          <p class="eyebrow">classified audio intelligence</p>
+          <h1 id="musicSpyHeroTitle">MUSIC SPY</h1>
+          <p class="deck-subtitle">CLASSIFIED AUDIO INTELLIGENCE</p>
+        </div>
+
+        <div class="vinyl-stage" aria-hidden="true">
+          <div class="hud-ring ring-one"></div>
+          <div class="hud-ring ring-two"></div>
+          <div class="particle-field"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="mega-vinyl">
+            <span class="vinyl-label"></span>
+            <span class="vinyl-shine"></span>
+          </div>
+          <div class="tonearm"><span></span></div>
+        </div>
+
+        <div class="terminal-form" aria-label="Launch controls">
+          <label>
+            <span>nickname</span>
+            <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
+          </label>
+          <label>
+            <span>room code</span>
+            <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="terminal-actions">
+          <button class="primary launch-button" type="button" onclick="showPlayRooms()">Играть</button>
+          <button class="secondary launch-button alt" onclick="joinLobby()">Войти по коду</button>
+          <button class="secondary micro-button" type="button" onclick="showHowToPlay()">Как играть?</button>
+          <button class="ghost-button micro-button" type="button" onclick="showDemoFlow()">Demo</button>
+        </div>
+        <p id="menuError" class="status error"></p>
+      </section>
+
+      <aside class="control-sidebar right-widgets" aria-label="Live system widgets">
+        <article class="live-widget daily-widget">
+          <div class="widget-title"><span>01</span><strong>DAILY REWARD</strong></div>
+          <div class="streak-cards" aria-label="Reward streak"><i>1</i><i>2</i><i class="ready">3</i><i>4</i><i>5</i></div>
+          <div class="widget-metric"><span>Next drop</span><strong>11:42:09</strong></div>
+          <button type="button" class="widget-button" onclick="openMainMenu('daily')">Collect reward</button>
+        </article>
+
+        <article class="live-widget booster-widget">
+          <div class="widget-title"><span>02</span><strong>XP BOOSTER</strong></div>
+          <div class="energy-row">
+            <div class="energy-core" aria-hidden="true"></div>
+            <div><strong>2X XP</strong><span>Active · 24:00</span></div>
+          </div>
+        </article>
+
+        <article class="live-widget chat-widget">
+          <div class="widget-title"><span>03</span><strong>GLOBAL CHAT</strong></div>
+          <div class="online-count"><i></i> 128 agents online</div>
+          <div class="chat-feed">
+            <p><b>Nova:</b> новый трек загружен</p>
+            <p><b>Vox:</b> шпион рядом?</p>
+          </div>
+        </article>
+
+        <article class="live-widget friends-widget">
+          <div class="widget-title"><span>04</span><strong>FRIENDS ONLINE</strong></div>
+          <div class="friend-stack" aria-label="Friends online">
+            <i>NX</i><i>DJ</i><i>VR</i><i>+5</i>
+          </div>
+          <button type="button" class="widget-button" onclick="openFriendsPanel()">Invite squad</button>
+        </article>
+
+        <article class="live-widget stats-widget">
+          <div class="widget-title"><span>05</span><strong>LIVE STATS</strong></div>
+          <div class="stats-grid">
+            <div><strong>1 284</strong><span>tracks guessed</span></div>
+            <div><strong>68%</strong><span>winrate</span></div>
+            <div><strong>12</strong><span>streak</span></div>
+            <div><strong>S-7</strong><span>rank</span></div>
+          </div>
+        </article>
+      </aside>
     </section>
 
     <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">
