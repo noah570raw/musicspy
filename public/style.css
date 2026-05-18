@@ -9432,3 +9432,96 @@ body,
   0%, 35% { transform: translateX(-130%); }
   70%, 100% { transform: translateX(130%); }
 }
+
+body[data-visual-theme="midnight"] {
+  --bg: #030712;
+  --panel: rgba(10, 13, 28, 0.9);
+  --surface-rgb: 10, 13, 28;
+  --surface-strong-rgb: 20, 24, 45;
+  --accent: #fbbf24;
+  --accent-rgb: 251, 191, 36;
+  --accent-2: #38bdf8;
+}
+
+.profile-danger-zone,
+.daily-reward-card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, transparent);
+  background: radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--danger) 18%, transparent), transparent 50%), rgba(255, 255, 255, 0.04);
+}
+
+.profile-danger-zone strong,
+.daily-reward-amount strong {
+  color: var(--text);
+}
+
+.profile-danger-zone span {
+  color: var(--theme-text-faint);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.daily-reward-card {
+  overflow: hidden;
+  border-color: rgba(var(--accent-rgb), 0.34);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(var(--accent-rgb), 0.24), transparent 38%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+    rgba(var(--surface-rgb), 0.72);
+}
+
+.daily-reward-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  background: rgba(var(--accent-rgb), 0.12);
+  box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.16);
+}
+
+.daily-reward-amount span {
+  color: var(--accent);
+  filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.5));
+}
+
+.daily-reward-timer {
+  margin: 0;
+  color: var(--theme-text-soft);
+  font-weight: 800;
+}
+
+body[data-screen="game"] .friends-system,
+body[data-screen="voting"] .friends-system,
+body[data-screen="spyGuess"] .friends-system {
+  display: none;
+}
+
+.friends-toggle {
+  grid-template-columns: 38px auto minmax(0, auto);
+  gap: 10px;
+  min-width: 160px;
+  min-height: 52px;
+  padding: 7px 12px 7px 8px;
+}
+
+.friends-toggle-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+}
+
+.friends-toggle-copy strong {
+  font-size: 0.86rem;
+}
+
+.friends-toggle-copy small {
+  font-size: 0.65rem;
+}

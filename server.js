@@ -79,6 +79,8 @@ const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const DEV_USERNAMES = new Set(["noah570raw"]);
 const DEV_ROLE = "dev";
 const DEV_VINYL_BALANCE = 999_999_999;
+const DAILY_REWARD_AMOUNT = 300;
+const DAILY_REWARD_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 
 const lobbies = {};
@@ -269,7 +271,8 @@ function defaultEconomy() {
     ownedCosmetics: [],
     equipped: {},
     achievements: {},
-    transactions: []
+    transactions: [],
+    lastDailyRewardAt: null
   };
 }
 
@@ -326,7 +329,8 @@ function normalizeEconomy(economy = {}) {
     ownedCosmetics: Array.from(owned),
     equipped: safeEquipped,
     achievements: economy.achievements && typeof economy.achievements === "object" ? economy.achievements : {},
-    transactions: Array.isArray(economy.transactions) ? economy.transactions.slice(-80) : []
+    transactions: Array.isArray(economy.transactions) ? economy.transactions.slice(-80) : [],
+    lastDailyRewardAt: economy.lastDailyRewardAt && !Number.isNaN(Date.parse(economy.lastDailyRewardAt)) ? economy.lastDailyRewardAt : null
   };
 }
 
@@ -346,7 +350,23 @@ function publicEconomy(user) {
     xp: economy.xp,
     ownedCosmetics: economy.ownedCosmetics,
     equipped: economy.equipped,
-    achievements: economy.achievements
+    achievements: economy.achievements,
+    lastDailyRewardAt: economy.lastDailyRewardAt || null
+  };
+}
+
+function dailyRewardState(user, now = Date.now()) {
+  const economy = ensureUserProgress(user);
+  const lastClaimAt = economy?.lastDailyRewardAt || null;
+  const lastClaimTime = lastClaimAt ? Date.parse(lastClaimAt) : 0;
+  const nextClaimTime = lastClaimTime ? lastClaimTime + DAILY_REWARD_INTERVAL_MS : now;
+  const canClaim = !lastClaimTime || now >= nextClaimTime;
+  return {
+    canClaim,
+    rewardAmount: DAILY_REWARD_AMOUNT,
+    lastClaimAt,
+    nextClaimAt: new Date(canClaim ? now : nextClaimTime).toISOString(),
+    remainingMs: canClaim ? 0 : nextClaimTime - now
   };
 }
 
@@ -883,6 +903,29 @@ function syncUserProfileInLobbies(user) {
     }
     if (changed) emitLobbyUpdate(lobby.code);
   }
+}
+
+function removeAccountFromActiveLobbies(userId) {
+  for (const code of Object.keys(lobbies)) {
+    const lobby = lobbies[code];
+    const playersToRemove = lobby.players.filter((player) => player.accountId === userId);
+    for (const player of playersToRemove) {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) handlePlayerDeparture(lobby, playerSocket, { leaveRoom: true });
+      else removePlayerFromLobby(lobby, player.id);
+      if (!lobbies[code]) break;
+    }
+    if (lobbies[code]) emitLobbyUpdate(code);
+  }
+}
+
+function deleteUserAccount(userId) {
+  const before = usersStore.users.length;
+  usersStore.users = usersStore.users.filter((user) => user.id !== userId);
+  usersStore.friendships = (usersStore.friendships || []).filter((friendship) => friendship.userAId !== userId && friendship.userBId !== userId);
+  usersStore.friendRequests = (usersStore.friendRequests || []).filter((request) => request.senderId !== userId && request.receiverId !== userId);
+  usersStore.directMessages = (usersStore.directMessages || []).filter((message) => message.senderId !== userId && message.receiverId !== userId);
+  return usersStore.users.length !== before;
 }
 
 const GAME_MODES = {
@@ -2256,6 +2299,21 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("account:delete", ({ refreshToken } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы удалить его" });
+    const userId = user.id;
+    if (refreshToken) revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
+    const affectedFriendIds = friendIdsFor(userId);
+    removeAccountFromActiveLobbies(userId);
+    unregisterAuthenticatedSocket(socket);
+    socket.request.logout?.(() => {});
+    const deleted = deleteUserAccount(userId);
+    if (deleted) saveUsersStore();
+    for (const friendId of affectedFriendIds) emitSocialForUserAndFriends(friendId);
+    cb({ success: true, profile: profileForSocket(socket) });
+  });
+
   socket.on("settings:update", ({ settings } = {}, cb = () => {}) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы сохранять настройки" });
@@ -2278,6 +2336,26 @@ io.on("connection", (socket) => {
     if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть магазин" });
     ensureUserProgress(user);
     cb({ success: true, catalog: SHOP_CATALOG, categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
+  });
+
+  socket.on("dailyReward:get", (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы получать ежедневную награду" });
+    cb({ success: true, ...dailyRewardState(user) });
+  });
+
+  socket.on("dailyReward:claim", (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы получать ежедневную награду" });
+    const currentState = dailyRewardState(user);
+    if (!currentState.canClaim) return cb({ error: "Новая награда будет доступна позже", dailyReward: currentState });
+    addVinylTransaction(user, DAILY_REWARD_AMOUNT, "daily_reward", { intervalHours: 24 });
+    user.economy.lastDailyRewardAt = new Date().toISOString();
+    user.updatedAt = user.economy.lastDailyRewardAt;
+    saveUsersStore();
+    const nextState = dailyRewardState(user);
+    cb({ success: true, amount: DAILY_REWARD_AMOUNT, economy: publicEconomy(user), dailyReward: nextState, profile: profileForSocket(socket) });
+    io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
   });
 
   socket.on("shop:purchase", ({ itemId } = {}, cb = () => {}) => {

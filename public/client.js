@@ -82,7 +82,9 @@ const state = {
   shopRarities: {},
   shopAchievements: [],
   shopCategory: "nicknameColor",
-  shopStatus: ""
+  shopStatus: "",
+  dailyReward: { canClaim: false, nextClaimAt: null, rewardAmount: 300 },
+  dailyRewardTimer: null
 };
 
 function hasDevRole(entity) {
@@ -123,7 +125,8 @@ const INTERFACE_THEMES = [
   { id: "ocean", label: "Ocean Glass" },
   { id: "forest", label: "Forest Bass" },
   { id: "galaxy", label: "Galaxy Noir" },
-  { id: "candy", label: "Candy Wave" }
+  { id: "candy", label: "Candy Wave" },
+  { id: "midnight", label: "Midnight Gold" }
 ];
 const ACCENT_COLORS = [
   { id: "red", label: "Красный", hex: "#ef4444", rgb: "239, 68, 68" },
@@ -1903,7 +1906,7 @@ function showAuthModal(mode = "choice") {
 }
 
 function openSettingsSection(section = "profile") {
-  const safeSection = ["profile", "shop", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
+  const safeSection = ["profile", "shop", "daily", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
   state.settingsSection = safeSection;
   for (const panel of document.querySelectorAll("[data-settings-panel]")) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
@@ -1915,6 +1918,7 @@ function openSettingsSection(section = "profile") {
   if (safeSection === "appearance") renderAppearanceControls();
   if (safeSection === "game") syncGamePreferenceToggles();
   if (safeSection === "shop") requestShopState();
+  if (safeSection === "daily") requestDailyRewardState();
 }
 
 function openMainMenu(section = "profile") {
@@ -2039,7 +2043,7 @@ function restoreServerBackedSettings(user) {
     if (settings.appearance.visualTheme) state.visualTheme = settings.appearance.visualTheme;
     if (settings.appearance.accentColor) state.accentColor = settings.appearance.accentColor;
     if (settings.appearance.secondaryAccentColor) state.secondaryAccentColor = settings.appearance.secondaryAccentColor;
-    applyAppearanceTheme();
+    applyLocalAppearanceTheme(state.visualTheme || "neon");
     renderAppearanceControls();
   }
   if (settings.gamePreferences && typeof settings.gamePreferences === "object") {
@@ -2095,6 +2099,8 @@ function applyProfile(profileData = { user: null, guest: true }) {
   renderProfileStats();
   renderProfileCosmetics();
   if (state.settingsSection === "shop") requestShopState();
+  if (state.settingsSection === "daily") requestDailyRewardState();
+  renderDailyReward();
   syncNameInput();
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
@@ -2179,6 +2185,88 @@ function ownedCosmetics() {
 function equippedCosmetics() {
   return state.profile?.economy?.equipped || {};
 }
+
+function formatDailyRewardCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(Number(ms || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
+function applyDailyRewardState(data = {}) {
+  state.dailyReward = {
+    canClaim: Boolean(data.canClaim),
+    nextClaimAt: data.nextClaimAt || null,
+    rewardAmount: Number(data.rewardAmount || state.dailyReward?.rewardAmount || 300)
+  };
+  renderDailyReward();
+}
+
+function requestDailyRewardState() {
+  if (!state.profile || !socket.connected) {
+    applyDailyRewardState({ canClaim: false, nextClaimAt: null, rewardAmount: 300 });
+    setStatus("dailyRewardStatus", "Войди в аккаунт, чтобы получать ежедневную награду", true);
+    return;
+  }
+  socket.emit("dailyReward:get", (res) => {
+    if (res?.error) {
+      setStatus("dailyRewardStatus", res.error, true);
+      renderDailyReward();
+      return;
+    }
+    setStatus("dailyRewardStatus");
+    applyDailyRewardState(res);
+  });
+}
+
+function renderDailyReward() {
+  const button = $("dailyRewardButton");
+  const timer = $("dailyRewardTimer");
+  if (!button && !timer) return;
+
+  const nextClaimTime = state.dailyReward?.nextClaimAt ? Date.parse(state.dailyReward.nextClaimAt) : 0;
+  const remaining = Math.max(0, nextClaimTime - Date.now());
+  const canClaim = Boolean(state.profile && (state.dailyReward?.canClaim || remaining <= 0));
+  const amount = Number(state.dailyReward?.rewardAmount || 300);
+
+  if (button) {
+    button.disabled = !canClaim;
+    button.textContent = canClaim ? `Получить +${amount} Vinyls` : "Награда недоступна";
+  }
+  if (timer) {
+    timer.textContent = state.profile
+      ? (canClaim ? "Награда готова — забирай сейчас!" : `Следующая награда через ${formatDailyRewardCountdown(remaining)}`)
+      : "Войди в аккаунт, чтобы запустить ежедневные награды.";
+  }
+
+  if (state.dailyRewardTimer) window.clearTimeout(state.dailyRewardTimer);
+  state.dailyRewardTimer = null;
+  if (state.profile && !canClaim && remaining > 0) {
+    state.dailyRewardTimer = window.setTimeout(renderDailyReward, 1000);
+  }
+}
+
+function claimDailyReward() {
+  if (!state.profile || !socket.connected) return setStatus("dailyRewardStatus", "Войди в аккаунт, чтобы получать ежедневную награду", true);
+  const button = $("dailyRewardButton");
+  if (button) button.disabled = true;
+  socket.emit("dailyReward:claim", (res) => {
+    if (res?.error) {
+      setStatus("dailyRewardStatus", res.error, true);
+      if (res.dailyReward) applyDailyRewardState(res.dailyReward);
+      else renderDailyReward();
+      return;
+    }
+    if (res.profile?.user) state.profile = res.profile.user;
+    else if (res.economy && state.profile) state.profile.economy = res.economy;
+    applyDailyRewardState(res.dailyReward || res);
+    renderProfileStats();
+    renderShop();
+    setStatus("dailyRewardStatus", `Начислено +${Number(res.amount || 300)} Vinyls`);
+  });
+}
+
 
 function shopItem(itemId) {
   return state.shopCatalog.find((item) => item.id === itemId) || null;
@@ -2450,11 +2538,35 @@ function continueAsGuest({ silent = false } = {}) {
 }
 
 function logoutAccount() {
+  const refreshToken = getStoredRefreshToken();
   clearStoredAuthToken();
-  socket.emit("auth:logout", { refreshToken: getStoredRefreshToken() }, () => {
+  socket.emit("auth:logout", { refreshToken }, () => {
     applyProfile({ user: null, guest: true });
     hideAuthModal();
     setAuthStatus("Ты вышел из аккаунта");
+  });
+}
+
+function deleteAccount() {
+  if (!state.profile || !socket.connected) return setAuthStatus("Войди в аккаунт, чтобы удалить его", true);
+  const confirmation = window.prompt("Чтобы удалить аккаунт навсегда, напиши УДАЛИТЬ");
+  if (confirmation !== "УДАЛИТЬ") return setAuthStatus("Удаление аккаунта отменено");
+  const refreshToken = getStoredRefreshToken();
+  const button = $("deleteAccountBtn");
+  if (button) button.disabled = true;
+  socket.emit("account:delete", { refreshToken }, (res) => {
+    if (button) button.disabled = false;
+    if (res?.error) return setAuthStatus(res.error, true);
+    clearStoredAuthToken();
+    state.friends = [];
+    state.friendRequests = [];
+    state.outgoingFriendRequests = [];
+    applyProfile({ user: null, guest: true });
+    closeFriendsPanel();
+    hideAuthModal();
+    showScreen("menu");
+    setAuthStatus("Аккаунт удален");
+    setStatus("menuError", "Аккаунт удален");
   });
 }
 
