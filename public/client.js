@@ -90,13 +90,14 @@ function hasDevRole(entity) {
   return Boolean(entity?.permissions?.dev || roles.includes("dev"));
 }
 
-function devBadgeMarkup() {
-  return `<span class="dev-badge" title="Official developer account">[ DEV ]</span>`;
+function devBadgeMarkup(label = "") {
+  const suffix = label ? ` (${label})` : "";
+  return `<span class="dev-badge" title="Official developer account">DEV${suffix}</span>`;
 }
 
 function nameWithDevBadge(entity, fallback = "Игрок") {
   const name = escapeHtml(entity?.name || entity?.displayName || entity?.nickname || entity?.username || t(fallback));
-  return `${hasDevRole(entity) ? devBadgeMarkup() : ""}<span class="player-name-text">${name}</span>`;
+  return hasDevRole(entity) ? devBadgeMarkup(name) : `<span class="player-name-text">${name}</span>`;
 }
 
 function vinylBalanceLabel() {
@@ -2076,7 +2077,10 @@ function applyProfile(profileData = { user: null, guest: true }) {
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
   if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName });
-  if ($("profileLogin")) $("profileLogin").innerHTML = user ? `${hasDevRole(user) ? devBadgeMarkup() : ""}@${escapeHtml(user.username)}` : t("гость без регистрации");
+  if ($("profileLogin")) {
+    const login = `@${escapeHtml(user?.username || "")}`;
+    $("profileLogin").innerHTML = user ? (hasDevRole(user) ? devBadgeMarkup(login) : login) : t("гость без регистрации");
+  }
   if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
   if ($("profileAvatar")) {
     $("profileAvatar").innerHTML = user?.avatar
