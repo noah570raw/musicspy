@@ -7212,7 +7212,7 @@ body[data-effects-density="low"] .sound-toggle {
 
 /* Premium in-game settings deck: glass, depth and accent-reactive lighting. */
 .site-menu-modal {
-  padding: clamp(18px, 3vh, 28px);
+  padding: clamp(12px, 2vh, 22px);
   overflow: hidden;
   background:
     radial-gradient(circle at 18% 18%, rgba(var(--accent-rgb), 0.2), transparent 32rem),
@@ -7226,11 +7226,11 @@ body[data-effects-density="low"] .sound-toggle {
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  width: min(980px, calc(100dvw - 48px));
-  height: min(760px, calc(100dvh - 48px));
-  max-width: calc(100dvw - 48px);
-  max-height: calc(100dvh - 48px);
-  padding: clamp(18px, 2.5vw, 28px);
+  width: min(1320px, calc(100dvw - 36px));
+  height: min(708px, calc(100dvh - 36px));
+  max-width: calc(100dvw - 36px);
+  max-height: calc(100dvh - 36px);
+  padding: clamp(14px, 1.9vw, 22px);
   overflow: hidden;
   border: 1px solid rgba(var(--accent-rgb), 0.24);
   border-radius: 34px;
@@ -7276,22 +7276,22 @@ body[data-effects-density="low"] .sound-toggle {
 
 .site-menu-header {
   display: grid;
-  grid-template-columns: minmax(178px, 0.34fr) minmax(0, 1fr);
+  grid-template-columns: minmax(168px, 210px) minmax(0, 1fr);
   grid-template-areas:
-    "kicker kicker"
+    "kicker copy"
     "title copy";
-  column-gap: clamp(14px, 2vw, 22px);
-  row-gap: clamp(34px, 4.5vh, 40px);
+  column-gap: clamp(12px, 1.6vw, 20px);
+  row-gap: clamp(4px, 0.8vh, 8px);
   flex: 0 0 auto;
   max-width: none;
-  padding: 4px 2px 0;
+  padding: 0 2px;
   align-items: end;
 }
 
 .site-menu-kicker {
   grid-area: kicker;
-  justify-self: center;
-  max-width: calc(100% - 128px);
+  justify-self: start;
+  max-width: 100%;
   margin: 0;
   color: color-mix(in srgb, var(--accent) 72%, var(--text));
   font-size: 0.72rem;
@@ -7306,7 +7306,7 @@ body[data-effects-density="low"] .sound-toggle {
   grid-area: title;
   align-self: end;
   margin: 0;
-  font-size: clamp(2.25rem, 5vw, 4.55rem);
+  font-size: clamp(2rem, 4.4vw, 3.9rem);
   line-height: 0.88;
   letter-spacing: -0.07em;
   text-shadow: 0 0 38px rgba(var(--accent-rgb), 0.24);
@@ -7321,12 +7321,12 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .site-menu-layout {
-  grid-template-columns: minmax(178px, 0.34fr) minmax(0, 1fr);
-  gap: clamp(14px, 2vw, 22px);
+  grid-template-columns: minmax(168px, 210px) minmax(0, 1fr);
+  gap: clamp(12px, 1.7vw, 20px);
   align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: clamp(14px, 2.2vw, 22px);
+  margin-top: clamp(10px, 1.45vw, 16px);
 }
 
 .site-menu-tabs {
@@ -7336,7 +7336,7 @@ body[data-effects-density="low"] .sound-toggle {
   gap: 7px;
   min-width: 0;
   overflow: hidden;
-  padding: 13px;
+  padding: clamp(10px, 1.2vw, 12px);
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 26px;
   background:
@@ -7364,8 +7364,8 @@ body[data-effects-density="low"] .sound-toggle {
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: 9px;
-  min-height: 48px;
-  padding: 0.68rem 0.72rem;
+  min-height: 43px;
+  padding: 0.56rem 0.68rem;
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 18px;
@@ -7450,7 +7450,7 @@ body[data-effects-density="low"] .sound-toggle {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: clamp(14px, 2.1vw, 20px);
+  padding: clamp(12px, 1.6vw, 16px);
   border: 1px solid rgba(255, 255, 255, 0.105);
   border-radius: 28px;
   background:
@@ -7462,15 +7462,15 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .site-menu-panel.active {
-  gap: 14px;
+  gap: clamp(10px, 1.2vw, 14px);
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   max-width: 100%;
-  overflow: auto;
+  overflow: hidden auto;
   overscroll-behavior: contain;
-  padding-right: 4px;
-  padding-bottom: 4px;
+  padding-right: 2px;
+  padding-bottom: 2px;
   animation: site-menu-panel-in 0.32s cubic-bezier(.2,.8,.2,1) both;
 }
 
@@ -7498,9 +7498,9 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .settings-block {
-  gap: 14px;
+  gap: clamp(10px, 1.2vw, 14px);
   max-width: 100%;
-  padding: clamp(14px, 1.9vw, 18px);
+  padding: clamp(12px, 1.5vw, 16px);
   overflow: hidden;
   border-radius: 24px;
 }
@@ -8760,7 +8760,10 @@ body,
 /* Vinyl economy and premium shop */
 .shop-panel-root {
   display: grid;
-  gap: 18px;
+  gap: clamp(10px, 1.35vw, 14px);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .shop-hero,
@@ -8780,15 +8783,15 @@ body,
 
 .shop-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) minmax(154px, auto);
+  gap: clamp(12px, 1.8vw, 18px);
   align-items: center;
-  padding: 24px;
+  padding: clamp(15px, 1.9vw, 20px);
 }
 
 .shop-hero h3 {
-  margin: 4px 0 8px;
-  font-size: clamp(28px, 5vw, 48px);
+  margin: 0 0 5px;
+  font-size: clamp(26px, 4.1vw, 40px);
   letter-spacing: -0.06em;
 }
 
@@ -8799,11 +8802,11 @@ body,
 }
 
 .shop-balance-card {
-  min-width: 190px;
+  min-width: clamp(148px, 17vw, 182px);
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding: 18px;
+  gap: 4px;
+  padding: clamp(12px, 1.5vw, 16px);
   border-radius: 24px;
   border: 1px solid rgba(250, 204, 21, 0.26);
   background: linear-gradient(180deg, rgba(250, 204, 21, 0.13), rgba(124, 58, 237, 0.12));
@@ -8821,8 +8824,8 @@ body,
 }
 
 .vinyl-coin {
-  width: 74px;
-  height: 74px;
+  width: clamp(56px, 6vw, 68px);
+  height: clamp(56px, 6vw, 68px);
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -8853,17 +8856,20 @@ body,
 
 .shop-tabs {
   display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow: hidden;
+  padding-bottom: 0;
 }
 
 .shop-category {
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 7px clamp(9px, 0.9vw, 11px);
   color: rgba(226, 232, 240, 0.8);
+  font-size: 0.78rem;
   background: rgba(15, 23, 42, 0.62);
+  flex: 0 1 auto;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -8877,7 +8883,7 @@ body,
 }
 
 .shop-status {
-  min-height: 20px;
+  min-height: 16px;
   margin: 0;
   color: #bfdbfe;
   opacity: 0;
@@ -8888,15 +8894,16 @@ body,
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
+  gap: clamp(10px, 1.3vw, 13px);
+  min-width: 0;
 }
 
 .shop-card {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-rows: 142px 1fr auto;
+  grid-template-rows: clamp(78px, 10vh, 96px) 1fr auto;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 24px;
   background: rgba(15, 23, 42, 0.72);
@@ -8942,8 +8949,8 @@ body,
 }
 
 .shop-preview-disc {
-  width: 82px;
-  height: 82px;
+  width: clamp(48px, 5vw, 62px);
+  height: clamp(48px, 5vw, 62px);
   border-radius: 999px;
   background: radial-gradient(circle, #020617 0 14%, rgba(255,255,255,.9) 15% 18%, rgba(2,6,23,.9) 19% 55%, rgba(255,255,255,.35) 56% 58%, rgba(2,6,23,.8) 59%);
   box-shadow: 0 0 30px rgba(255, 255, 255, 0.32);
@@ -8966,12 +8973,36 @@ body,
 
 .shop-card-body,
 .shop-card-actions {
-  padding: 14px;
+  padding: clamp(9px, 1vw, 11px);
 }
 
 .shop-card-body h4 {
-  margin: 3px 0 8px;
-  font-size: 18px;
+  margin: 2px 0 6px;
+  font-size: clamp(14px, 1.25vw, 16px);
+  line-height: 1.08;
+}
+
+.shop-card small {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.shop-card p {
+  display: -webkit-box;
+  margin: 7px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.78rem;
+  line-height: 1.34;
+}
+
+.shop-card-actions .primary,
+.shop-card-actions .secondary {
+  min-height: 38px;
+  padding-block: 0.62rem;
+  padding-inline: 8px;
+  font-size: 0.78rem;
 }
 
 .rarity-pill {
@@ -8994,8 +9025,8 @@ body,
 
 .shop-achievements {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: clamp(12px, 1.5vw, 14px);
   border-radius: 24px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(2, 6, 23, 0.38);
@@ -9003,12 +9034,12 @@ body,
 
 .achievement-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(155px, 100%), 1fr));
+  gap: 10px;
 }
 
 .achievement-card {
-  padding: 14px;
+  padding: 11px;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.72);
