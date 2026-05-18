@@ -83,7 +83,7 @@ const state = {
   shopAchievements: [],
   shopCategory: "nicknameColor",
   shopStatus: "",
-  dailyReward: { canClaim: false, nextClaimAt: null, rewardAmount: 300 },
+  dailyReward: { canClaim: false, nextClaimAt: null, rewardAmount: 300, rewardSchedule: [300, 350, 400, 450, 500, 650, 700], cycleDay: 1, claimedDays: 0 },
   dailyRewardTimer: null
 };
 
@@ -2195,10 +2195,15 @@ function formatDailyRewardCountdown(ms) {
 }
 
 function applyDailyRewardState(data = {}) {
+  const fallbackSchedule = state.dailyReward?.rewardSchedule || [300, 350, 400, 450, 500, 650, 700];
   state.dailyReward = {
     canClaim: Boolean(data.canClaim),
     nextClaimAt: data.nextClaimAt || null,
-    rewardAmount: Number(data.rewardAmount || state.dailyReward?.rewardAmount || 300)
+    rewardAmount: Number(data.rewardAmount || state.dailyReward?.rewardAmount || 300),
+    rewardSchedule: Array.isArray(data.rewardSchedule) && data.rewardSchedule.length ? data.rewardSchedule.map((value) => Number(value || 0)) : fallbackSchedule,
+    cycleDay: Math.max(1, Math.floor(Number(data.cycleDay || state.dailyReward?.cycleDay || 1))),
+    claimedDays: Math.max(0, Math.floor(Number(data.claimedDays ?? state.dailyReward?.claimedDays ?? 0))),
+    streak: Math.max(0, Math.floor(Number(data.streak ?? state.dailyReward?.streak ?? 0)))
   };
   renderDailyReward();
 }
@@ -2221,23 +2226,64 @@ function requestDailyRewardState() {
 }
 
 function renderDailyReward() {
+  const root = $("dailyRewardCard");
   const button = $("dailyRewardButton");
   const timer = $("dailyRewardTimer");
-  if (!button && !timer) return;
+  const amountNode = $("dailyRewardAmount");
+  const streakTrack = $("dailyStreakTrack");
+  const missions = $("dailyBonusMissions");
+  if (!button && !timer && !streakTrack) return;
 
   const nextClaimTime = state.dailyReward?.nextClaimAt ? Date.parse(state.dailyReward.nextClaimAt) : 0;
   const remaining = Math.max(0, nextClaimTime - Date.now());
   const canClaim = Boolean(state.profile && (state.dailyReward?.canClaim || remaining <= 0));
   const amount = Number(state.dailyReward?.rewardAmount || 300);
+  const schedule = state.dailyReward?.rewardSchedule?.length ? state.dailyReward.rewardSchedule : [300, 350, 400, 450, 500, 650, 700];
+  const activeDay = Math.max(1, Math.min(schedule.length, Number(state.dailyReward?.cycleDay || 1)));
+  const claimedDays = Math.max(0, Math.min(schedule.length, Number(state.dailyReward?.claimedDays || 0)));
 
+  if (root) root.classList.toggle("ready", canClaim);
+  if (amountNode) amountNode.textContent = `+${amount} VINYLS`;
   if (button) {
     button.disabled = !canClaim;
-    button.textContent = canClaim ? `Получить +${amount} Vinyls` : "Награда недоступна";
+    button.innerHTML = `<span>${canClaim ? "Получить награду" : "Награда недоступна"}</span><i aria-hidden="true"></i>`;
   }
   if (timer) {
     timer.textContent = state.profile
-      ? (canClaim ? "Награда готова — забирай сейчас!" : `Следующая награда через ${formatDailyRewardCountdown(remaining)}`)
-      : "Войди в аккаунт, чтобы запустить ежедневные награды.";
+      ? (canClaim ? "READY" : formatDailyRewardCountdown(remaining))
+      : "LOGIN";
+  }
+
+  if (streakTrack) {
+    streakTrack.style.setProperty("--daily-progress", `${Math.max(0, ((Math.max(claimedDays, canClaim ? activeDay - 1 : activeDay) - 1) / Math.max(1, schedule.length - 1)) * 100)}%`);
+    streakTrack.innerHTML = schedule.map((reward, index) => {
+      const day = index + 1;
+      const classes = ["daily-streak-card"];
+      if (day === activeDay) classes.push("active");
+      if (day <= claimedDays) classes.push("claimed");
+      if (day > Math.max(activeDay, claimedDays)) classes.push("future");
+      return `<article class="${classes.join(" ")}" style="--delay:${index}">
+        <span class="daily-streak-day">Day ${day}</span>
+        <b>${reward}</b>
+        <i aria-hidden="true">◍</i>
+      </article>`;
+    }).join("");
+  }
+
+  if (missions && !missions.dataset.rendered) {
+    const bonusMissions = [
+      { icon: "🤝", title: "Сыграй с другом", reward: "+100", progress: 35 },
+      { icon: "⚡", title: "Сыграй 5 матчей", reward: "+200", progress: 60 },
+      { icon: "🕵", title: "Победи за шпиона", reward: "+300", progress: 20 }
+    ];
+    missions.innerHTML = bonusMissions.map((mission, index) => `<article class="daily-mission-card" style="--delay:${index}">
+      <div class="daily-mission-icon" aria-hidden="true">${mission.icon}</div>
+      <div>
+        <strong>${mission.title} <span>→ ${mission.reward}</span></strong>
+        <div class="daily-mission-progress"><i style="width:${mission.progress}%"></i></div>
+      </div>
+    </article>`).join("");
+    missions.dataset.rendered = "true";
   }
 
   if (state.dailyRewardTimer) window.clearTimeout(state.dailyRewardTimer);
@@ -2263,10 +2309,21 @@ function claimDailyReward() {
     applyDailyRewardState(res.dailyReward || res);
     renderProfileStats();
     renderShop();
+    triggerDailyRewardSuccess(Number(res.amount || 300));
     setStatus("dailyRewardStatus", `Начислено +${Number(res.amount || 300)} Vinyls`);
   });
 }
 
+function triggerDailyRewardSuccess(amount = 300) {
+  const root = $("dailyRewardCard");
+  const popup = $("dailyRewardSuccess");
+  if (!root) return;
+  if (popup) popup.textContent = `+${amount} VINYLS added`;
+  root.classList.remove("reward-claimed");
+  void root.offsetWidth;
+  root.classList.add("reward-claimed");
+  window.setTimeout(() => root.classList.remove("reward-claimed"), 1900);
+}
 
 function shopItem(itemId) {
   return state.shopCatalog.find((item) => item.id === itemId) || null;
