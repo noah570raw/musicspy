@@ -85,6 +85,7 @@ const state = {
   shopStatus: "",
   dailyReward: { canClaim: false, nextClaimAt: null, rewardAmount: 300, rewardSchedule: [300, 350, 400, 450, 500, 650, 700], cycleDay: 1, claimedDays: 0 },
   dailyRewardTimer: null,
+  dailyStreakSignature: "",
   xpBooster: { canActivate: false, active: false, displayMultiplier: 2, activeUntil: null, cooldownUntil: null, remainingActiveMs: 0, remainingCooldownMs: 0 },
   xpBoosterTimer: null,
   xpBoosterHoldTimer: null,
@@ -2267,12 +2268,13 @@ function renderXpBooster() {
   const coolingDown = cooldownRemaining > 0;
   const canActivate = Boolean(state.profile && !coolingDown && !active);
   const cooldownMs = Math.max(1, Number(state.xpBooster?.cooldownMs || 6 * 60 * 60 * 1000));
-  const chargeRatio = active ? 1 : (state.profile ? (coolingDown ? Math.min(1, Math.max(0, 1 - (cooldownRemaining / cooldownMs))) : 1) : 0);
+  const chargeRatio = state.profile ? (coolingDown ? Math.min(1, Math.max(0, 1 - (cooldownRemaining / cooldownMs))) : 1) : 0;
   const chargePercent = `${Math.round(chargeRatio * 100)}%`;
-  const orbScale = (0.62 + (chargeRatio * 0.38)).toFixed(3);
-  const glowRatio = (0.35 + (chargeRatio * 0.75)).toFixed(3);
-  const ringOpacity = (0.34 + (chargeRatio * 0.52)).toFixed(3);
-  const orbitOpacity = (0.35 + (chargeRatio * 0.5)).toFixed(3);
+  const visualRatio = active ? Math.min(chargeRatio, 0.18) : chargeRatio;
+  const orbScale = (0.2 + (visualRatio * 0.8)).toFixed(3);
+  const glowRatio = (0.18 + (visualRatio * 0.92)).toFixed(3);
+  const ringOpacity = (0.44 + (chargeRatio * 0.42)).toFixed(3);
+  const orbitOpacity = (0.45 + (chargeRatio * 0.4)).toFixed(3);
   const orbGlowTight = `${Math.round(18 + (38 * Number(glowRatio)))}px`;
   const orbGlowWide = `${Math.round(42 + (68 * Number(glowRatio)))}px`;
   const orbInnerGlow = `${Math.round(12 + (24 * Number(glowRatio)))}px`;
@@ -2286,17 +2288,17 @@ function renderXpBooster() {
     root.classList.toggle("charging", state.xpBoosterHolding);
     root.style.setProperty("--charge-progress", chargePercent);
     root.style.setProperty("--charge-ratio", chargeRatio.toFixed(3));
-    root.style.setProperty("--orb-scale", active ? "1.04" : orbScale);
-    root.style.setProperty("--glow-ratio", active ? "1.18" : glowRatio);
+    root.style.setProperty("--orb-scale", orbScale);
+    root.style.setProperty("--glow-ratio", glowRatio);
     root.style.setProperty("--ring-opacity", active ? "1" : ringOpacity);
     root.style.setProperty("--orbit-opacity", active ? "1" : orbitOpacity);
-    root.style.setProperty("--orb-glow-tight", active ? "64px" : orbGlowTight);
-    root.style.setProperty("--orb-glow-wide", active ? "122px" : orbGlowWide);
-    root.style.setProperty("--orb-inner-glow", active ? "42px" : orbInnerGlow);
-    root.style.setProperty("--charge-glow", active ? "24px" : chargeGlow);
-    root.style.setProperty("--orb-pulse-scale", active ? "1.085" : pulseScale);
-    root.style.setProperty("--hold-pulse-from", active ? "1.07" : holdPulseFrom);
-    root.style.setProperty("--hold-pulse-to", active ? "1.18" : holdPulseTo);
+    root.style.setProperty("--orb-glow-tight", active ? "24px" : orbGlowTight);
+    root.style.setProperty("--orb-glow-wide", active ? "62px" : orbGlowWide);
+    root.style.setProperty("--orb-inner-glow", active ? "18px" : orbInnerGlow);
+    root.style.setProperty("--charge-glow", active ? "28px" : chargeGlow);
+    root.style.setProperty("--orb-pulse-scale", pulseScale);
+    root.style.setProperty("--hold-pulse-from", holdPulseFrom);
+    root.style.setProperty("--hold-pulse-to", holdPulseTo);
     root.style.setProperty("--hold-progress", state.xpBoosterHolding ? "100%" : "0%");
   }
   if (activeTimer) activeTimer.textContent = active ? formatXpBoosterActiveCountdown(activeRemaining) : "--:--";
@@ -2304,8 +2306,8 @@ function renderXpBooster() {
   if (modeLabel) modeLabel.textContent = active ? "2X XP ACTIVE" : (coolingDown ? "CORE RECHARGING" : "2X XP BOOST");
   if (stateLabel) {
     stateLabel.textContent = active
-      ? "Unstable energized core is boosting every XP reward."
-      : (coolingDown ? "Energy is rebuilding inside the sphere during the 6h cooldown." : "Hold the glowing sphere for 1.5 seconds — release cancels charge.");
+      ? "Core destroyed: XP boost is active while the sphere begins its 6h rebuild."
+      : (coolingDown ? "Energy is reconstructing the sphere during the 6h cooldown." : "Hold the glowing sphere for 1.5 seconds — release cancels charge.");
   }
   if (core) {
     core.setAttribute("aria-disabled", String(!canActivate));
@@ -2438,7 +2440,7 @@ function renderDailyReward() {
   if (amountNode) amountNode.textContent = `+${amount} VINYLS`;
   if (button) {
     button.disabled = !canClaim;
-    button.innerHTML = `<span>${canClaim ? "Получить награду" : "Награда недоступна"}</span><i aria-hidden="true"></i>`;
+    button.innerHTML = `<span>ЗАБРАТЬ<br>НАГРАДУ</span><small>${canClaim ? "READY TO CLAIM" : (state.profile ? formatDailyRewardCountdown(remaining) : "LOGIN REQUIRED")}</small><i aria-hidden="true"></i>`;
   }
   if (timer) {
     timer.textContent = state.profile
@@ -2448,32 +2450,36 @@ function renderDailyReward() {
 
   if (streakTrack) {
     streakTrack.style.setProperty("--daily-progress", `${Math.max(0, ((Math.max(claimedDays, canClaim ? activeDay - 1 : activeDay) - 1) / Math.max(1, schedule.length - 1)) * 100)}%`);
-    streakTrack.innerHTML = schedule.map((reward, index) => {
-      const day = index + 1;
-      const classes = ["daily-streak-card"];
-      if (day === activeDay) classes.push("active");
-      if (day <= claimedDays) classes.push("claimed");
-      if (day > Math.max(activeDay, claimedDays)) classes.push("future");
-      return `<article class="${classes.join(" ")}" style="--delay:${index}">
-        <span class="daily-streak-day">Day ${day}</span>
-        <b>${reward}</b>
-        <i aria-hidden="true">◍</i>
-      </article>`;
-    }).join("");
+    const streakSignature = `${activeDay}|${claimedDays}|${canClaim}|${schedule.join(",")}`;
+    if (state.dailyStreakSignature !== streakSignature) {
+      state.dailyStreakSignature = streakSignature;
+      streakTrack.innerHTML = schedule.map((reward, index) => {
+        const day = index + 1;
+        const classes = ["daily-streak-card"];
+        if (day === activeDay) classes.push("active");
+        if (day <= claimedDays) classes.push("claimed");
+        if (day > Math.max(activeDay, claimedDays)) classes.push("future");
+        return `<article class="${classes.join(" ")}" style="--delay:${index}">
+          <span class="daily-streak-day">Day ${day}</span>
+          <b>${reward}</b>
+          <i aria-hidden="true">◍</i>
+        </article>`;
+      }).join("");
+    }
   }
 
   if (missions && !missions.dataset.rendered) {
     const bonusMissions = [
-      { icon: "🤝", title: "Сыграй с другом", reward: "+100", progress: 35 },
-      { icon: "⚡", title: "Сыграй 5 матчей", reward: "+200", progress: 60 },
-      { icon: "🕵", title: "Победи за шпиона", reward: "+300", progress: 20 }
+      { icon: "🤝", title: "Сыграй с другом", reward: "+100", current: 0, total: 1 },
+      { icon: "⚡", title: "Сыграй 5 матчей", reward: "+200", current: 0, total: 5 },
+      { icon: "🕵", title: "Победи за шпиона", reward: "+300", current: 0, total: 1 }
     ];
     missions.innerHTML = bonusMissions.map((mission, index) => `<article class="daily-mission-card" style="--delay:${index}">
       <div class="daily-mission-icon" aria-hidden="true">${mission.icon}</div>
       <div>
-        <strong>${mission.title} <span>→ ${mission.reward}</span></strong>
-        <div class="daily-mission-progress"><i style="width:${mission.progress}%"></i></div>
+        <strong>${mission.title} <span>${mission.reward}</span></strong>
       </div>
+      <em class="daily-mission-counter">${mission.current}/${mission.total}</em>
     </article>`).join("");
     missions.dataset.rendered = "true";
   }
