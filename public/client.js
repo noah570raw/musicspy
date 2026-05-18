@@ -5114,3 +5114,33 @@ socket.on("gameCancelled", ({ reason }) => {
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
+
+function switchHomeTab(tab = "home", trigger) {
+  const targetTab = tab || "home";
+  document.querySelectorAll("[data-home-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.homePanel === targetTab);
+  });
+  document.querySelectorAll("[data-home-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.homeTab === targetTab);
+  });
+  if (trigger?.dataset?.homeTab) trigger.classList.add("active");
+  closeSignalProfile();
+}
+
+function openSignalProfile(name = "Agent", level = "1") {
+  const modal = $("signalProfileModal");
+  if (!modal) return;
+  const avatar = $("signalProfileAvatar");
+  const title = $("signalProfileName");
+  const meta = $("signalProfileMeta");
+  const cleanName = String(name || "Agent");
+  if (avatar) avatar.textContent = cleanName.slice(0, 1).toUpperCase();
+  if (title) title.textContent = cleanName;
+  if (meta) meta.textContent = `Level ${String(level || "1")} · Online`;
+  modal.classList.remove("hidden");
+}
+
+function closeSignalProfile() {
+  const modal = $("signalProfileModal");
+  if (modal) modal.classList.add("hidden");
+}
