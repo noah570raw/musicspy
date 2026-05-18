@@ -222,10 +222,14 @@ async function initializePersistentState() {
   if ((usersStore.users || []).some((user) => applyRoleEntitlements(user))) await saveUsersStore();
 }
 
+let userStoreSaveChain = Promise.resolve();
+
 function saveUsersStore() {
-  const pendingSave = saveUserStore(usersStore);
-  pendingSave.catch((error) => console.error("[db] failed to save users store", error));
-  return pendingSave;
+  userStoreSaveChain = userStoreSaveChain
+    .catch(() => {})
+    .then(() => saveUserStore(usersStore));
+  userStoreSaveChain.catch((error) => console.error("[db] failed to save users store", error));
+  return userStoreSaveChain;
 }
 
 function createSession(user) {
@@ -377,6 +381,8 @@ function publicUser(user) {
     username: user.username,
     displayName: user.displayName,
     avatar: user.avatar || "",
+    providerName: user.providerName || "",
+    hasCustomAvatar: Boolean(user.hasCustomAvatar),
     authProviders: Array.from(new Set((user.oauth || []).map((identity) => identity.provider).filter(Boolean))),
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) },
@@ -685,24 +691,38 @@ function userHasOAuthIdentity(user, provider, providerId) {
   return (user.oauth || []).some((identity) => identity.provider === provider && identity.providerId === providerId);
 }
 
-function upsertOAuthUser(provider, profile) {
+async function upsertOAuthUser(provider, profile, tokenData = {}) {
   const providerId = String(profile.providerId || "").trim();
   if (!providerId) throw new Error("OAuth profile id is missing");
 
   const now = new Date().toISOString();
   const email = String(profile.email || "").trim().toLowerCase();
-  const displayName = sanitizeDisplayName(profile.displayName || email.split("@")[0], oauthProviderLabel(provider));
+  const providerName = sanitizeDisplayName(profile.providerName || profile.displayName || profile.username || email.split("@")[0], oauthProviderLabel(provider));
   let user = usersStore.users.find((item) => userHasOAuthIdentity(item, provider, providerId));
+
+  const oauthPatch = {
+    provider,
+    providerId,
+    email,
+    providerName,
+    linkedAt: now,
+    lastLoginAt: now
+  };
+  if (tokenData.access_token) oauthPatch.hasAccessToken = true;
+  if (tokenData.refresh_token) oauthPatch.hasRefreshToken = true;
 
   if (!user) {
     const usernameBase = profile.username || email.split("@")[0] || `${provider}_${providerId}`;
     user = {
       id: crypto.randomUUID(),
       username: makeUniqueUsername(usernameBase),
-      displayName,
+      displayName: sanitizeDisplayName(profile.displayName || providerName, oauthProviderLabel(provider)),
+      providerName,
       avatar: profile.avatar || "",
+      hasCustomAvatar: false,
       stats: defaultStats(),
-      oauth: [{ provider, providerId, email, linkedAt: now }],
+      economy: defaultEconomy(),
+      oauth: [oauthPatch],
       sessions: [],
       createdAt: now,
       updatedAt: now
@@ -710,14 +730,23 @@ function upsertOAuthUser(provider, profile) {
     ensureUserProgress(user);
     usersStore.users.push(user);
   } else {
-    user.displayName = user.displayName || displayName;
-    if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
-    const identity = (user.oauth || []).find((item) => item.provider === provider && item.providerId === providerId);
-    if (identity) identity.email = email || identity.email || "";
+    user.oauth = Array.isArray(user.oauth) ? user.oauth : [];
+    const identity = user.oauth.find((item) => item.provider === provider && item.providerId === providerId);
+    if (identity) {
+      identity.email = email || identity.email || "";
+      identity.providerName = providerName || identity.providerName || "";
+      identity.lastLoginAt = now;
+      identity.linkedAt = identity.linkedAt || now;
+      if (tokenData.access_token) identity.hasAccessToken = true;
+      if (tokenData.refresh_token) identity.hasRefreshToken = true;
+    } else {
+      user.oauth.push(oauthPatch);
+    }
+    user.providerName = user.providerName || providerName;
     user.updatedAt = now;
   }
 
-  saveUsersStore();
+  await saveUsersStore();
   return user;
 }
 
@@ -787,6 +816,7 @@ function appProfileFromPassport(provider, profile = {}) {
       email: profile.emails?.[0]?.value || "",
       username: profile.emails?.[0]?.value ? String(profile.emails[0].value).split("@")[0] : profile.displayName,
       displayName: profile.displayName || profile.emails?.[0]?.value || "Google player",
+      providerName: profile.displayName || profile.emails?.[0]?.value || "Google player",
       avatar: profile.photos?.[0]?.value || ""
     };
   }
@@ -796,6 +826,7 @@ function appProfileFromPassport(provider, profile = {}) {
     email: profile.email || profile.emails?.[0]?.value || "",
     username: profile.username || profile.global_name || profile.displayName,
     displayName: profile.global_name || profile.displayName || profile.username || "Discord player",
+    providerName: profile.global_name || profile.displayName || profile.username || "Discord player",
     avatar: profile.avatar || profile.photos?.[0]?.value || ""
   };
 }
@@ -1407,7 +1438,7 @@ async function handleOAuthCallback(provider, req, res) {
     const rawProfile = await parseOAuthResponse(userResponse);
     if (!userResponse.ok) throw oauthError(provider, "profile request", userResponse, rawProfile);
     const profile = normalizeOAuthProfile(provider, rawProfile);
-    const user = upsertOAuthUser(provider, profile);
+    const user = await upsertOAuthUser(provider, profile, tokenData);
     const session = createSession(user);
     return res.redirect(buildOAuthSuccessRedirect(returnTo, session));
   } catch (error) {
@@ -1442,7 +1473,7 @@ function finishPassportOAuth(provider, req, res, next) {
 
       const existingIndex = usersStore.users.findIndex((item) => item.id === user.id);
       if (existingIndex === -1) usersStore.users.push(user);
-      else usersStore.users[existingIndex] = { ...usersStore.users[existingIndex], ...user };
+      else usersStore.users[existingIndex] = { ...user, sessions: usersStore.users[existingIndex].sessions || user.sessions || [] };
       ensureSocialCollections();
       return res.redirect(returnTo);
     });
@@ -2247,7 +2278,9 @@ io.on("connection", (socket) => {
       username: normalizedUsername,
       displayName: normalizeName(displayName || username),
       roles: DEV_USERNAMES.has(normalizedUsername) ? [DEV_ROLE] : [],
+      providerName: "",
       avatar: "",
+      hasCustomAvatar: false,
       stats: defaultStats(),
       economy: defaultEconomy(),
       salt,
@@ -2279,7 +2312,7 @@ io.on("connection", (socket) => {
     cb({ success: true, profile: profileForSocket(socket) });
   });
 
-  socket.on("profile:update", ({ displayName, username, avatar } = {}, cb = () => {}) => {
+  socket.on("profile:update", async ({ displayName, username, avatar } = {}, cb = () => {}) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы менять профиль" });
     try {
@@ -2288,9 +2321,12 @@ io.on("connection", (socket) => {
       if (tagResult.error) return cb({ error: tagResult.error });
       user.username = tagResult.username;
       user.displayName = normalizeName(displayName || user.displayName || user.username);
-      if (avatar !== undefined) user.avatar = normalizeAvatar(avatar);
+      if (avatar !== undefined) {
+        user.avatar = normalizeAvatar(avatar);
+        user.hasCustomAvatar = Boolean(user.avatar);
+      }
       user.updatedAt = new Date().toISOString();
-      saveUsersStore();
+      await saveUsersStore();
       syncUserProfileInLobbies(user);
       emitSocialForUserAndFriends(user.id);
       cb({ success: true, profile: profileForSocket(socket) });
