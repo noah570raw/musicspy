@@ -91,8 +91,8 @@ function hasDevRole(entity) {
 }
 
 function devBadgeMarkup(label = "") {
-  const suffix = label ? ` (${label})` : "";
-  return `<span class="dev-badge" title="Official developer account">DEV${suffix}</span>`;
+  const name = label ? `<span class="dev-name-glow">${label}</span>` : "";
+  return `<span class="dev-badge" title="Official developer account">DEV</span>${name}`;
 }
 
 function nameWithDevBadge(entity, fallback = "Игрок") {
