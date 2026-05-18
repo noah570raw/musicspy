@@ -1372,7 +1372,7 @@ function startPassportOAuth(provider, req, res, next) {
     return res.redirect(buildOAuthErrorRedirect(req.query.returnTo || "/", `Вход через ${oauthProviderLabel(provider)} не настроен`));
   }
   req.session.oauthReturnTo = String(req.query.returnTo || "/").startsWith("/") ? String(req.query.returnTo || "/") : "/";
-  return passport.authenticate(provider)(req, res, next);
+  return passport.authenticate(provider, provider === "google" ? { scope: ["profile", "email"] } : undefined)(req, res, next);
 }
 
 function finishPassportOAuth(provider, req, res, next) {
