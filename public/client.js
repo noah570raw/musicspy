@@ -90,14 +90,20 @@ function hasDevRole(entity) {
   return Boolean(entity?.permissions?.dev || roles.includes("dev"));
 }
 
-function devBadgeMarkup(label = "") {
+function devBadgeMarkup(label = "", options = {}) {
+  const { showBadge = true } = options;
   const name = label ? `<span class="dev-name-glow">${label}</span>` : "";
-  return `<span class="dev-badge" title="Official developer account">DEV</span>${name}`;
+  return `${showBadge ? `<span class="dev-badge" title="Official developer account">DEV</span>` : ""}${name}`;
 }
 
-function nameWithDevBadge(entity, fallback = "Игрок") {
+function shouldShowDevBadgeInCurrentScreen() {
+  return !["game", "voting", "spyGuess", "results"].includes(document.body?.dataset?.screen || state.phase);
+}
+
+function nameWithDevBadge(entity, fallback = "Игрок", options = {}) {
+  const { showBadge = shouldShowDevBadgeInCurrentScreen() } = options;
   const name = escapeHtml(entity?.name || entity?.displayName || entity?.nickname || entity?.username || t(fallback));
-  return hasDevRole(entity) ? devBadgeMarkup(name) : `<span class="player-name-text">${name}</span>`;
+  return hasDevRole(entity) ? devBadgeMarkup(name, { showBadge }) : `<span class="player-name-text">${name}</span>`;
 }
 
 function vinylBalanceLabel() {
@@ -239,7 +245,7 @@ function renderFriendCard(friend) {
       </div>
       <div class="friend-meta">
         <div class="friend-name-row">
-          <strong class="friend-name">${nameWithDevBadge(friend)}</strong>
+          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -274,7 +280,7 @@ function renderFriendRequests() {
     <article class="friend-request-card" data-request-id="${escapeAttribute(request.id)}">
       <div class="friend-avatar" aria-hidden="true">${friendAvatarMarkup(user)}</div>
       <div class="friend-meta">
-        <strong class="friend-name">${nameWithDevBadge(user)}</strong>
+        <strong class="friend-name">${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
         <span class="friend-activity">хочет стать другом</span>
       </div>
       <div class="friend-request-actions">
@@ -2076,10 +2082,10 @@ function applyProfile(profileData = { user: null, guest: true }) {
   $("accountProfileView")?.classList.toggle("dev-profile-card", hasDevRole(user));
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
-  if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName });
+  if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName }, "Игрок", { showBadge: true });
   if ($("profileLogin")) {
     const login = `@${escapeHtml(user?.username || "")}`;
-    $("profileLogin").innerHTML = user ? (hasDevRole(user) ? devBadgeMarkup(login) : login) : t("гость без регистрации");
+    $("profileLogin").innerHTML = user ? (hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : login) : t("гость без регистрации");
   }
   if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
   if ($("profileAvatar")) {
@@ -2121,7 +2127,7 @@ function updateAccountToggle(displayName, user) {
       : (guestLocked ? t("Гость") : t("Аккаунт и статистика"));
     toggle.setAttribute("aria-disabled", String(locked));
   }
-  if (label) label.innerHTML = user ? nameWithDevBadge(user) : t("Гость");
+  if (label) label.innerHTML = user ? nameWithDevBadge(user, "Игрок", { showBadge: true }) : t("Гость");
   if (!avatar) return;
   avatar.innerHTML = user?.avatar
     ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
@@ -2540,7 +2546,7 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
         <span class="lobby-online-dot" aria-hidden="true"></span>
       </div>
       <div class="lobby-player-info">
-        <strong>${nameWithDevBadge(player)}</strong>
+        <strong>${nameWithDevBadge(player, "Игрок", { showBadge: true })}</strong>
         <span>${isMe ? t("это ты") : t("в комнате")}</span>
       </div>
       <div class="lobby-player-badges">
@@ -3667,7 +3673,7 @@ function canSeeSpyMarkers() {
 }
 
 function playerNameMarkup(player, fallback = "Игрок") {
-  const name = nameWithDevBadge(player, fallback);
+  const name = nameWithDevBadge(player, fallback, { showBadge: false });
   const isVisibleSpy = canSeeSpyMarkers() && state.spyIds.includes(player?.id);
   return `<strong class="${isVisibleSpy ? "spy-visible-name" : ""}">${name}</strong>${isVisibleSpy ? `<small class="spy-visible-badge">${t("Шпион")}</small>` : ""}`;
 }
@@ -3721,7 +3727,7 @@ function renderHostControls() {
     const isCurrent = player.id === state.currentPlayerId;
     return `
       <div class="kick-row host-player-row">
-        <span>${nameWithDevBadge(player)} ${isMe ? `(${t("ты")})` : ""}</span>
+        <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })} ${isMe ? `(${t("ты")})` : ""}</span>
         <div class="host-player-actions">
           <button class="mini-action" ${isCurrent ? "disabled" : ""} onclick="hostSetTurn('${escapeAttribute(player.id)}')">${isCurrent ? t("ходит") : t("передать")}</button>
           <button class="mini-action danger" ${isMe ? "disabled" : ""} onclick="hostKickPlayer('${escapeAttribute(player.id)}')">${isMe ? t("хост") : t("кик")}</button>
@@ -3824,7 +3830,7 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
     return `
       <div class="history-row">
         <span>${t(`Раунд ${track.round}, ход ${track.turnNumber || "?"}`)}</span>
-        <strong>${nameWithDevBadge(state.players.find((player) => player.id === track.playerId) || { name: track.playerName })}</strong>
+        <strong>${nameWithDevBadge(state.players.find((player) => player.id === track.playerId) || { name: track.playerName }, "Игрок", { showBadge: false })}</strong>
         <small>${formatReactions(track.reactions)}</small>
         <div class="history-row-link">${link}</div>
       </div>
@@ -4130,7 +4136,7 @@ function renderVoteList(votes = {}) {
     const countMarkup = state.anonymousVoting ? "<strong>?</strong>" : `<strong>${voteCounts[player.id] || 0}</strong>`;
     return `
       <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
-        <span>${nameWithDevBadge(player)} ${isMe ? `(${t("ты")})` : ""}</span>
+        <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })} ${isMe ? `(${t("ты")})` : ""}</span>
         ${countMarkup}
       </button>
     `;
@@ -4184,7 +4190,7 @@ function renderFinalComments(comments = state.finalComments) {
   state.finalComments = comments || [];
   box.classList.toggle("empty", !state.finalComments.length);
   box.innerHTML = state.finalComments.length ? state.finalComments.map((comment) => `
-    <div class="final-comment"><strong>${nameWithDevBadge(state.players.find((player) => player.id === comment.playerId) || { name: comment.playerName })}</strong><span>${escapeHtml(comment.text || "")}</span></div>
+    <div class="final-comment"><strong>${nameWithDevBadge(state.players.find((player) => player.id === comment.playerId) || { name: comment.playerName }, "Игрок", { showBadge: false })}</strong><span>${escapeHtml(comment.text || "")}</span></div>
   `).join("") : t("Комментариев пока нет");
 }
 
@@ -4346,7 +4352,7 @@ function renderResults(data) {
 
   $("resultVotes").innerHTML = state.players.map((player) => `
     <div class="vote-row static">
-      <span>${nameWithDevBadge(player)}</span>
+      <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })}</span>
       <strong>${data.votes[player.id] || 0}</strong>
     </div>
   `).join("");
@@ -4415,12 +4421,16 @@ function renderVoteDetails(details = []) {
     return;
   }
 
-  el.innerHTML = details.map((item) => `
-    <div class="vote-row static ${item.hitSpy ? "hit-spy" : ""}">
-      <span>${escapeHtml(item.voterName)} → ${escapeHtml(item.targetName)}</span>
-      <strong>${item.hitSpy ? "🎯" : "•"}</strong>
-    </div>
-  `).join("");
+  el.innerHTML = details.map((item) => {
+    const voter = state.players.find((player) => player.id === item.voterId) || { name: item.voterName };
+    const target = state.players.find((player) => player.id === item.targetId) || { name: item.targetName };
+    return `
+      <div class="vote-row static ${item.hitSpy ? "hit-spy" : ""}">
+        <span>${nameWithDevBadge(voter, "Игрок", { showBadge: false })} → ${nameWithDevBadge(target, "Игрок", { showBadge: false })}</span>
+        <strong>${item.hitSpy ? "🎯" : "•"}</strong>
+      </div>
+    `;
+  }).join("");
 }
 
 function escapeHtml(value) {
