@@ -67,7 +67,6 @@ const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
-const MAX_GLOBAL_CHAT_MESSAGES = 80;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
 const MAX_DIRECT_MESSAGES = 5000;
@@ -219,8 +218,7 @@ let usersStore = {
   users: [...EMPTY_USERS_STORE.users],
   friendships: [...EMPTY_USERS_STORE.friendships],
   friendRequests: [...EMPTY_USERS_STORE.friendRequests],
-  directMessages: [...EMPTY_USERS_STORE.directMessages],
-  globalChatMessages: [...EMPTY_USERS_STORE.globalChatMessages]
+  directMessages: [...EMPTY_USERS_STORE.directMessages]
 };
 
 async function initializePersistentState() {
@@ -431,18 +429,6 @@ function dailyRewardState(user, now = Date.now()) {
   };
 }
 
-function rankLabelForUser(user) {
-  const stats = { ...defaultStats(), ...(user?.stats || {}) };
-  const economy = normalizeEconomy(user?.economy || {});
-  const level = Number(economy.level || 1);
-  const wins = Number(stats.wins || 0);
-  if (level >= 50 || wins >= 100) return "S";
-  if (level >= 30 || wins >= 50) return "A";
-  if (level >= 15 || wins >= 20) return "B";
-  if (level >= 5 || wins >= 5) return "C";
-  return "D";
-}
-
 function publicUser(user) {
   if (!user) return null;
   return {
@@ -456,7 +442,6 @@ function publicUser(user) {
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) },
     economy: publicEconomy(user),
-    rank: rankLabelForUser(user),
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) },
     settings: { ...(user.settings || {}) }
@@ -468,7 +453,6 @@ function ensureSocialCollections() {
   if (!Array.isArray(usersStore.friendships)) usersStore.friendships = [];
   if (!Array.isArray(usersStore.friendRequests)) usersStore.friendRequests = [];
   if (!Array.isArray(usersStore.directMessages)) usersStore.directMessages = [];
-  if (!Array.isArray(usersStore.globalChatMessages)) usersStore.globalChatMessages = [];
   for (const user of usersStore.users) {
     user.friends = friendIdsForUser(user.id);
     ensureUserProgress(user);
@@ -568,37 +552,6 @@ function getSocialState(userId) {
     .filter(({ user }) => user)
     .map(({ request, user: requestUser }) => ({ ...request, user: publicSocialUser(requestUser, userId) }));
   return { friends, incomingRequests, outgoingRequests };
-}
-
-function onlineUserCount() {
-  return userSockets.size;
-}
-
-function publicGlobalChatUser(user) {
-  ensureUserProgress(user);
-  return {
-    id: user.id,
-    username: user.username,
-    displayName: user.displayName || user.username,
-    avatar: user.avatar || "",
-    level: Number(user.economy?.level || 1),
-    rank: rankLabelForUser(user),
-    roles: publicRoles(user),
-    permissions: { dev: hasRole(user, DEV_ROLE) }
-  };
-}
-
-function globalChatHistory() {
-  ensureSocialCollections();
-  return usersStore.globalChatMessages;
-}
-
-function globalChatState() {
-  return { messages: globalChatHistory().slice(-MAX_GLOBAL_CHAT_MESSAGES), onlineCount: onlineUserCount() };
-}
-
-function emitGlobalPresence() {
-  io.emit("global:presence", { onlineCount: onlineUserCount() });
 }
 
 function emitSocialState(userId) {
@@ -751,7 +704,6 @@ function registerAuthenticatedSocket(socket, user) {
   }
   if (deliveredChanged) saveUsersStore();
   emitSocialForUserAndFriends(user.id);
-  emitGlobalPresence();
 }
 
 function unregisterAuthenticatedSocket(socket) {
@@ -765,7 +717,6 @@ function unregisterAuthenticatedSocket(socket) {
   }
   socket.data.user = null;
   emitSocialForUserAndFriends(userId);
-  emitGlobalPresence();
 }
 
 function sanitizeDisplayName(value, fallback = "Игрок") {
@@ -2433,30 +2384,6 @@ io.on("connection", (socket) => {
     if (user && refreshToken) revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
     unregisterAuthenticatedSocket(socket);
     cb({ success: true, profile: profileForSocket(socket) });
-  });
-
-
-  socket.on("globalChat:get", (cb = () => {}) => {
-    cb({ success: true, ...globalChatState() });
-  });
-
-  socket.on("globalChat:send", ({ text } = {}, cb = () => {}) => {
-    const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы писать в глобальный чат" });
-    const body = String(text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
-    if (!body) return cb({ error: "Напиши сообщение" });
-    const message = {
-      id: crypto.randomUUID(),
-      user: publicGlobalChatUser(user),
-      text: body,
-      createdAt: new Date().toISOString()
-    };
-    const history = globalChatHistory();
-    history.push(message);
-    if (history.length > MAX_GLOBAL_CHAT_MESSAGES) history.splice(0, history.length - MAX_GLOBAL_CHAT_MESSAGES);
-    saveUsersStore();
-    cb({ success: true, message });
-    io.emit("globalChat:update", globalChatState());
   });
 
   socket.on("profile:update", async ({ displayName, username, avatar } = {}, cb = () => {}) => {

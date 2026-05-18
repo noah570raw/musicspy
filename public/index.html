@@ -484,132 +484,35 @@
   </div>
 
   <main class="app-shell">
-    <section id="menu" class="screen music-spy-terminal" aria-label="Music Spy multiplayer desktop">
-      <div class="terminal-bg" aria-hidden="true">
-        <span class="terminal-star star-a"></span>
-        <span class="terminal-star star-b"></span>
-        <span class="terminal-star star-c"></span>
-        <span class="terminal-star star-d"></span>
+    <section id="menu" class="screen card hero-card">
+      <p class="eyebrow">Шпион помузыкальски</p>
+      <h1>Music Spy</h1>
+      <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+
+      <div class="form-grid">
+        <label>
+          <span>Никнейм</span>
+          <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
+        </label>
+        <label>
+          <span>Код комнаты</span>
+          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+        </label>
       </div>
 
-      <aside class="control-sidebar left-control" aria-label="Main navigation">
-        <div class="brand-lockup">
-          <div class="brand-vinyl" aria-hidden="true">◉</div>
-          <div>
-            <span>Music Spy</span>
-            <strong>Audio OS</strong>
-          </div>
-        </div>
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
+        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
+        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
+      </div>
 
-        <nav class="spy-nav" aria-label="Главная навигация">
-          <button class="spy-nav-item active" type="button" data-home-tab="home" onclick="switchHomeTab('home', this)"><span aria-hidden="true">⌂</span>Главная</button>
-          <button class="spy-nav-item" type="button" data-home-tab="play" onclick="switchHomeTab('play', this)"><span aria-hidden="true">▶</span>Играть</button>
-          <button class="spy-nav-item" type="button" data-home-tab="profile" onclick="switchHomeTab('profile', this)"><span aria-hidden="true">◎</span>Профиль</button>
-          <button class="spy-nav-item" type="button" data-home-tab="inventory" onclick="switchHomeTab('inventory', this)"><span aria-hidden="true">▣</span>Инвентарь</button>
-          <button class="spy-nav-item" type="button" data-home-tab="daily" onclick="switchHomeTab('daily', this)"><span aria-hidden="true">◈</span>Daily Reward</button>
-          <button class="spy-nav-item" type="button" data-home-tab="booster" onclick="switchHomeTab('booster', this)"><span aria-hidden="true">✦</span>XP Booster</button>
-          <button class="spy-nav-item" type="button" data-home-tab="friends" onclick="switchHomeTab('friends', this)"><span aria-hidden="true">☷</span>Друзья</button>
-          <button class="spy-nav-item" type="button" data-home-tab="shop" onclick="switchHomeTab('shop', this)"><span aria-hidden="true">◇</span>Магазин</button>
-          <button class="spy-nav-item" type="button" data-home-tab="settings" onclick="switchHomeTab('settings', this)"><span aria-hidden="true">⚙</span>Настройки</button>
-        </nav>
-
-        <button class="mini-profile" type="button" onclick="switchHomeTab('profile')" aria-label="Открыть профиль агента">
-          <div id="homeMiniAvatar" class="mini-avatar" aria-hidden="true">MS</div>
-          <div class="mini-profile-copy">
-            <strong id="homeMiniName">Гость</strong>
-            <span><i></i> <em id="homeMiniStatus">Online</em></span>
-          </div>
-          <div class="xp-readout"><span id="homeMiniXpBar"></span></div>
-          <small id="homeMiniMeta">Войдите в аккаунт</small>
-        </button>
-      </aside>
-
-      <section class="main-control-deck" aria-labelledby="musicSpyHeroTitle">
-        <div class="deck-hud hud-top" aria-hidden="true"><span></span><span></span><span></span></div>
-
-        <article class="home-viewport active" data-home-panel="home" aria-labelledby="musicSpyHeroTitle">
-          <div class="deck-title-stack">
-            <p class="eyebrow">classified audio intelligence</p>
-            <h1 id="musicSpyHeroTitle">MUSIC SPY</h1>
-            <p class="deck-subtitle">CLASSIFIED AUDIO INTELLIGENCE</p>
-          </div>
-
-          <div class="vinyl-stage" aria-hidden="true">
-            <div class="hud-ring ring-one"></div>
-            <div class="hud-ring ring-two"></div>
-            <div class="particle-field"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <div class="mega-vinyl">
-              <span class="vinyl-label"></span>
-              <span class="vinyl-shine"></span>
-            </div>
-            <div class="tonearm"><span></span></div>
-          </div>
-
-          <div class="quick-play-panel">
-            <div class="terminal-form" aria-label="Launch controls">
-              <label>
-                <span>nickname</span>
-                <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-              </label>
-              <label>
-                <span>room code</span>
-                <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-              </label>
-            </div>
-            <div class="terminal-actions">
-              <button class="primary launch-button" type="button" onclick="showPlayRooms()">Play</button>
-              <button class="secondary launch-button alt" onclick="joinLobby()">Join by code</button>
-              <button class="secondary micro-button" type="button" onclick="showHowToPlay()">How to play</button>
-              <button class="ghost-button micro-button" type="button" onclick="showDemoFlow()">Demo</button>
-            </div>
-          </div>
-          <p id="menuError" class="status error"></p>
-        </article>
-
-        <article class="home-viewport app-page" data-home-panel="play">
-          <div class="page-header"><p class="eyebrow">matchmaking relay</p><h2>Играть</h2><span>Соберите оперативную комнату или войдите по коду.</span></div>
-          <div class="play-command-grid">
-            <button class="ops-card primary-ops" type="button" onclick="showPlayRooms()"><b>Quick Match</b><span>создать / найти комнату</span></button>
-            <button class="ops-card" type="button" onclick="joinLobby()"><b>Join by Code</b><span>использовать поле room code</span></button>
-            <button class="ops-card" type="button" onclick="showHowToPlay()"><b>Rules Simulation</b><span>обучающий брифинг</span></button>
-          </div>
-          <div class="mission-strip"><span>LIVE LOBBIES</span><b id="homeLiveLobbyCount">0</b><span>RANKED SIGNAL</span><b id="homeOnlineSignal">SYNC</b><span>AVG QUEUE</span><b>LIVE</b></div>
-        </article>
-
-        <article id="homeProfilePage" class="home-viewport app-page" data-home-panel="profile"></article>
-
-        <article id="homeInventoryPage" class="home-viewport app-page inventory-page" data-home-panel="inventory"></article>
-
-        <article id="homeDailyPage" class="home-viewport app-page" data-home-panel="daily"></article>
-
-        <article id="homeBoosterPage" class="home-viewport app-page" data-home-panel="booster"></article>
-
-        <article id="homeFriendsPage" class="home-viewport app-page" data-home-panel="friends"></article>
-
-        <article id="homeShopPage" class="home-viewport app-page" data-home-panel="shop"></article>
-
-        <article id="homeSettingsPage" class="home-viewport app-page" data-home-panel="settings"></article>
-      </section>
-
-      <aside class="control-sidebar global-chat-panel" aria-label="Global signal chat">
-        <header class="global-chat-header">
-          <div><p class="eyebrow">GLOBAL SIGNAL CHAT</p><h2 id="globalOnlineCount">0 agents online</h2></div>
-          <span class="signal-live"><i></i>LIVE</span>
-        </header>
-        <div id="globalChatFeed" class="global-chat-feed" aria-label="Live chat messages"></div>
-        <form id="globalChatForm" class="chat-input-bar" onsubmit="sendGlobalChatMessage(event)">
-          <button type="button" aria-label="Emoji" onclick="insertGlobalChatGlyph()">✦</button>
-          <input id="globalChatInput" maxlength="240" placeholder="send signal..." aria-label="send signal" autocomplete="off">
-          <button type="submit">SEND</button>
-        </form>
-        <div id="signalProfileModal" class="signal-profile-popover hidden" role="dialog" aria-label="Mini profile">
-          <button class="signal-close" type="button" onclick="closeSignalProfile()">×</button>
-          <div id="signalProfileAvatar" class="profile-avatar-xl small">N</div>
-          <h3 id="signalProfileName">Agent</h3>
-          <span id="signalProfileMeta">Level 1 · Online</span>
-          <div class="signal-profile-actions"><button type="button" onclick="addSignalProfileFriend()">Add friend</button><button type="button" onclick="inviteSignalProfileToLobby()">Invite to lobby</button><button type="button" onclick="viewSignalProfile()">View profile</button></div>
-        </div>
-      </aside>
+      <div class="rules">
+        <div><strong>3+</strong><span>игрока</span></div>
+        <div><strong>30с</strong><span>на трек</span></div>
+        <div><strong>3</strong><span>круга</span></div>
+      </div>
+      <p id="menuError" class="status error"></p>
     </section>
 
     <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">

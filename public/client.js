@@ -90,10 +90,7 @@ const state = {
   xpBoosterTimer: null,
   xpBoosterHoldTimer: null,
   xpBoosterHolding: false,
-  xpBoosterHoldStart: 0,
-  globalChatMessages: [],
-  globalOnlineCount: 0,
-  signalProfileUser: null
+  xpBoosterHoldStart: 0
 };
 
 function hasDevRole(entity) {
@@ -182,7 +179,6 @@ function applySocialState(data = {}) {
   state.friendRequests = Array.isArray(data.incomingRequests) ? data.incomingRequests : [];
   state.outgoingFriendRequests = Array.isArray(data.outgoingRequests) ? data.outgoingRequests : [];
   renderFriendsSystem();
-  renderHomeFriends();
 }
 
 function friendDisplayName(friend = {}) {
@@ -2109,7 +2105,6 @@ function applyProfile(profileData = { user: null, guest: true }) {
   updateAccountToggle(displayName, user);
   renderProfileStats();
   renderProfileCosmetics();
-  renderHomeShells();
   if (state.settingsSection === "shop") requestShopState();
   if (state.settingsSection === "daily") requestDailyRewardState();
   if (state.settingsSection === "xpbooster") requestXpBoosterState();
@@ -2229,7 +2224,6 @@ function applyXpBoosterState(data = {}) {
     remainingCooldownMs: Math.max(0, Number(data.remainingCooldownMs || 0))
   };
   renderXpBooster();
-  renderHomeBooster();
 }
 
 function requestXpBoosterState() {
@@ -2406,7 +2400,6 @@ function applyDailyRewardState(data = {}) {
     streak: Math.max(0, Math.floor(Number(data.streak ?? state.dailyReward?.streak ?? 0)))
   };
   renderDailyReward();
-  renderHomeDaily();
 }
 
 function requestDailyRewardState() {
@@ -2557,8 +2550,6 @@ function requestShopState() {
     state.shopCategory = state.shopCategories.some((category) => category.id === state.shopCategory) ? state.shopCategory : (state.shopCategories[0]?.id || "nicknameColor");
     state.shopStatus = "";
     renderShop();
-    renderHomeInventory();
-    renderHomeProfile();
     renderProfileStats();
     renderProfileCosmetics();
   });
@@ -2567,7 +2558,6 @@ function requestShopState() {
 function selectShopCategory(categoryId) {
   state.shopCategory = categoryId;
   renderShop();
-  renderHomeInventory();
 }
 
 function purchaseShopItem(itemId) {
@@ -2581,8 +2571,6 @@ function purchaseShopItem(itemId) {
     else if (res.economy && state.profile) state.profile.economy = res.economy;
     state.shopStatus = `Куплено: ${res.item?.name || "предмет"}. Предмет добавлен в коллекцию.`;
     renderShop(true);
-    renderHomeInventory();
-    renderHomeProfile();
     renderProfileStats();
     renderProfileCosmetics();
   });
@@ -2599,8 +2587,6 @@ function equipShopItem(itemId) {
     else if (res.economy && state.profile) state.profile.economy = res.economy;
     state.shopStatus = `Экипировано: ${res.item?.name || "предмет"}. Только стиль — никаких игровых бонусов.`;
     renderShop(true);
-    renderHomeInventory();
-    renderHomeProfile();
     renderProfileCosmetics();
   });
 }
@@ -2628,12 +2614,8 @@ function renderProfileCosmetics() {
 }
 
 function renderShop(celebrate = false) {
-  const roots = [$("shopPanelRoot"), $("homeShopRoot")].filter(Boolean);
-  if (!roots.length) return;
-  for (const root of roots) renderShopInto(root, celebrate);
-}
-
-function renderShopInto(root, celebrate = false) {
+  const root = $("shopPanelRoot");
+  if (!root) return;
   if (!state.profile) {
     root.innerHTML = `
       <div class="shop-locked-card">
@@ -4844,7 +4826,6 @@ socket.on("connect", () => {
   state.authResolved = false;
   consumeOAuthRedirectParams();
   authenticateWithStoredToken();
-  requestGlobalChatState();
 });
 
 socket.on("lobbyUpdate", (lobby) => {
@@ -4931,8 +4912,6 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("chat:update", ({ messages }) => renderChat(messages || []));
-socket.on("globalChat:update", applyGlobalChatState);
-socket.on("global:presence", applyGlobalChatState);
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
@@ -5135,229 +5114,3 @@ socket.on("gameCancelled", ({ reason }) => {
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
-
-
-function userDisplayName(user = state.profile) {
-  return user?.displayName || user?.username || "Гость";
-}
-
-function xpToNextLevel(user = state.profile) {
-  const level = Math.max(1, Number(user?.economy?.level || 1));
-  return level * 1000;
-}
-
-function renderHomeShells() {
-  if ($("homeLiveLobbyCount")) $("homeLiveLobbyCount").textContent = String(state.openLobbies.length || 0);
-  if ($("homeOnlineSignal")) $("homeOnlineSignal").textContent = `${state.globalOnlineCount} ONLINE`;
-  renderHomeMiniProfile();
-  renderHomeProfile();
-  renderHomeInventory();
-  renderHomeDaily();
-  renderHomeBooster();
-  renderHomeFriends();
-  renderHomeShopShell();
-  renderHomeSettings();
-}
-
-function renderHomeMiniProfile() {
-  const user = state.profile;
-  const name = userDisplayName(user);
-  const avatar = $("homeMiniAvatar");
-  if (avatar) avatar.innerHTML = user?.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="">` : escapeHtml(name.slice(0, 2).toUpperCase() || "MS");
-  if ($("homeMiniName")) $("homeMiniName").textContent = name;
-  if ($("homeMiniStatus")) $("homeMiniStatus").textContent = user ? "Online" : "Guest";
-  const xp = Number(user?.economy?.xp || 0);
-  const next = xpToNextLevel(user);
-  if ($("homeMiniXpBar")) $("homeMiniXpBar").style.width = `${Math.min(100, Math.round((xp / next) * 100))}%`;
-  if ($("homeMiniMeta")) $("homeMiniMeta").textContent = user ? `LVL ${Number(user.economy?.level || 1)} · XP ${xp.toLocaleString("ru-RU")} / ${next.toLocaleString("ru-RU")}` : "Войдите в аккаунт";
-}
-
-function renderHomeProfile() {
-  const root = $("homeProfilePage");
-  if (!root) return;
-  const user = state.profile;
-  if (!user) {
-    root.innerHTML = `<div class="page-header"><p class="eyebrow">agent profile</p><h2>Профиль</h2><span>Войдите, чтобы видеть реальную статистику и инвентарь.</span></div><button class="primary" type="button" onclick="openSettingsSection('profile')">Войти</button>`;
-    return;
-  }
-  const stats = user.stats || {};
-  const games = Number(stats.games || 0);
-  const wins = Number(stats.wins || 0);
-  const spyGames = Number(stats.spyGames || 0);
-  const spyWins = Number(stats.spyWins || 0);
-  const civilianGames = Number(stats.civilianGames || 0);
-  const civilianWins = Number(stats.civilianWins || 0);
-  const accuracy = percent(Number(stats.correctAccusations || 0), civilianGames);
-  const inventoryCount = ownedCosmetics().size;
-  const xp = Number(user.economy?.xp || 0);
-  const name = userDisplayName(user);
-  root.innerHTML = `<div class="profile-dashboard-head"><div class="profile-avatar-xl">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="">` : escapeHtml(name.slice(0,2).toUpperCase())}</div><div><p class="eyebrow">agent profile</p><h2>${nameWithDevBadge(user)}</h2><span>Rank ${escapeHtml(user.rank || "D")} · Level ${Number(user.economy?.level || 1)} · ${xp.toLocaleString("ru-RU")} XP</span></div></div>
-  <div class="dashboard-grid compact"><div><span>Winrate</span><b>${percent(wins, games)}</b></div><div><span>Favorite role</span><b>${spyGames >= civilianGames ? "Spy" : "Civilian"}</b></div><div><span>Matches</span><b>${games}</b></div><div><span>Accuracy</span><b>${accuracy}</b></div></div>
-  <div class="recent-panel"><h3>Real account summary</h3><p>Spy wins · ${spyWins}/${spyGames}</p><p>Civilian wins · ${civilianWins}/${civilianGames}</p><p>Inventory · ${inventoryCount} owned items · ${vinylBalanceLabel()}</p></div>
-  <div class="badge-row"><i>LVL ${Number(user.economy?.level || 1)}</i><i>${escapeHtml(user.rank || "D")}</i><i>${inventoryCount}</i><i>${Number(stats.winStreak || 0)}🔥</i></div>`;
-}
-
-function renderHomeInventory() {
-  const root = $("homeInventoryPage");
-  if (!root) return;
-  const owned = ownedCosmetics();
-  const equipped = equippedCosmetics();
-  const items = state.shopCatalog.filter((item) => owned.has(item.id));
-  root.innerHTML = `<div class="page-header"><p class="eyebrow">vinyl collection system</p><h2>Инвентарь</h2><span>Реальные предметы аккаунта из базы данных.</span></div><div class="inventory-layout"><div class="vinyl-card-grid">${items.map((item) => {
-    const category = state.shopCategories.find((entry) => entry.id === item.category) || {};
-    const isEquipped = equipped[category.equipSlot] === item.id;
-    return `<button class="vinyl-card ${isEquipped ? "selected" : ""} rarity-${escapeAttribute(item.rarity)}" type="button" onclick="equipShopItem('${escapeAttribute(item.id)}')"><i></i><b>${escapeHtml(item.name)}</b><span>${escapeHtml(rarityLabel(item.rarity))}${isEquipped ? " · equipped" : ""}</span></button>`;
-  }).join("") || `<div class="shop-locked-card">Инвентарь пуст — откройте магазин или получите награды.</div>`}</div><aside class="vinyl-preview-panel"><div class="preview-vinyl"></div><p class="eyebrow">owned cosmetics</p><h3>${items.length} предметов</h3><span>Экипировка сохраняется в профиле и применяется к реальному аккаунту.</span><button class="primary" type="button" onclick="switchHomeTab('shop')">Открыть магазин</button></aside></div>`;
-}
-
-function renderHomeDaily() {
-  const root = $("homeDailyPage");
-  if (!root) return;
-  const nextClaimTime = state.dailyReward?.nextClaimAt ? Date.parse(state.dailyReward.nextClaimAt) : 0;
-  const remaining = Math.max(0, nextClaimTime - Date.now());
-  const canClaim = Boolean(state.profile && (state.dailyReward?.canClaim || remaining <= 0));
-  const schedule = state.dailyReward?.rewardSchedule || [];
-  root.innerHTML = `<div class="page-header"><p class="eyebrow">login streak</p><h2>Daily Reward</h2><span>Реальный streak, cooldown и начисление Vinyls в базу.</span></div><div class="reward-track">${schedule.map((amount, i) => `<i class="${i + 1 === Number(state.dailyReward?.cycleDay || 1) ? "ready" : ""}">${i + 1}</i>`).join("")}</div><div class="ops-card reward-focus"><b>${canClaim ? `Доступно ${Number(state.dailyReward?.rewardAmount || 0)} Vinyls` : "Награда на cooldown"}</b><span>${state.profile ? (canClaim ? "Можно забрать сейчас" : `Следующий drop через ${formatDailyRewardCountdown(remaining)}`) : "Войдите в аккаунт"}</span><button class="primary" type="button" onclick="claimDailyReward()" ${canClaim ? "" : "disabled"}>Collect reward</button><p id="homeDailyRewardStatus" class="status"></p></div>`;
-  if (state.profile && !canClaim && remaining > 0) window.setTimeout(renderHomeDaily, 1000);
-}
-
-function renderHomeBooster() {
-  const root = $("homeBoosterPage");
-  if (!root) return;
-  const { activeRemaining, cooldownRemaining } = currentXpBoosterTimes();
-  const active = activeRemaining > 0;
-  const cooldown = cooldownRemaining > 0;
-  root.innerHTML = `<div class="page-header"><p class="eyebrow">xp amplifier</p><h2>XP Booster</h2><span>Синхронизирован с backend-таймерами аккаунта.</span></div><div class="booster-core" onclick="activateXpBooster()"><i></i><b>${active ? `${Number(state.xpBooster?.displayMultiplier || 2)}X XP ACTIVE` : cooldown ? "BOOSTER RECHARGING" : "XP BOOSTER READY"}</b><span>${active ? formatXpBoosterActiveCountdown(activeRemaining) : cooldown ? formatDailyRewardCountdown(cooldownRemaining) : (state.profile ? "Нажмите, чтобы активировать" : "Войдите в аккаунт")}</span></div><div class="dashboard-grid compact"><div><span>Multiplier</span><b>${Number(state.xpBooster?.displayMultiplier || 2)}X</b></div><div><span>Status</span><b>${active ? "Active" : cooldown ? "Cooldown" : "Ready"}</b></div><div><span>Next unlock</span><b>LVL ${Number(state.profile?.economy?.level || 1) + 1}</b></div></div>`;
-  if (active || cooldown) window.setTimeout(renderHomeBooster, 1000);
-}
-
-function renderHomeFriends() {
-  const root = $("homeFriendsPage");
-  if (!root) return;
-  root.innerHTML = `<div class="page-header"><p class="eyebrow">party network</p><h2>Друзья</h2><span>Реальный список друзей, статусы и приглашения.</span></div><div class="friends-os-grid">${state.friends.map((friend) => `<div class="friend-os-card"><i>${escapeHtml(friendDisplayName(friend).slice(0,2).toUpperCase())}</i><b>${escapeHtml(friendDisplayName(friend))}</b><span>${escapeHtml(getFriendActivity(friend))}</span><button type="button" onclick="${friend.lobby?.canJoin ? `joinFriendLobby('${escapeAttribute(friend.id)}')` : `inviteFriendToLobby('${escapeAttribute(friend.id)}')`}">${friend.lobby?.canJoin ? "Join" : "Invite"}</button></div>`).join("") || `<div class="shop-locked-card">${state.profile ? "Добавьте друзей по @nickname." : "Войдите, чтобы открыть друзей."}</div>`}</div><div class="recent-panel"><h3>Friend requests</h3>${state.friendRequests.map((request) => `<p>${escapeHtml(friendDisplayName(request.user))} · pending</p>`).join("") || `<p>Новых заявок нет</p>`}</div>`;
-}
-
-function renderHomeShopShell() {
-  const root = $("homeShopPage");
-  if (!root) return;
-  if (!$("homeShopRoot")) root.innerHTML = `<div id="homeShopRoot" class="shop-panel-root"></div>`;
-  renderShop();
-}
-
-function renderHomeSettings() {
-  const root = $("homeSettingsPage");
-  if (!root) return;
-  root.innerHTML = `<div class="page-header"><p class="eyebrow">system settings</p><h2>Настройки</h2><span>Открывают реальные настройки аккаунта, языка, звука и интерфейса.</span></div><div class="settings-grid"><button type="button" onclick="openSettingsSection('appearance')">Внешний вид · ${escapeHtml(INTERFACE_THEMES.find((x) => x.id === state.visualTheme)?.label || state.visualTheme)}</button><button type="button" onclick="toggleMusic()">Звук · ${state.musicEnabled ? "ON" : "OFF"}</button><button type="button" onclick="openSettingsSection('language')">Язык · ${state.lang.toUpperCase()}</button><button type="button" onclick="openSettingsSection('game')">Игра · preferences</button></div>`;
-}
-
-function requestGlobalChatState() {
-  socket.emit("globalChat:get", (res) => {
-    if (!res?.error) applyGlobalChatState(res || {});
-  });
-}
-
-function applyGlobalChatState(data = {}) {
-  state.globalChatMessages = Array.isArray(data.messages) ? data.messages : state.globalChatMessages;
-  if (Number.isFinite(Number(data.onlineCount))) state.globalOnlineCount = Number(data.onlineCount);
-  renderGlobalChat();
-}
-
-function renderGlobalChat() {
-  const count = $("globalOnlineCount");
-  if (count) count.textContent = `${state.globalOnlineCount} ${state.globalOnlineCount === 1 ? "agent" : "agents"} online`;
-  const feed = $("globalChatFeed");
-  if (!feed) return;
-  const messages = state.globalChatMessages || [];
-  feed.innerHTML = messages.map((message) => {
-    const user = message.user || {};
-    const name = user.displayName || user.username || "Agent";
-    const level = Number(user.level || 1);
-    const time = message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-    return `<article class="signal-message"><button class="chat-avatar" type="button" onclick="openSignalProfileById('${escapeAttribute(user.id || "")}')">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="">` : escapeHtml(name.slice(0,1).toUpperCase())}</button><div><button class="chat-name" type="button" onclick="openSignalProfileById('${escapeAttribute(user.id || "")}')">${escapeHtml(name)} <span>LVL ${level} · ${escapeHtml(user.rank || "D")}</span></button><p>${escapeHtml(message.text || "")}</p><time>${escapeHtml(time)}</time></div></article>`;
-  }).join("") || `<div class="shop-locked-card">Глобальный чат пуст. Войдите и отправьте первый сигнал.</div>`;
-  feed.scrollTop = feed.scrollHeight;
-}
-
-function sendGlobalChatMessage(event) {
-  event?.preventDefault?.();
-  const input = $("globalChatInput");
-  const text = input?.value.trim() || "";
-  if (!text) return;
-  socket.emit("globalChat:send", { text }, (res) => {
-    if (res?.error) return showSocialToast(res.error, "error");
-    if (input) input.value = "";
-  });
-}
-
-function insertGlobalChatGlyph() {
-  const input = $("globalChatInput");
-  if (!input) return;
-  input.value = `${input.value} ✦`.trimStart();
-  input.focus();
-}
-
-function openSignalProfileById(userId = "") {
-  const message = (state.globalChatMessages || []).find((item) => item.user?.id === userId);
-  const user = message?.user;
-  if (!user) return openSignalProfile("Agent", "1");
-  state.signalProfileUser = user;
-  openSignalProfile(user.displayName || user.username || "Agent", user.level || "1");
-}
-
-function switchHomeTab(tab = "home", trigger) {
-  const targetTab = tab || "home";
-  document.querySelectorAll("[data-home-panel]").forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.homePanel === targetTab);
-  });
-  document.querySelectorAll("[data-home-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.homeTab === targetTab);
-  });
-  if (trigger?.dataset?.homeTab) trigger.classList.add("active");
-  if (targetTab === "shop" || targetTab === "inventory") requestShopState();
-  if (targetTab === "daily") requestDailyRewardState();
-  if (targetTab === "booster") requestXpBoosterState();
-  if (targetTab === "friends") requestSocialState();
-  renderHomeShells();
-  closeSignalProfile();
-}
-
-function openSignalProfile(name = "Agent", level = "1") {
-  const modal = $("signalProfileModal");
-  if (!modal) return;
-  const avatar = $("signalProfileAvatar");
-  const title = $("signalProfileName");
-  const meta = $("signalProfileMeta");
-  const cleanName = String(name || "Agent");
-  if (avatar) avatar.textContent = cleanName.slice(0, 1).toUpperCase();
-  if (title) title.textContent = cleanName;
-  if (meta) meta.textContent = `Level ${String(level || "1")} · Online`;
-  modal.classList.remove("hidden");
-}
-
-function addSignalProfileFriend() {
-  const user = state.signalProfileUser;
-  if (!user?.username) return showSocialToast("Пользователь не найден", "error");
-  socket.emit("friend:request", { nickname: user.username }, (res) => {
-    showSocialToast(res?.error || "Заявка отправлена", res?.error ? "error" : "success");
-    if (!res?.error) requestSocialState();
-  });
-}
-
-function inviteSignalProfileToLobby() {
-  const user = state.signalProfileUser;
-  if (!user?.id) return showSocialToast("Пользователь не найден", "error");
-  if (!state.currentCode) return showSocialToast("Сначала войдите в лобби", "error");
-  socket.emit("friend:lobby:invite", { friendId: user.id, code: state.currentCode }, (res) => {
-    showSocialToast(res?.error || "Инвайт отправлен", res?.error ? "error" : "success");
-  });
-}
-
-function viewSignalProfile() {
-  closeSignalProfile();
-  switchHomeTab("profile");
-}
-
-function closeSignalProfile() {
-  const modal = $("signalProfileModal");
-  if (modal) modal.classList.add("hidden");
-}
