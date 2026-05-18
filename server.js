@@ -17,7 +17,8 @@ const {
   loadUserStore,
   pool,
   resolveDataDir,
-  saveUserStore
+  saveUserStore,
+  updateUser
 } = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
@@ -247,6 +248,19 @@ function refreshSession(refreshToken) {
 
 function findUserByToken(token) {
   return findUserBySessionToken(usersStore.users, token);
+}
+
+async function refreshUserFromDatabase(user) {
+  if (!user?.id) return user || null;
+  const freshUser = await getUser(user.id);
+  if (!freshUser) return user;
+  const existingIndex = usersStore.users.findIndex((item) => item.id === freshUser.id);
+  const existingUser = existingIndex === -1 ? user : usersStore.users[existingIndex];
+  const mergedUser = { ...freshUser, sessions: existingUser.sessions || freshUser.sessions || [] };
+  ensureUserProgress(mergedUser);
+  if (existingIndex === -1) usersStore.users.push(mergedUser);
+  else usersStore.users[existingIndex] = mergedUser;
+  return mergedUser;
 }
 
 function defaultStats() {
@@ -2236,28 +2250,45 @@ function createLobbyState(code, hostId, player, options = {}) {
 io.on("connection", (socket) => {
   socket.data.user = null;
 
-  socket.on("auth:session", ({ token, accessToken } = {}, cb = () => {}) => {
-    const user = findUserByToken(accessToken || token) || socket.request.user || null;
-    if (!user) {
-      console.warn("[auth] access restore failed: token missing or expired");
-      return cb({ error: "Сессия не найдена" });
+  socket.on("auth:session", async ({ token, accessToken } = {}, cb = () => {}) => {
+    try {
+      const sessionUser = findUserByToken(accessToken || token) || socket.request.user || null;
+      if (!sessionUser) {
+        console.warn("[auth] access restore failed: token missing or expired");
+        return cb({ error: "Сессия не найдена" });
+      }
+      const user = await refreshUserFromDatabase(sessionUser);
+      registerAuthenticatedSocket(socket, user);
+      console.info(`[auth] restored access session for user=${user.id}`);
+      cb({ success: true, profile: profileForSocket(socket), social: getSocialState(user.id) });
+    } catch (error) {
+      console.error("[auth] access restore failed", error);
+      cb({ error: "Сессия не найдена" });
     }
-    registerAuthenticatedSocket(socket, user);
-    console.info(`[auth] restored access session for user=${user.id}`);
-    cb({ success: true, profile: profileForSocket(socket), social: getSocialState(user.id) });
   });
 
-  socket.on("auth:refresh", ({ refreshToken } = {}, cb = () => {}) => {
-    const refreshed = refreshSession(refreshToken);
-    if (!refreshed) return cb({ error: "Сессия истекла" });
-    registerAuthenticatedSocket(socket, refreshed.user);
-    cb({ success: true, ...refreshed.tokens, token: refreshed.tokens.accessToken, profile: profileForSocket(socket), social: getSocialState(refreshed.user.id) });
+  socket.on("auth:refresh", async ({ refreshToken } = {}, cb = () => {}) => {
+    try {
+      const refreshed = refreshSession(refreshToken);
+      if (!refreshed) return cb({ error: "Сессия истекла" });
+      const user = await refreshUserFromDatabase(refreshed.user);
+      registerAuthenticatedSocket(socket, user);
+      cb({ success: true, ...refreshed.tokens, token: refreshed.tokens.accessToken, profile: profileForSocket(socket), social: getSocialState(user.id) });
+    } catch (error) {
+      console.error("[auth] refresh failed", error);
+      cb({ error: "Сессия истекла" });
+    }
   });
 
-  socket.on("auth:guest", ({ name } = {}, cb = () => {}) => {
+  socket.on("auth:guest", async ({ name } = {}, cb = () => {}) => {
     if (socket.request.user) {
-      registerAuthenticatedSocket(socket, socket.request.user);
-      return cb({ success: true, profile: profileForSocket(socket), social: getSocialState(socket.request.user.id) });
+      try {
+        const user = await refreshUserFromDatabase(socket.request.user);
+        registerAuthenticatedSocket(socket, user);
+        return cb({ success: true, profile: profileForSocket(socket), social: getSocialState(user.id) });
+      } catch (error) {
+        console.error("[auth] guest session restore failed", error);
+      }
     }
     unregisterAuthenticatedSocket(socket);
     cb({ success: true, profile: profileForSocket(socket), name: normalizeName(name || "Гость") });
@@ -2325,6 +2356,11 @@ io.on("connection", (socket) => {
         user.avatar = normalizeAvatar(avatar);
         user.hasCustomAvatar = Boolean(user.avatar);
       }
+      await updateUser(user.id, {
+        username: user.username,
+        displayName: user.displayName,
+        ...(avatar !== undefined ? { avatar: user.avatar, hasCustomAvatar: user.hasCustomAvatar } : {})
+      });
       user.updatedAt = new Date().toISOString();
       await saveUsersStore();
       syncUserProfileInLobbies(user);
