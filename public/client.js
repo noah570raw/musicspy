@@ -2313,8 +2313,10 @@ function renderShop(celebrate = false) {
     </div>
     <div class="shop-tabs">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory.id ? "active" : ""}" type="button" onclick="selectShopCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
     <p class="shop-status ${state.shopStatus ? "visible" : ""}">${escapeHtml(state.shopStatus || "")}</p>
-    <div class="shop-grid">${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card">Скоро новые дропы.</div>`}</div>
-    ${achievementHtml}
+    <div class="shop-grid neon-shop-scrollbar">
+      ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card">Скоро новые дропы.</div>`}
+      ${achievementHtml ? `<div class="shop-grid-wide">${achievementHtml}</div>` : ""}
+    </div>
   `;
 }
 
