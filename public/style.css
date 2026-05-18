@@ -7245,7 +7245,7 @@ body[data-effects-density="low"] .sound-toggle {
   height: min(708px, calc(100dvh - 36px));
   max-width: calc(100dvw - 36px);
   max-height: calc(100dvh - 36px);
-  padding: clamp(14px, 1.9vw, 22px);
+  padding: clamp(22px, 2vw, 28px);
   overflow: hidden;
   border: 1px solid rgba(var(--accent-rgb), 0.24);
   border-radius: 34px;
@@ -7291,46 +7291,49 @@ body[data-effects-density="low"] .sound-toggle {
 
 .site-menu-header {
   display: grid;
-  grid-template-columns: minmax(168px, 210px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-areas:
-    "kicker copy"
-    "title copy";
-  column-gap: clamp(12px, 1.6vw, 20px);
-  row-gap: clamp(4px, 0.8vh, 8px);
+    "title kicker close"
+    "copy copy copy";
+  column-gap: clamp(14px, 1.8vw, 24px);
+  row-gap: clamp(5px, 0.8vh, 9px);
   flex: 0 0 auto;
   max-width: none;
-  padding: 0 2px;
-  align-items: end;
+  padding: 0;
+  align-items: center;
 }
 
 .site-menu-kicker {
   grid-area: kicker;
-  justify-self: start;
+  justify-self: center;
   max-width: 100%;
   margin: 0;
-  color: color-mix(in srgb, var(--accent) 72%, var(--text));
-  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--accent) 62%, var(--text));
+  opacity: 0.82;
+  font-size: clamp(0.64rem, 0.85vw, 0.74rem);
   font-weight: 950;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   line-height: 1.2;
   text-align: center;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .site-menu-card h2 {
   grid-area: title;
-  align-self: end;
+  justify-self: start;
+  align-self: center;
   margin: 0;
-  font-size: clamp(2rem, 4.4vw, 3.9rem);
-  line-height: 0.88;
+  font-size: clamp(2rem, 3.6vw, 3.25rem);
+  line-height: 0.95;
   letter-spacing: -0.07em;
   text-shadow: 0 0 38px rgba(var(--accent-rgb), 0.24);
 }
 
 .site-menu-card .auth-modal-text {
   grid-area: copy;
-  align-self: end;
-  max-width: none;
+  justify-self: start;
+  max-width: min(100%, 760px);
   margin: 0;
   color: var(--theme-text-soft);
 }
@@ -7341,7 +7344,7 @@ body[data-effects-density="low"] .sound-toggle {
   align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: clamp(10px, 1.45vw, 16px);
+  margin-top: clamp(8px, 1.1vw, 12px);
 }
 
 .site-menu-tabs {
@@ -7734,9 +7737,11 @@ html[lang="en"] .site-menu-card .language-toggle-knob {
 }
 
 .site-menu-card .modal-close {
-  top: 20px;
-  left: 20px;
-  right: auto;
+  position: static;
+  inset: auto;
+  grid-area: close;
+  justify-self: end;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7776,18 +7781,31 @@ html[lang="en"] .site-menu-card .language-toggle-knob {
   }
 
   .site-menu-header {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "kicker"
-      "title"
-      "copy";
-    row-gap: 8px;
-    padding: 50px 0 0;
+      "title close"
+      "kicker kicker"
+      "copy copy";
+    column-gap: 12px;
+    row-gap: 7px;
+    padding: 0;
     text-align: left;
   }
 
   .site-menu-kicker {
+    justify-self: center;
     max-width: 100%;
+    white-space: normal;
+  }
+
+  .site-menu-card h2 {
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .site-menu-card .modal-close {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
   }
 
   .site-menu-content {
@@ -7839,7 +7857,7 @@ html[lang="en"] .site-menu-card .language-toggle-knob {
 .site-menu-header,
 .site-menu-layout,
 .site-menu-card > .status,
-.site-menu-card > .modal-close {
+.site-menu-header .modal-close {
   position: relative;
   z-index: 1;
 }
