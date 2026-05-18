@@ -76,7 +76,13 @@ const state = {
   outgoingFriendRequests: [],
   lobbyInvites: [],
   dmMessages: {},
-  activeDmFriendId: ""
+  activeDmFriendId: "",
+  shopCatalog: [],
+  shopCategories: [],
+  shopRarities: {},
+  shopAchievements: [],
+  shopCategory: "nicknameColor",
+  shopStatus: ""
 };
 
 const APPEARANCE_STORAGE_KEY = "musicSpyAppearance";
@@ -1872,7 +1878,7 @@ function showAuthModal(mode = "choice") {
 }
 
 function openSettingsSection(section = "profile") {
-  const safeSection = ["profile", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
+  const safeSection = ["profile", "shop", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
   state.settingsSection = safeSection;
   for (const panel of document.querySelectorAll("[data-settings-panel]")) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
@@ -1883,6 +1889,7 @@ function openSettingsSection(section = "profile") {
   }
   if (safeSection === "appearance") renderAppearanceControls();
   if (safeSection === "game") syncGamePreferenceToggles();
+  if (safeSection === "shop") requestShopState();
 }
 
 function openMainMenu(section = "profile") {
@@ -2059,6 +2066,8 @@ function applyProfile(profileData = { user: null, guest: true }) {
   }
   updateAccountToggle(displayName, user);
   renderProfileStats();
+  renderProfileCosmetics();
+  if (state.settingsSection === "shop") requestShopState();
   syncNameInput();
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
@@ -2120,7 +2129,9 @@ function renderProfileStats() {
     ["🕵️", t("Побед за шпиона"), `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
     ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
     ["🎯", t("Любимая роль"), bestRole],
-    ["🔥", t("Серия побед"), stats.winStreak || 0]
+    ["🔥", t("Серия побед"), stats.winStreak || 0],
+    ["◍", "Vinyls", vinylBalance().toLocaleString("ru-RU")],
+    ["⭐", "Уровень", state.profile.economy?.level || 1]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">
       <span>${icon}</span>
@@ -2128,6 +2139,210 @@ function renderProfileStats() {
       <strong>${escapeHtml(String(value))}</strong>
     </div>
   `).join("");
+}
+
+function vinylBalance() {
+  return Number(state.profile?.economy?.vinyls || 0);
+}
+
+function ownedCosmetics() {
+  return new Set(Array.isArray(state.profile?.economy?.ownedCosmetics) ? state.profile.economy.ownedCosmetics : []);
+}
+
+function equippedCosmetics() {
+  return state.profile?.economy?.equipped || {};
+}
+
+function shopItem(itemId) {
+  return state.shopCatalog.find((item) => item.id === itemId) || null;
+}
+
+function rarityLabel(rarity) {
+  return state.shopRarities?.[rarity]?.label || rarity || "Common";
+}
+
+function requestShopState() {
+  if (!state.profile) {
+    renderShop();
+    return;
+  }
+  socket.emit("economy:get", (res) => {
+    if (res?.error) {
+      state.shopStatus = res.error;
+      renderShop();
+      return;
+    }
+    state.shopCatalog = Array.isArray(res.catalog) ? res.catalog : [];
+    state.shopCategories = Array.isArray(res.categories) ? res.categories : [];
+    state.shopRarities = res.rarities || {};
+    state.shopAchievements = Array.isArray(res.achievements) ? res.achievements : [];
+    if (res.economy && state.profile) state.profile.economy = res.economy;
+    state.shopCategory = state.shopCategories.some((category) => category.id === state.shopCategory) ? state.shopCategory : (state.shopCategories[0]?.id || "nicknameColor");
+    state.shopStatus = "";
+    renderShop();
+    renderProfileStats();
+    renderProfileCosmetics();
+  });
+}
+
+function selectShopCategory(categoryId) {
+  state.shopCategory = categoryId;
+  renderShop();
+}
+
+function purchaseShopItem(itemId) {
+  socket.emit("shop:purchase", { itemId }, (res) => {
+    if (res?.error) {
+      state.shopStatus = res.error;
+      renderShop();
+      return;
+    }
+    if (res.profile?.user) state.profile = res.profile.user;
+    else if (res.economy && state.profile) state.profile.economy = res.economy;
+    state.shopStatus = `Куплено: ${res.item?.name || "предмет"}. Предмет добавлен в коллекцию.`;
+    renderShop(true);
+    renderProfileStats();
+    renderProfileCosmetics();
+  });
+}
+
+function equipShopItem(itemId) {
+  socket.emit("shop:equip", { itemId }, (res) => {
+    if (res?.error) {
+      state.shopStatus = res.error;
+      renderShop();
+      return;
+    }
+    if (res.profile?.user) state.profile = res.profile.user;
+    else if (res.economy && state.profile) state.profile.economy = res.economy;
+    state.shopStatus = `Экипировано: ${res.item?.name || "предмет"}. Только стиль — никаких игровых бонусов.`;
+    renderShop(true);
+    renderProfileCosmetics();
+  });
+}
+
+function renderProfileCosmetics() {
+  const target = $("profileCosmeticShowcase");
+  if (!target) return;
+  if (!state.profile) {
+    target.innerHTML = "";
+    return;
+  }
+  const equipped = equippedCosmetics();
+  const entries = Object.entries(equipped).map(([slot, itemId]) => [slot, shopItem(itemId)]).filter(([, item]) => item);
+  if (!entries.length) {
+    target.innerHTML = `<div class="profile-cosmetic-empty">Коллекция готова: зайди в «Магазин», чтобы экипировать титул, баннер, рамку или эффект.</div>`;
+    return;
+  }
+  target.innerHTML = entries.map(([slot, item]) => `
+    <div class="profile-cosmetic-chip rarity-${escapeAttribute(item.rarity)}">
+      <i style="background:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}"></i>
+      <span>${escapeHtml(item.name)}</span>
+      <small>${escapeHtml(rarityLabel(item.rarity))}</small>
+    </div>
+  `).join("");
+}
+
+function renderShop(celebrate = false) {
+  const root = $("shopPanelRoot");
+  if (!root) return;
+  if (!state.profile) {
+    root.innerHTML = `
+      <div class="shop-locked-card">
+        <div class="vinyl-coin xl"><span></span></div>
+        <h3>Магазин доступен после входа</h3>
+        <p>Создай аккаунт или войди, чтобы Vinyls, косметика, достижения и прогресс сохранялись навсегда.</p>
+        <button class="primary" type="button" onclick="openSettingsSection('profile')">Войти в профиль</button>
+      </div>`;
+    return;
+  }
+  const categories = state.shopCategories.length ? state.shopCategories : [
+    { id: "nicknameColor", label: "Nickname Colors" },
+    { id: "avatarFrame", label: "Avatar Frames" },
+    { id: "profileBanner", label: "Profile Banners" },
+    { id: "chatEffect", label: "Chat Effects" },
+    { id: "lobbyEffect", label: "Lobby Effects" },
+    { id: "collectible", label: "Rare Collectibles" },
+    { id: "playerTitle", label: "Player Titles" },
+    { id: "victoryAnimation", label: "Victory Animations" }
+  ];
+  const owned = ownedCosmetics();
+  const equipped = equippedCosmetics();
+  const currentCategory = categories.find((category) => category.id === state.shopCategory) || categories[0];
+  const items = state.shopCatalog.filter((item) => item.category === currentCategory.id);
+  const achievementHtml = renderShopAchievements();
+  root.innerHTML = `
+    <div class="shop-hero ${celebrate ? "purchase-flash" : ""}">
+      <div class="shop-hero-copy">
+        <p class="eyebrow">premium cosmetic economy</p>
+        <h3>Vinyls Shop</h3>
+        <p>Голографические монеты, редкие титулы, рамки, баннеры и анимации. Система полностью косметическая и не дает преимущества в партии.</p>
+      </div>
+      <div class="shop-balance-card">
+        <div class="vinyl-coin"><span></span></div>
+        <small>Баланс</small>
+        <strong>${vinylBalance().toLocaleString("ru-RU")} Vinyls</strong>
+        <em>Level ${Number(state.profile.economy?.level || 1)} · ${Number(state.profile.economy?.xp || 0).toLocaleString("ru-RU")} XP</em>
+      </div>
+    </div>
+    <div class="shop-tabs">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory.id ? "active" : ""}" type="button" onclick="selectShopCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
+    <p class="shop-status ${state.shopStatus ? "visible" : ""}">${escapeHtml(state.shopStatus || "")}</p>
+    <div class="shop-grid">${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card">Скоро новые дропы.</div>`}</div>
+    ${achievementHtml}
+  `;
+}
+
+function renderShopItemCard(item, owned, equipped) {
+  const category = state.shopCategories.find((entry) => entry.id === item.category) || {};
+  const isOwned = owned.has(item.id);
+  const isEquipped = equipped[category.equipSlot] === item.id;
+  const canAfford = vinylBalance() >= Number(item.price || 0);
+  const action = isEquipped
+    ? `<button class="secondary" type="button" disabled>Экипировано</button>`
+    : isOwned
+      ? `<button class="primary" type="button" onclick="equipShopItem('${escapeAttribute(item.id)}')">Экипировать</button>`
+      : item.achievementOnly
+        ? `<button class="secondary" type="button" disabled>Достижение</button>`
+        : `<button class="${canAfford ? "primary" : "secondary"}" type="button" onclick="purchaseShopItem('${escapeAttribute(item.id)}')" ${canAfford ? "" : "disabled"}>${Number(item.price || 0).toLocaleString("ru-RU")} Vinyls</button>`;
+  return `
+    <article class="shop-card rarity-${escapeAttribute(item.rarity)} ${isOwned ? "owned" : ""}">
+      <div class="shop-preview" style="--preview:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}">
+        <span class="shop-preview-disc"></span>
+        ${item.limited ? `<b>limited</b>` : ""}
+      </div>
+      <div class="shop-card-body">
+        <small>${escapeHtml(category.label || item.category)}</small>
+        <h4>${escapeHtml(item.name)}</h4>
+        <span class="rarity-pill">${escapeHtml(rarityLabel(item.rarity))}</span>
+        <p>${isOwned ? "В коллекции. Можно экипировать в профиль." : "Косметический предмет: стиль, идентичность и шоу без влияния на баланс."}</p>
+      </div>
+      <div class="shop-card-actions">${action}</div>
+    </article>`;
+}
+
+function renderShopAchievements() {
+  if (!state.shopAchievements.length) return "";
+  const achievements = state.profile?.economy?.achievements || {};
+  return `
+    <section class="shop-achievements">
+      <div class="settings-title compact"><strong>Достижения и долгий прогресс</strong><span>Открывай Vinyls, титулы, баннеры и эффекты за мастерство.</span></div>
+      <div class="achievement-grid">${state.shopAchievements.map((achievement) => {
+        const progress = achievements[achievement.id]?.progress || 0;
+        const complete = Boolean(achievements[achievement.id]?.completed);
+        const pct = Math.min(100, Math.round((progress / achievement.target) * 100));
+        const unlock = shopItem(achievement.unlock);
+        return `<article class="achievement-card ${complete ? "complete" : ""}">
+          <strong>${escapeHtml(achievement.label)}</strong>
+          <span>${progress}/${achievement.target}</span>
+          <div class="achievement-progress"><i style="width:${pct}%"></i></div>
+          <small>${complete ? "Получено" : `Награда: ${achievement.vinyls} Vinyls${unlock ? ` + ${escapeHtml(unlock.name)}` : ""}`}</small>
+        </article>`;
+      }).join("")}</div>
+    </section>`;
+}
+
+function myMatchReward(data) {
+  return (data?.economyRewards || []).find((reward) => reward.playerId === socket.id) || null;
 }
 
 function finishAuthenticatedRestore(res, welcome = "С возвращением!") {
@@ -4098,9 +4313,12 @@ function renderResults(data) {
     ? t("шпион не называл тему")
     : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(translateTheme(data.spyGuess?.text || "—"))}»`;
   $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
-  $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`);
+  const reward = myMatchReward(data);
+  const rewardText = reward ? ` · +${reward.total} Vinyls` : "";
+  $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`) + rewardText;
 
   renderResultBreakdown(data, guessText);
+  renderEconomyRewardSummary(reward);
   renderVoteDetails(data.breakdown?.voteDetails || []);
 
   $("resultVotes").innerHTML = state.players.map((player) => `
@@ -4112,6 +4330,26 @@ function renderResults(data) {
   state.trackHistory = data.trackHistory || state.trackHistory;
   renderTrackHistory("resultTrackHistory", state.trackHistory);
   $("restartBtn").classList.toggle("hidden", state.lobby?.host !== socket.id);
+}
+
+function renderEconomyRewardSummary(reward) {
+  const target = $("resultEconomyRewards");
+  if (!target) return;
+  if (!reward) {
+    target.innerHTML = `<div class="economy-result-card locked"><div class="vinyl-coin"><span></span></div><p>Войди в аккаунт, чтобы получать Vinyls, достижения и косметику после матчей.</p></div>`;
+    return;
+  }
+  target.innerHTML = `
+    <div class="economy-result-card reward-reveal">
+      <div class="vinyl-coin"><span></span></div>
+      <div>
+        <small>match payout</small>
+        <strong>+${Number(reward.total || 0).toLocaleString("ru-RU")} Vinyls</strong>
+        <span>Баланс: ${Number(reward.balance || 0).toLocaleString("ru-RU")}</span>
+      </div>
+      <ul>${(reward.lines || []).map((line) => `<li><span>${escapeHtml(line.label)}</span><b>+${Number(line.amount || 0)}</b></li>`).join("")}</ul>
+      ${(reward.achievements || []).length ? `<div class="reward-achievements">${reward.achievements.map((achievement) => `<em>🏆 ${escapeHtml(achievement.label)}</em>`).join("")}</div>` : ""}
+    </div>`;
 }
 
 function renderResultBreakdown(data, guessText) {
