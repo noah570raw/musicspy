@@ -181,6 +181,7 @@
           <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')"><span class="site-menu-tab-icon" aria-hidden="true">◉</span><span>Профиль</span></button>
           <button id="settingsTabShop" class="site-menu-tab" type="button" onclick="openSettingsSection('shop')"><span class="site-menu-tab-icon" aria-hidden="true">◍</span><span>Магазин</span></button>
           <button id="settingsTabDaily" class="site-menu-tab" type="button" onclick="openSettingsSection('daily')"><span class="site-menu-tab-icon" aria-hidden="true">🎁</span><span>Daily reward</span></button>
+          <button id="settingsTabXpbooster" class="site-menu-tab" type="button" onclick="openSettingsSection('xpbooster')"><span class="site-menu-tab-icon" aria-hidden="true">⚡</span><span>XP Booster</span></button>
           <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')"><span class="site-menu-tab-icon" aria-hidden="true">✦</span><span>Внешний вид</span></button>
           <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')"><span class="site-menu-tab-icon" aria-hidden="true">≋</span><span>Игра</span></button>
           <button id="settingsTabLanguage" class="site-menu-tab" type="button" onclick="openSettingsSection('language')"><span class="site-menu-tab-icon" aria-hidden="true">⌁</span><span>Язык</span></button>
@@ -312,6 +313,66 @@
                   <strong>Reset cadence</strong>
                   <span>Новый claim становится доступен через 24 часа после последнего получения.</span>
                 </div>
+              </div>
+            </div>
+          </section>
+
+
+          <section id="settingsPanelXpbooster" class="site-menu-panel" data-settings-panel="xpbooster">
+            <div id="xpBoosterCard" class="xp-booster-dashboard settings-block" data-xp-state="loading">
+              <div class="xp-ambient xp-ambient-one" aria-hidden="true"></div>
+              <div class="xp-ambient xp-ambient-two" aria-hidden="true"></div>
+              <div class="xp-particle-field" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+
+              <div class="xp-booster-header">
+                <div>
+                  <span class="xp-kicker">Premium power module</span>
+                  <h3>XP Booster</h3>
+                  <p>Удвой свой прогресс на ограниченное время</p>
+                </div>
+                <div class="xp-header-icon" aria-hidden="true">
+                  <span>XP</span>
+                  <b>2X XP</b>
+                </div>
+              </div>
+
+              <div class="xp-booster-stage">
+                <div class="xp-core-wrap" aria-hidden="true">
+                  <span class="xp-ring xp-ring-one"></span>
+                  <span class="xp-ring xp-ring-two"></span>
+                  <span class="xp-ring xp-ring-three"></span>
+                  <span class="xp-core-orb"><i></i></span>
+                  <span class="xp-shockwave"></span>
+                </div>
+                <div class="xp-boost-copy">
+                  <span>2X XP BOOST</span>
+                  <strong>Duration: 1 hour</strong>
+                  <small id="xpBoosterStateLabel">Hold core button to charge booster</small>
+                </div>
+              </div>
+
+              <div class="xp-booster-metrics" aria-live="polite">
+                <div class="xp-metric active-metric">
+                  <span>Booster time</span>
+                  <strong id="xpBoosterActiveTimer">--:--</strong>
+                </div>
+                <div class="xp-metric cooldown-metric">
+                  <span>Next use</span>
+                  <strong id="xpBoosterCooldownTimer">READY</strong>
+                </div>
+              </div>
+
+              <div class="xp-activate-panel">
+                <button id="xpBoosterButton" class="xp-hold-button" type="button"
+                  onpointerdown="startXpBoosterHold(event)" onpointerup="cancelXpBoosterHold()" onpointerleave="cancelXpBoosterHold()" onpointercancel="cancelXpBoosterHold()">
+                  <span class="xp-button-progress" aria-hidden="true"></span>
+                  <span class="xp-button-energy" aria-hidden="true"></span>
+                  <strong id="xpBoosterButtonLabel">HOLD TO ACTIVATE</strong>
+                </button>
+                <div id="xpBoosterSuccess" class="xp-success-popup" aria-live="polite">2X XP Activated</div>
+                <p id="xpBoosterStatus" class="status xp-booster-status" aria-live="polite"></p>
               </div>
             </div>
           </section>
