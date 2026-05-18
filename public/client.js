@@ -2440,7 +2440,7 @@ function renderDailyReward() {
   if (amountNode) amountNode.textContent = `+${amount} VINYLS`;
   if (button) {
     button.disabled = !canClaim;
-    button.innerHTML = `<span>ЗАБРАТЬ<br>НАГРАДУ</span><small>${canClaim ? "READY TO CLAIM" : (state.profile ? formatDailyRewardCountdown(remaining) : "LOGIN REQUIRED")}</small><i aria-hidden="true"></i>`;
+    button.innerHTML = `<span>ЗАБРАТЬ<br>НАГРАДУ</span><i aria-hidden="true"></i>`;
   }
   if (timer) {
     timer.textContent = state.profile
