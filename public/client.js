@@ -2298,25 +2298,29 @@ function renderShop(celebrate = false) {
   const items = state.shopCatalog.filter((item) => item.category === currentCategory.id);
   const achievementHtml = renderShopAchievements();
   root.innerHTML = `
-    <div class="shop-hero ${celebrate ? "purchase-flash" : ""}">
-      <div class="shop-hero-copy">
-        <p class="eyebrow">cosmetic shop</p>
-        <h3>Vinyls Shop</h3>
-        <p>Голографические монеты, редкие титулы, рамки, баннеры и анимации. Система полностью косметическая и не дает преимущества в партии.</p>
+    <div class="shop-static-header">
+      <div class="shop-hero ${celebrate ? "purchase-flash" : ""}">
+        <div class="shop-hero-copy">
+          <p class="eyebrow">cosmetic shop</p>
+          <h3>Vinyls Shop</h3>
+          <p>Голографические монеты, редкие титулы, рамки, баннеры и анимации. Система полностью косметическая и не дает преимущества в партии.</p>
+        </div>
+        <div class="shop-balance-card">
+          <div class="vinyl-coin"><span></span></div>
+          <small>Баланс</small>
+          <strong class="${hasDevRole(state.profile) ? "dev-balance" : ""}">${vinylBalanceLabel()}</strong>
+          <em>Level ${Number(state.profile.economy?.level || 1)} · ${Number(state.profile.economy?.xp || 0).toLocaleString("ru-RU")} XP</em>
+        </div>
       </div>
-      <div class="shop-balance-card">
-        <div class="vinyl-coin"><span></span></div>
-        <small>Баланс</small>
-        <strong class="${hasDevRole(state.profile) ? "dev-balance" : ""}">${vinylBalanceLabel()}</strong>
-        <em>Level ${Number(state.profile.economy?.level || 1)} · ${Number(state.profile.economy?.xp || 0).toLocaleString("ru-RU")} XP</em>
+      <div class="shop-tabs" aria-label="Категории магазина">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory.id ? "active" : ""}" type="button" onclick="selectShopCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
+      <p class="shop-status ${state.shopStatus ? "visible" : ""}">${escapeHtml(state.shopStatus || "")}</p>
+    </div>
+    <div class="shop-items-area neon-shop-scrollbar" data-shop-items-area>
+      <div class="shop-grid">
+        ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card shop-empty-card">Скоро новые дропы.</div>`}
       </div>
     </div>
-    <div class="shop-tabs">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory.id ? "active" : ""}" type="button" onclick="selectShopCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
-    <p class="shop-status ${state.shopStatus ? "visible" : ""}">${escapeHtml(state.shopStatus || "")}</p>
-    <div class="shop-grid neon-shop-scrollbar">
-      ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card">Скоро новые дропы.</div>`}
-      ${achievementHtml ? `<div class="shop-grid-wide">${achievementHtml}</div>` : ""}
-    </div>
+    ${achievementHtml ? `<div class="shop-achievements-footer">${achievementHtml}</div>` : ""}
   `;
 }
 

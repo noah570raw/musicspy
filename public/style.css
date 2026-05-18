@@ -8840,8 +8840,19 @@ body,
   min-width: 0;
   min-height: 0;
   max-width: 100%;
-  padding: 24px clamp(4px, 0.8vw, 8px) 0 0;
+  padding: 0;
   overflow: hidden;
+}
+
+.shop-static-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: clamp(8px, 1vw, 12px);
+  min-width: 0;
+  min-height: 0;
+  padding: 0 clamp(4px, 0.8vw, 8px) 0 0;
+  overflow: visible;
 }
 
 .shop-hero,
@@ -8860,8 +8871,7 @@ body,
 }
 
 .shop-hero {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 4;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(142px, auto);
@@ -8948,7 +8958,7 @@ body,
   flex-wrap: wrap;
   gap: 8px;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   padding: 0 2px;
 }
 
@@ -8983,22 +8993,29 @@ body,
 
 .shop-status.visible { opacity: 1; }
 
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  align-content: start;
-  gap: clamp(10px, 1.2vw, 14px);
+.shop-items-area {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 2px clamp(8px, 1vw, 12px) clamp(16px, 2vh, 22px) 2px;
+  padding: 2px clamp(8px, 1vw, 12px) clamp(18px, 2.4vh, 28px) 2px;
   scrollbar-gutter: stable;
 }
 
-.shop-grid-wide {
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
+  align-content: start;
+  gap: clamp(10px, 1.2vw, 14px);
+  width: 100%;
+  min-width: 0;
+  min-height: min-content;
+}
+
+.shop-grid-wide,
+.shop-empty-card {
   grid-column: 1 / -1;
   min-width: 0;
 }
@@ -9153,6 +9170,14 @@ body,
 .shop-card[class*="rarity-"] { box-shadow: 0 18px 50px color-mix(in srgb, var(--rarity, #64748b) 16%, transparent); }
 .shop-card[class*="rarity-"] .rarity-pill { color: var(--rarity, #e2e8f0); border: 1px solid color-mix(in srgb, var(--rarity, #64748b) 42%, transparent); }
 
+.shop-achievements-footer {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 clamp(4px, 0.8vw, 8px) 0 0;
+  overflow: visible;
+}
+
 .shop-achievements {
   display: grid;
   gap: 10px;
@@ -9291,13 +9316,25 @@ body,
 }
 
 @media (max-width: 760px) {
-  .shop-panel-root {
-    padding-top: 24px;
+  .shop-static-header,
+  .shop-achievements-footer {
+    padding-right: 0;
   }
 
-  .shop-hero { grid-template-columns: 1fr; }
+  .shop-hero {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
   .shop-balance-card { justify-items: start; }
+  .shop-category { font-size: 0.72rem; padding-block: 6px; }
+  .shop-items-area { padding-right: 6px; }
   .shop-grid { grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); }
+  .shop-achievements { padding: 10px; }
+  .achievement-grid { grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr)); gap: 7px; }
+  .achievement-card { padding: 8px; }
+  .achievement-card small { font-size: 0.68rem; }
+  .achievement-progress { height: 6px; margin-top: 7px; }
 }
 
 .dev-badge {
