@@ -224,6 +224,8 @@
               </div>
               <div id="profileEditor" class="profile-editor hidden">
                 <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
+                <input id="profileUsername" maxlength="24" placeholder="@nickname" autocomplete="username" spellcheck="false">
+                <p class="profile-editor-hint">Тег нужен для поиска друзей: 3–24 символа, латиница, цифры, _ или -.</p>
                 <input id="avatarInput" type="file" accept="image/png,image/png,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
                 <div class="actions two-col">
                   <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
@@ -951,7 +953,7 @@
       <div class="friends-add-card">
         <label for="friendSearchInput">Добавить друга</label>
         <div class="friends-add-row">
-          <input id="friendSearchInput" maxlength="18" placeholder="@username" autocomplete="off" oninput="clearFriendAddStatus()" onkeydown="handleFriendSearchKeydown(event)">
+          <input id="friendSearchInput" maxlength="24" placeholder="@nickname" autocomplete="off" oninput="clearFriendAddStatus()" onkeydown="handleFriendSearchKeydown(event)">
           <button id="friendAddButton" class="secondary friends-add-button" type="button" onclick="sendFriendRequest()">Добавить</button>
         </div>
         <p id="friendAddStatus" class="friends-add-status" aria-live="polite"></p>
