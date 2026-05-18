@@ -84,7 +84,11 @@ const state = {
   shopCategory: "nicknameColor",
   shopStatus: "",
   dailyReward: { canClaim: false, nextClaimAt: null, rewardAmount: 300, rewardSchedule: [300, 350, 400, 450, 500, 650, 700], cycleDay: 1, claimedDays: 0 },
-  dailyRewardTimer: null
+  dailyRewardTimer: null,
+  xpBooster: { canActivate: false, active: false, displayMultiplier: 2, activeUntil: null, cooldownUntil: null, remainingActiveMs: 0, remainingCooldownMs: 0 },
+  xpBoosterTimer: null,
+  xpBoosterHoldTimer: null,
+  xpBoosterHolding: false
 };
 
 function hasDevRole(entity) {
@@ -1906,7 +1910,7 @@ function showAuthModal(mode = "choice") {
 }
 
 function openSettingsSection(section = "profile") {
-  const safeSection = ["profile", "shop", "daily", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
+  const safeSection = ["profile", "shop", "daily", "xpbooster", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
   state.settingsSection = safeSection;
   for (const panel of document.querySelectorAll("[data-settings-panel]")) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
@@ -1919,6 +1923,7 @@ function openSettingsSection(section = "profile") {
   if (safeSection === "game") syncGamePreferenceToggles();
   if (safeSection === "shop") requestShopState();
   if (safeSection === "daily") requestDailyRewardState();
+  if (safeSection === "xpbooster") requestXpBoosterState();
 }
 
 function openMainMenu(section = "profile") {
@@ -2100,6 +2105,8 @@ function applyProfile(profileData = { user: null, guest: true }) {
   renderProfileCosmetics();
   if (state.settingsSection === "shop") requestShopState();
   if (state.settingsSection === "daily") requestDailyRewardState();
+  if (state.settingsSection === "xpbooster") requestXpBoosterState();
+  if (user?.economy?.xpBooster) applyXpBoosterState(user.economy.xpBooster);
   renderDailyReward();
   syncNameInput();
   updateLobbyRenameControls();
@@ -2192,6 +2199,142 @@ function formatDailyRewardCountdown(ms) {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
+function formatXpBoosterActiveCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(Number(ms || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} remaining`;
+}
+
+function applyXpBoosterState(data = {}) {
+  state.xpBooster = {
+    canActivate: Boolean(data.canActivate),
+    active: Boolean(data.active),
+    multiplier: Number(data.multiplier || 1),
+    displayMultiplier: Number(data.displayMultiplier || 2),
+    durationMs: Number(data.durationMs || 60 * 60 * 1000),
+    cooldownMs: Number(data.cooldownMs || 6 * 60 * 60 * 1000),
+    activeUntil: data.activeUntil || null,
+    cooldownUntil: data.cooldownUntil || null,
+    remainingActiveMs: Math.max(0, Number(data.remainingActiveMs || 0)),
+    remainingCooldownMs: Math.max(0, Number(data.remainingCooldownMs || 0))
+  };
+  renderXpBooster();
+}
+
+function requestXpBoosterState() {
+  if (!state.profile || !socket.connected) {
+    applyXpBoosterState({ canActivate: false });
+    setStatus("xpBoosterStatus", "Войди в аккаунт, чтобы использовать XP Booster", true);
+    return;
+  }
+  socket.emit("xpBooster:get", (res) => {
+    if (res?.error) {
+      setStatus("xpBoosterStatus", res.error, true);
+      renderXpBooster();
+      return;
+    }
+    setStatus("xpBoosterStatus");
+    applyXpBoosterState(res?.xpBooster || {});
+  });
+}
+
+function currentXpBoosterTimes() {
+  const activeUntil = state.xpBooster?.activeUntil ? Date.parse(state.xpBooster.activeUntil) : 0;
+  const cooldownUntil = state.xpBooster?.cooldownUntil ? Date.parse(state.xpBooster.cooldownUntil) : 0;
+  const now = Date.now();
+  return {
+    activeRemaining: Math.max(0, activeUntil - now),
+    cooldownRemaining: Math.max(0, cooldownUntil - now)
+  };
+}
+
+function renderXpBooster() {
+  const root = $("xpBoosterCard");
+  const button = $("xpBoosterButton");
+  const buttonLabel = $("xpBoosterButtonLabel");
+  const activeTimer = $("xpBoosterActiveTimer");
+  const cooldownTimer = $("xpBoosterCooldownTimer");
+  const stateLabel = $("xpBoosterStateLabel");
+  if (!root && !button) return;
+
+  const { activeRemaining, cooldownRemaining } = currentXpBoosterTimes();
+  const active = activeRemaining > 0;
+  const coolingDown = cooldownRemaining > 0;
+  const canActivate = Boolean(state.profile && !coolingDown);
+
+  if (root) {
+    root.dataset.xpState = active ? "active" : (coolingDown ? "cooldown" : (state.profile ? "ready" : "locked"));
+    root.classList.toggle("charging", state.xpBoosterHolding);
+  }
+  if (activeTimer) activeTimer.textContent = active ? formatXpBoosterActiveCountdown(activeRemaining) : "--:--";
+  if (cooldownTimer) cooldownTimer.textContent = coolingDown ? `Available in ${formatDailyRewardCountdown(cooldownRemaining)}` : (state.profile ? "READY" : "LOGIN");
+  if (stateLabel) {
+    stateLabel.textContent = active
+      ? "2x XP multiplier online — играй матчи прямо сейчас"
+      : (coolingDown ? "Core is cooling down before next overcharge" : "Hold core button for 1.5 seconds to activate");
+  }
+  if (button) {
+    button.disabled = !canActivate || active;
+    button.style.setProperty("--hold-progress", state.xpBoosterHolding ? "100%" : "0%");
+  }
+  if (buttonLabel) {
+    buttonLabel.textContent = active ? "BOOSTER ACTIVE" : (coolingDown ? "RECHARGING" : "HOLD TO ACTIVATE");
+  }
+
+  if (state.xpBoosterTimer) window.clearTimeout(state.xpBoosterTimer);
+  state.xpBoosterTimer = null;
+  if (active || coolingDown) state.xpBoosterTimer = window.setTimeout(renderXpBooster, 1000);
+}
+
+function startXpBoosterHold(event) {
+  event?.preventDefault?.();
+  const { activeRemaining, cooldownRemaining } = currentXpBoosterTimes();
+  if (!state.profile) return setStatus("xpBoosterStatus", "Войди в аккаунт, чтобы использовать XP Booster", true);
+  if (activeRemaining > 0 || cooldownRemaining > 0) return;
+  cancelXpBoosterHold();
+  state.xpBoosterHolding = true;
+  renderXpBooster();
+  playSoundCue("click");
+  state.xpBoosterHoldTimer = window.setTimeout(activateXpBooster, 1500);
+}
+
+function cancelXpBoosterHold() {
+  if (state.xpBoosterHoldTimer) window.clearTimeout(state.xpBoosterHoldTimer);
+  state.xpBoosterHoldTimer = null;
+  if (state.xpBoosterHolding) {
+    state.xpBoosterHolding = false;
+    renderXpBooster();
+  }
+}
+
+function activateXpBooster() {
+  state.xpBoosterHoldTimer = null;
+  state.xpBoosterHolding = false;
+  if (!state.profile || !socket.connected) {
+    renderXpBooster();
+    return setStatus("xpBoosterStatus", "Нет соединения с сервером", true);
+  }
+  socket.emit("xpBooster:activate", (res) => {
+    if (res?.error) {
+      setStatus("xpBoosterStatus", res.error, true);
+      if (res.xpBooster) applyXpBoosterState(res.xpBooster);
+      else renderXpBooster();
+      return;
+    }
+    if (res?.profile) applyProfile(res.profile);
+    setStatus("xpBoosterStatus", "2X XP Activated");
+    applyXpBoosterState(res?.xpBooster || {});
+    const success = $("xpBoosterSuccess");
+    const root = $("xpBoosterCard");
+    success?.classList.add("show");
+    root?.classList.add("boosted");
+    playSoundCue("success");
+    window.setTimeout(() => success?.classList.remove("show"), 2200);
+    window.setTimeout(() => root?.classList.remove("boosted"), 1100);
+  });
 }
 
 function applyDailyRewardState(data = {}) {

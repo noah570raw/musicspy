@@ -84,6 +84,9 @@ const DAILY_REWARD_STREAK_AMOUNTS = [300, 350, 400, 450, 500, 650, 700];
 const DAILY_REWARD_AMOUNT = DAILY_REWARD_STREAK_AMOUNTS[0];
 const DAILY_REWARD_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
+const XP_BOOSTER_DURATION_MS = 60 * 60 * 1000;
+const XP_BOOSTER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+const XP_BOOSTER_MULTIPLIER = 2;
 
 
 const lobbies = {};
@@ -293,7 +296,9 @@ function defaultEconomy() {
     achievements: {},
     transactions: [],
     lastDailyRewardAt: null,
-    dailyRewardStreak: 0
+    dailyRewardStreak: 0,
+    xpBoosterActiveUntil: null,
+    xpBoosterCooldownUntil: null
   };
 }
 
@@ -352,7 +357,9 @@ function normalizeEconomy(economy = {}) {
     achievements: economy.achievements && typeof economy.achievements === "object" ? economy.achievements : {},
     transactions: Array.isArray(economy.transactions) ? economy.transactions.slice(-80) : [],
     lastDailyRewardAt: economy.lastDailyRewardAt && !Number.isNaN(Date.parse(economy.lastDailyRewardAt)) ? economy.lastDailyRewardAt : null,
-    dailyRewardStreak: Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Math.floor(Number(economy.dailyRewardStreak || 0))))
+    dailyRewardStreak: Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Math.floor(Number(economy.dailyRewardStreak || 0)))),
+    xpBoosterActiveUntil: economy.xpBoosterActiveUntil && !Number.isNaN(Date.parse(economy.xpBoosterActiveUntil)) ? economy.xpBoosterActiveUntil : null,
+    xpBoosterCooldownUntil: economy.xpBoosterCooldownUntil && !Number.isNaN(Date.parse(economy.xpBoosterCooldownUntil)) ? economy.xpBoosterCooldownUntil : null
   };
 }
 
@@ -374,7 +381,28 @@ function publicEconomy(user) {
     equipped: economy.equipped,
     achievements: economy.achievements,
     lastDailyRewardAt: economy.lastDailyRewardAt || null,
-    dailyRewardStreak: economy.dailyRewardStreak || 0
+    dailyRewardStreak: economy.dailyRewardStreak || 0,
+    xpBooster: xpBoosterState(user)
+  };
+}
+
+function xpBoosterState(user, now = Date.now()) {
+  const economy = ensureUserProgress(user);
+  const activeUntilTime = economy?.xpBoosterActiveUntil ? Date.parse(economy.xpBoosterActiveUntil) : 0;
+  const cooldownUntilTime = economy?.xpBoosterCooldownUntil ? Date.parse(economy.xpBoosterCooldownUntil) : 0;
+  const isActive = activeUntilTime > now;
+  const isCoolingDown = cooldownUntilTime > now;
+  return {
+    canActivate: Boolean(economy && !isCoolingDown),
+    active: isActive,
+    multiplier: isActive ? XP_BOOSTER_MULTIPLIER : 1,
+    displayMultiplier: XP_BOOSTER_MULTIPLIER,
+    durationMs: XP_BOOSTER_DURATION_MS,
+    cooldownMs: XP_BOOSTER_COOLDOWN_MS,
+    activeUntil: isActive ? new Date(activeUntilTime).toISOString() : null,
+    cooldownUntil: isCoolingDown ? new Date(cooldownUntilTime).toISOString() : null,
+    remainingActiveMs: isActive ? activeUntilTime - now : 0,
+    remainingCooldownMs: isCoolingDown ? cooldownUntilTime - now : 0
   };
 }
 
@@ -1913,7 +1941,9 @@ function addVinylTransaction(user, amount, reason, meta = {}) {
     createdAt: new Date().toISOString()
   };
   economy.vinyls = hasRole(user, DEV_ROLE) ? Math.max(DEV_VINYL_BALANCE, economy.vinyls) : Math.max(0, economy.vinyls + transaction.amount);
-  economy.xp += Math.max(0, transaction.amount);
+  const boosterActiveUntil = economy.xpBoosterActiveUntil ? Date.parse(economy.xpBoosterActiveUntil) : 0;
+  const xpGain = Math.max(0, transaction.amount) * (boosterActiveUntil > Date.now() ? XP_BOOSTER_MULTIPLIER : 1);
+  economy.xp += xpGain;
   economy.level = Math.max(economy.level || 1, Math.floor(economy.xp / 1000) + 1);
   economy.transactions = [...(economy.transactions || []), transaction].slice(-80);
   if (transaction.amount > 0) user.stats.vinylsEarned = Number(user.stats.vinylsEarned || 0) + transaction.amount;
@@ -2421,6 +2451,27 @@ io.on("connection", (socket) => {
     if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть магазин" });
     ensureUserProgress(user);
     cb({ success: true, catalog: SHOP_CATALOG, categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
+  });
+
+  socket.on("xpBooster:get", (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы использовать XP Booster" });
+    cb({ success: true, xpBooster: xpBoosterState(user), economy: publicEconomy(user) });
+  });
+
+  socket.on("xpBooster:activate", (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы использовать XP Booster" });
+    const currentState = xpBoosterState(user);
+    if (!currentState.canActivate) return cb({ error: "XP Booster перезаряжается", xpBooster: currentState, economy: publicEconomy(user) });
+    const now = Date.now();
+    user.economy.xpBoosterActiveUntil = new Date(now + XP_BOOSTER_DURATION_MS).toISOString();
+    user.economy.xpBoosterCooldownUntil = new Date(now + XP_BOOSTER_COOLDOWN_MS).toISOString();
+    user.updatedAt = new Date(now).toISOString();
+    saveUsersStore();
+    const nextState = xpBoosterState(user, now);
+    cb({ success: true, xpBooster: nextState, economy: publicEconomy(user), profile: profileForSocket(socket) });
+    io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
   });
 
   socket.on("dailyReward:get", (cb = () => {}) => {
@@ -3146,5 +3197,6 @@ module.exports = {
   defaultEconomy,
   normalizeEconomy,
   ensureUserProgress,
+  xpBoosterState,
   buildEconomyRewardsForGame
 };
