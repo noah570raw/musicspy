@@ -2,8 +2,23 @@ const express = require("express");
 const crypto = require("crypto");
 const http = require("http");
 const { Server } = require("socket.io");
+const session = require("express-session");
+const PgSession = require("connect-pg-simple")(session);
+const passport = require("passport");
+const DiscordStrategy = require("passport-discord").Strategy;
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const { createUserStorePersistence, friendshipKey, resolveDataDir } = require("./lib/persistence");
+const {
+  EMPTY_USERS_STORE,
+  friendshipKey,
+  getOrCreateUser,
+  getUser,
+  initializeDatabase,
+  loadUserStore,
+  pool,
+  resolveDataDir,
+  saveUserStore
+} = require("./lib/persistence");
 const {
   buildOAuthErrorRedirect,
   buildOAuthSuccessRedirect,
@@ -27,10 +42,23 @@ const io = new Server(server);
 
 app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
-app.use(express.static("public"));
 
-const userStorePersistence = createUserStorePersistence();
-const USERS_FILE = userStorePersistence.usersFile;
+const sessionMiddleware = session({
+  store: new PgSession({ pool, createTableIfMissing: true }),
+  secret: process.env.SESSION_SECRET || "fallback-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax"
+  }
+});
+
+app.use(sessionMiddleware);
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(express.static("public"));
 const SPY_GUESS_SECONDS = 60;
 const DECOY_GUESS_SECONDS = 3;
 const HOST_TIMER_STEP_SECONDS = 15;
@@ -178,12 +206,24 @@ const SIMILAR_THEME_GROUPS = [
 ];
 
 
-let usersStore = userStorePersistence.read();
-ensureSocialCollections();
-if ((usersStore.users || []).some((user) => applyRoleEntitlements(user))) saveUsersStore();
+let usersStore = {
+  users: [...EMPTY_USERS_STORE.users],
+  friendships: [...EMPTY_USERS_STORE.friendships],
+  friendRequests: [...EMPTY_USERS_STORE.friendRequests],
+  directMessages: [...EMPTY_USERS_STORE.directMessages]
+};
+
+async function initializePersistentState() {
+  await initializeDatabase();
+  usersStore = await loadUserStore();
+  ensureSocialCollections();
+  if ((usersStore.users || []).some((user) => applyRoleEntitlements(user))) await saveUsersStore();
+}
 
 function saveUsersStore() {
-  userStorePersistence.write(usersStore);
+  const pendingSave = saveUserStore(usersStore);
+  pendingSave.catch((error) => console.error("[db] failed to save users store", error));
+  return pendingSave;
 }
 
 function createSession(user) {
@@ -661,7 +701,7 @@ function getPublicBaseUrl(req) {
 
 function oauthRedirectUri(req, provider) {
   const envKey = provider === "google" ? "GOOGLE_REDIRECT_URI" : "DISCORD_REDIRECT_URI";
-  return String(process.env[envKey] || "").trim() || `${getPublicBaseUrl(req)}/auth/${provider}/callback`;
+  return String(process.env[envKey] || "").trim() || `${String(process.env.PUBLIC_URL || getPublicBaseUrl(req)).replace(/\/$/, "")}/auth/${provider}/callback`;
 }
 
 function createOAuthState(provider, returnTo = "/") {
@@ -711,6 +751,76 @@ function oauthError(provider, step, response, payload) {
   const details = payload?.error_description || payload?.error || payload?.message || payload?.raw || "empty response";
   return new Error(`${oauthProviderLabel(provider)} ${step} failed with ${response.status}: ${details}`);
 }
+
+function appProfileFromPassport(provider, profile = {}) {
+  if (provider === "google") {
+    return {
+      providerId: profile.id,
+      email: profile.emails?.[0]?.value || "",
+      username: profile.emails?.[0]?.value ? String(profile.emails[0].value).split("@")[0] : profile.displayName,
+      displayName: profile.displayName || profile.emails?.[0]?.value || "Google player",
+      avatar: profile.photos?.[0]?.value || ""
+    };
+  }
+
+  return {
+    providerId: profile.id,
+    email: profile.email || profile.emails?.[0]?.value || "",
+    username: profile.username || profile.global_name || profile.displayName,
+    displayName: profile.global_name || profile.displayName || profile.username || "Discord player",
+    avatar: profile.avatar || profile.photos?.[0]?.value || ""
+  };
+}
+
+function configurePassportStrategies() {
+  passport.serializeUser((user, done) => done(null, user.id));
+  passport.deserializeUser(async (id, done) => {
+    try {
+      done(null, await getUser(id));
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  const publicUrl = String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
+
+  if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
+    passport.use(new DiscordStrategy({
+      clientID: process.env.DISCORD_CLIENT_ID,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      callbackURL: `${publicUrl}/auth/discord/callback`,
+      scope: ["identify", "email"]
+    }, async (accessToken, refreshToken, profile, done) => {
+      try {
+        const appProfile = appProfileFromPassport("discord", profile);
+        done(null, await getOrCreateUser("discord", appProfile.providerId, appProfile));
+      } catch (error) {
+        done(error);
+      }
+    }));
+  }
+
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: `${publicUrl}/auth/google/callback`
+    }, async (accessToken, refreshToken, profile, done) => {
+      try {
+        const appProfile = appProfileFromPassport("google", profile);
+        done(null, await getOrCreateUser("google", appProfile.providerId, appProfile));
+      } catch (error) {
+        done(error);
+      }
+    }));
+  }
+}
+
+configurePassportStrategies();
+
+io.engine.use(sessionMiddleware);
+io.engine.use(passport.initialize());
+io.engine.use(passport.session());
 
 function profileForSocket(socket) {
   const user = socket.data.user;
@@ -1255,10 +1365,43 @@ async function handleOAuthCallback(provider, req, res) {
   }
 }
 
-app.get("/auth/google", (req, res) => redirectToOAuth("google", req, res));
-app.get("/auth/google/callback", (req, res) => handleOAuthCallback("google", req, res));
-app.get("/auth/discord", (req, res) => redirectToOAuth("discord", req, res));
-app.get("/auth/discord/callback", (req, res) => handleOAuthCallback("discord", req, res));
+function startPassportOAuth(provider, req, res, next) {
+  const clientId = provider === "google" ? process.env.GOOGLE_CLIENT_ID : process.env.DISCORD_CLIENT_ID;
+  const clientSecret = provider === "google" ? process.env.GOOGLE_CLIENT_SECRET : process.env.DISCORD_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return res.redirect(buildOAuthErrorRedirect(req.query.returnTo || "/", `Вход через ${oauthProviderLabel(provider)} не настроен`));
+  }
+  req.session.oauthReturnTo = String(req.query.returnTo || "/").startsWith("/") ? String(req.query.returnTo || "/") : "/";
+  return passport.authenticate(provider)(req, res, next);
+}
+
+function finishPassportOAuth(provider, req, res, next) {
+  const returnTo = req.session?.oauthReturnTo || "/";
+  return passport.authenticate(provider, (error, user) => {
+    if (error || !user) {
+      console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
+      return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+    }
+
+    return req.logIn(user, (loginError) => {
+      if (loginError) {
+        console.error(`${oauthProviderLabel(provider)} session login failed`, loginError);
+        return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+      }
+
+      const existingIndex = usersStore.users.findIndex((item) => item.id === user.id);
+      if (existingIndex === -1) usersStore.users.push(user);
+      else usersStore.users[existingIndex] = { ...usersStore.users[existingIndex], ...user };
+      ensureSocialCollections();
+      return res.redirect(returnTo);
+    });
+  })(req, res, next);
+}
+
+app.get("/auth/google", (req, res, next) => startPassportOAuth("google", req, res, next));
+app.get("/auth/google/callback", (req, res, next) => finishPassportOAuth("google", req, res, next));
+app.get("/auth/discord", (req, res, next) => startPassportOAuth("discord", req, res, next));
+app.get("/auth/discord/callback", (req, res, next) => finishPassportOAuth("discord", req, res, next));
 
 function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
@@ -2012,7 +2155,7 @@ io.on("connection", (socket) => {
   socket.data.user = null;
 
   socket.on("auth:session", ({ token, accessToken } = {}, cb = () => {}) => {
-    const user = findUserByToken(accessToken || token);
+    const user = findUserByToken(accessToken || token) || socket.request.user || null;
     if (!user) {
       console.warn("[auth] access restore failed: token missing or expired");
       return cb({ error: "Сессия не найдена" });
@@ -2030,11 +2173,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("auth:guest", ({ name } = {}, cb = () => {}) => {
+    if (socket.request.user) {
+      registerAuthenticatedSocket(socket, socket.request.user);
+      return cb({ success: true, profile: profileForSocket(socket), social: getSocialState(socket.request.user.id) });
+    }
     unregisterAuthenticatedSocket(socket);
     cb({ success: true, profile: profileForSocket(socket), name: normalizeName(name || "Гость") });
   });
 
-  socket.on("auth:register", ({ username, password, displayName } = {}, cb = () => {}) => {
+  socket.on("auth:register", async ({ username, password, displayName } = {}, cb = () => {}) => {
     const normalizedUsername = normalizeUsername(username);
     if (normalizedUsername.length < 3) return cb({ error: "Логин должен быть от 3 символов: латиница, цифры, _ или -" });
     if (!validatePassword(password)) return cb({ error: "Пароль должен быть от 6 до 72 символов" });
@@ -2059,6 +2206,7 @@ io.on("connection", (socket) => {
       updatedAt: now
     };
     usersStore.users.push(user);
+    await saveUsersStore();
     registerAuthenticatedSocket(socket, user);
     const tokens = createSession(user);
     cb({ success: true, ...tokens, token: tokens.accessToken, profile: profileForSocket(socket) });
@@ -2764,9 +2912,16 @@ function pickTheme() {
 }
 
 if (require.main === module) {
-  server.listen(process.env.PORT || 3000, () => {
-    console.log(`Music Spy server running; users store: ${USERS_FILE}`);
-  });
+  initializePersistentState()
+    .then(() => {
+      server.listen(process.env.PORT || 3000, () => {
+        console.log("Music Spy server running; users store: PostgreSQL");
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to initialize PostgreSQL persistence", error);
+      process.exit(1);
+    });
 }
 
 module.exports = {
