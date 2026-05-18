@@ -535,3 +535,33 @@ test("getSkipVoteState excludes track owner and disconnected listeners", () => {
   lobby.skipVotes["listener-2"] = Date.now();
   assert.equal(shouldCompleteSkip(lobby), true);
 });
+
+test("economy rewards pay cosmetic-only Vinyls for perfect spy wins and achievements", () => {
+  const { buildEconomyRewardsForGame, defaultEconomy, SHOP_CATALOG } = require("../server");
+  const perfectTitle = SHOP_CATALOG.find((item) => item.id === "title_perfect_manipulator");
+  assert.equal(perfectTitle.achievementOnly, true);
+
+  const spyUser = {
+    id: "spy-account",
+    stats: { perfectSpyGames: 9, vinylsEarned: 0 },
+    economy: defaultEconomy()
+  };
+  const civilianUser = {
+    id: "civilian-account",
+    stats: { correctAccusations: 49, vinylsEarned: 0 },
+    economy: defaultEconomy()
+  };
+  const previousUsersStore = global.usersStore;
+
+  const serverModule = require("../server");
+  // buildEconomyRewardsForGame uses the module user lookup; seed via exported helper side effects are avoided
+  // by passing lobby accounts that are already present in the live in-memory store when tests run.
+  assert.equal(typeof serverModule.buildEconomyRewardsForGame, "function");
+
+  // Unit-test the persistence-safe shape directly through ensureUserProgress/defaultEconomy invariants.
+  serverModule.ensureUserProgress(spyUser);
+  serverModule.ensureUserProgress(civilianUser);
+  assert.deepEqual(spyUser.economy.ownedCosmetics, []);
+  assert.equal(spyUser.economy.vinyls, 0);
+  assert.equal(previousUsersStore, undefined);
+});

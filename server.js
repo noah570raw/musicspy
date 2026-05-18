@@ -56,6 +56,77 @@ const userSockets = new Map();
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 
+const COSMETIC_RARITIES = {
+  common: { label: "Common", glow: 1 },
+  rare: { label: "Rare", glow: 2 },
+  epic: { label: "Epic", glow: 3 },
+  legendary: { label: "Legendary", glow: 4 },
+  mythic: { label: "Mythic", glow: 5 }
+};
+
+const SHOP_CATEGORIES = [
+  { id: "nicknameColor", label: "Nickname Colors", equipSlot: "nicknameColor" },
+  { id: "avatarFrame", label: "Avatar Frames", equipSlot: "avatarFrame" },
+  { id: "profileBanner", label: "Profile Banners", equipSlot: "profileBanner" },
+  { id: "chatEffect", label: "Chat Effects", equipSlot: "chatEffect" },
+  { id: "lobbyEffect", label: "Lobby Effects", equipSlot: "lobbyEffect" },
+  { id: "collectible", label: "Rare Collectibles", equipSlot: "collectible" },
+  { id: "playerTitle", label: "Player Titles", equipSlot: "playerTitle" },
+  { id: "victoryAnimation", label: "Victory Animations", equipSlot: "victoryAnimation" }
+];
+
+const SHOP_CATALOG = [
+  { id: "nick_neon_blue", category: "nicknameColor", name: "Neon Blue", rarity: "common", price: 450, preview: "linear-gradient(90deg,#38bdf8,#60a5fa)" },
+  { id: "nick_aurora_purple", category: "nicknameColor", name: "Aurora Purple", rarity: "rare", price: 850, preview: "linear-gradient(90deg,#a78bfa,#f0abfc,#67e8f9)" },
+  { id: "nick_toxic_green", category: "nicknameColor", name: "Toxic Green", rarity: "rare", price: 900, preview: "linear-gradient(90deg,#bef264,#22c55e)" },
+  { id: "nick_vinyl_gold", category: "nicknameColor", name: "Vinyl Gold", rarity: "epic", price: 1400, preview: "linear-gradient(90deg,#fde68a,#f59e0b,#fff7ed)" },
+  { id: "nick_crimson_pulse", category: "nicknameColor", name: "Crimson Pulse", rarity: "epic", price: 1450, preview: "linear-gradient(90deg,#fb7185,#dc2626,#f97316)" },
+  { id: "nick_white_chrome", category: "nicknameColor", name: "White Chrome", rarity: "legendary", price: 2200, preview: "linear-gradient(90deg,#ffffff,#94a3b8,#ffffff)" },
+  { id: "nick_holographic_gradient", category: "nicknameColor", name: "Holographic Gradient", rarity: "mythic", price: 3200, preview: "linear-gradient(90deg,#22d3ee,#a78bfa,#f9a8d4,#fde68a)" },
+  { id: "frame_vinyl_ring", category: "avatarFrame", name: "Vinyl Ring", rarity: "common", price: 500, preview: "radial-gradient(circle,#111 40%,#38bdf8 42%,#020617 65%)" },
+  { id: "frame_audio_spectrum", category: "avatarFrame", name: "Audio Spectrum", rarity: "rare", price: 1000, preview: "linear-gradient(135deg,#22c55e,#06b6d4,#8b5cf6)" },
+  { id: "frame_cyber_halo", category: "avatarFrame", name: "Cyber Halo", rarity: "epic", price: 1550, preview: "conic-gradient(#06b6d4,#8b5cf6,#06b6d4)" },
+  { id: "frame_glitch", category: "avatarFrame", name: "Glitch Frame", rarity: "epic", price: 1700, preview: "repeating-linear-gradient(90deg,#ef4444 0 8px,#06b6d4 8px 16px,#111827 16px 24px)" },
+  { id: "frame_platinum_disc", category: "avatarFrame", name: "Platinum Disc", rarity: "legendary", price: 2600, preview: "radial-gradient(circle,#f8fafc,#64748b,#111827)" },
+  { id: "frame_legendary_pulse", category: "avatarFrame", name: "Legendary Pulse", rarity: "mythic", price: 3600, preview: "conic-gradient(#fde68a,#f97316,#ec4899,#8b5cf6,#fde68a)" },
+  { id: "banner_retro_vinyl", category: "profileBanner", name: "Retro Vinyl", rarity: "common", price: 650, preview: "linear-gradient(135deg,#111827,#f97316)" },
+  { id: "banner_night_city", category: "profileBanner", name: "Night City", rarity: "rare", price: 1200, preview: "linear-gradient(135deg,#020617,#7c3aed,#06b6d4)" },
+  { id: "banner_synthwave", category: "profileBanner", name: "Synthwave", rarity: "epic", price: 1750, preview: "linear-gradient(135deg,#ec4899,#7c3aed,#020617)" },
+  { id: "banner_aurora_pulse", category: "profileBanner", name: "Aurora Pulse", rarity: "legendary", price: 2500, preview: "linear-gradient(135deg,#14b8a6,#8b5cf6,#f0abfc)" },
+  { id: "banner_studio_lights", category: "profileBanner", name: "Studio Lights", rarity: "rare", price: 1250, preview: "radial-gradient(circle at 30% 20%,#fde68a,transparent 35%),linear-gradient(135deg,#111827,#334155)" },
+  { id: "banner_dark_frequency", category: "profileBanner", name: "Dark Frequency", rarity: "epic", price: 1850, preview: "repeating-linear-gradient(0deg,#020617 0 12px,#172554 12px 14px)" },
+  { id: "banner_dj_console", category: "profileBanner", name: "DJ Console", rarity: "legendary", price: 2700, preview: "linear-gradient(90deg,#020617,#0f172a,#38bdf8)" },
+  { id: "chat_glow_text", category: "chatEffect", name: "Animated Glow Text", rarity: "rare", price: 900, preview: "linear-gradient(90deg,#38bdf8,#a78bfa)" },
+  { id: "chat_typing_fx", category: "chatEffect", name: "Typing FX", rarity: "epic", price: 1500, preview: "linear-gradient(90deg,#f472b6,#22d3ee)" },
+  { id: "chat_gradient_wave", category: "chatEffect", name: "Message Gradient", rarity: "epic", price: 1650, preview: "linear-gradient(90deg,#22c55e,#06b6d4,#8b5cf6)" },
+  { id: "chat_audio_pulse", category: "chatEffect", name: "Audio Pulse", rarity: "legendary", price: 2400, preview: "radial-gradient(circle,#22d3ee,#312e81,#020617)" },
+  { id: "lobby_ready_remix", category: "lobbyEffect", name: "Ready Button Remix", rarity: "rare", price: 1100, preview: "linear-gradient(135deg,#22c55e,#14b8a6)" },
+  { id: "lobby_join_drop", category: "lobbyEffect", name: "Custom Join Drop", rarity: "epic", price: 1800, preview: "linear-gradient(135deg,#f97316,#ec4899)" },
+  { id: "lobby_hover_aura", category: "lobbyEffect", name: "Profile Hover Aura", rarity: "epic", price: 1900, preview: "radial-gradient(circle,#8b5cf6,transparent 70%)" },
+  { id: "lobby_ambient_aura", category: "lobbyEffect", name: "Ambient Aura", rarity: "legendary", price: 2800, preview: "conic-gradient(#06b6d4,#8b5cf6,#ec4899,#06b6d4)" },
+  { id: "collect_seasonal_drop", category: "collectible", name: "Limited Seasonal Drop", rarity: "legendary", price: 3000, limited: true, preview: "linear-gradient(135deg,#facc15,#ef4444,#7c3aed)" },
+  { id: "collect_animated_badge", category: "collectible", name: "Animated Badge", rarity: "epic", price: 2100, preview: "radial-gradient(circle,#fde68a,#7c2d12)" },
+  { id: "collect_event_reward", category: "collectible", name: "Exclusive Event Reward", rarity: "mythic", price: 4200, limited: true, preview: "conic-gradient(#fff,#22d3ee,#a78bfa,#fff)" },
+  { id: "title_master_deception", category: "playerTitle", name: "Master of Deception", rarity: "legendary", price: 2600, preview: "linear-gradient(90deg,#ef4444,#111827)" },
+  { id: "title_silent_spy", category: "playerTitle", name: "Silent Spy", rarity: "rare", price: 900, preview: "linear-gradient(90deg,#64748b,#020617)" },
+  { id: "title_vinyl_collector", category: "playerTitle", name: "Vinyl Collector", rarity: "common", price: 600, preview: "linear-gradient(90deg,#facc15,#111827)" },
+  { id: "title_neon_detective", category: "playerTitle", name: "Neon Detective", rarity: "epic", price: 1600, preview: "linear-gradient(90deg,#06b6d4,#8b5cf6)" },
+  { id: "title_audio_phantom", category: "playerTitle", name: "Audio Phantom", rarity: "mythic", price: 3500, preview: "linear-gradient(90deg,#020617,#8b5cf6,#f8fafc)" },
+  { id: "title_perfect_manipulator", category: "playerTitle", name: "Perfect Manipulator", rarity: "mythic", price: 0, achievementOnly: true, preview: "linear-gradient(90deg,#facc15,#ef4444,#020617)" },
+  { id: "victory_endgame_glow", category: "victoryAnimation", name: "Endgame Glow", rarity: "rare", price: 1250, preview: "radial-gradient(circle,#22d3ee,transparent 65%)" },
+  { id: "victory_mvp_card", category: "victoryAnimation", name: "Animated MVP Card", rarity: "legendary", price: 2800, preview: "linear-gradient(135deg,#fde68a,#8b5cf6)" },
+  { id: "victory_vinyl_spin", category: "victoryAnimation", name: "Vinyl Spin Showcase", rarity: "epic", price: 1900, preview: "radial-gradient(circle,#020617 30%,#f8fafc 32%,#111827 55%,#38bdf8 58%)" }
+];
+
+const ACHIEVEMENTS = [
+  { id: "wins_100", label: "100 wins", target: 100, stat: "wins", vinyls: 1000, unlock: "banner_aurora_pulse" },
+  { id: "perfect_spy_10", label: "10 perfect spy games", target: 10, stat: "perfectSpyGames", vinyls: 1500, unlock: "title_perfect_manipulator" },
+  { id: "correct_accusations_50", label: "50 correct accusations", target: 50, stat: "correctAccusations", vinyls: 900, unlock: "title_neon_detective" },
+  { id: "friend_matches_25", label: "25 friend matches", target: 25, stat: "friendMatches", vinyls: 750, unlock: "lobby_hover_aura" },
+  { id: "vinyls_1000", label: "1000 Vinyls earned", target: 1000, stat: "vinylsEarned", vinyls: 300, unlock: "title_vinyl_collector" }
+];
+
+
 const THEMES = [
   "ру андер ск",
   "англ андер ск",
@@ -131,7 +202,69 @@ function defaultStats() {
     civilianGames: 0,
     civilianWins: 0,
     winStreak: 0,
-    bestWinStreak: 0
+    bestWinStreak: 0,
+    correctAccusations: 0,
+    friendMatches: 0,
+    perfectSpyGames: 0,
+    mvpAwards: 0,
+    vinylsEarned: 0
+  };
+}
+
+function defaultEconomy() {
+  return {
+    vinyls: 0,
+    level: 1,
+    xp: 0,
+    ownedCosmetics: [],
+    equipped: {},
+    achievements: {},
+    transactions: []
+  };
+}
+
+function catalogItemById(itemId) {
+  return SHOP_CATALOG.find((item) => item.id === itemId) || null;
+}
+
+function normalizeEconomy(economy = {}) {
+  const owned = new Set(Array.isArray(economy.ownedCosmetics) ? economy.ownedCosmetics.map(String) : []);
+  for (const item of SHOP_CATALOG.filter((entry) => entry.price === 0 && entry.achievementOnly !== true)) owned.add(item.id);
+  const safeEquipped = {};
+  if (economy.equipped && typeof economy.equipped === "object") {
+    for (const category of SHOP_CATEGORIES) {
+      const itemId = String(economy.equipped[category.equipSlot] || "");
+      const item = catalogItemById(itemId);
+      if (item && owned.has(itemId) && item.category === category.id) safeEquipped[category.equipSlot] = itemId;
+    }
+  }
+  return {
+    vinyls: Math.max(0, Math.floor(Number(economy.vinyls || 0))),
+    level: Math.max(1, Math.floor(Number(economy.level || 1))),
+    xp: Math.max(0, Math.floor(Number(economy.xp || 0))),
+    ownedCosmetics: Array.from(owned),
+    equipped: safeEquipped,
+    achievements: economy.achievements && typeof economy.achievements === "object" ? economy.achievements : {},
+    transactions: Array.isArray(economy.transactions) ? economy.transactions.slice(-80) : []
+  };
+}
+
+function ensureUserProgress(user) {
+  if (!user) return null;
+  user.stats = { ...defaultStats(), ...(user.stats || {}) };
+  user.economy = normalizeEconomy(user.economy || {});
+  return user.economy;
+}
+
+function publicEconomy(user) {
+  const economy = normalizeEconomy(user?.economy || {});
+  return {
+    vinyls: economy.vinyls,
+    level: economy.level,
+    xp: economy.xp,
+    ownedCosmetics: economy.ownedCosmetics,
+    equipped: economy.equipped,
+    achievements: economy.achievements
   };
 }
 
@@ -145,6 +278,7 @@ function publicUser(user) {
     authProviders: Array.from(new Set((user.oauth || []).map((identity) => identity.provider).filter(Boolean))),
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) },
+    economy: publicEconomy(user),
     settings: { ...(user.settings || {}) }
   };
 }
@@ -156,7 +290,7 @@ function ensureSocialCollections() {
   if (!Array.isArray(usersStore.directMessages)) usersStore.directMessages = [];
   for (const user of usersStore.users) {
     user.friends = friendIdsForUser(user.id);
-    if (!user.stats) user.stats = defaultStats();
+    ensureUserProgress(user);
     if (!user.settings) user.settings = {};
   }
 }
@@ -1465,12 +1599,144 @@ function startSpyGuess(code, suspected, voteTotals) {
 
 
 
-function updateUserStatsForGame(lobby, civiliansWin) {
+function addVinylTransaction(user, amount, reason, meta = {}) {
+  const economy = ensureUserProgress(user);
+  if (!economy || !amount) return null;
+  const transaction = {
+    id: crypto.randomUUID(),
+    amount: Math.floor(amount),
+    reason,
+    meta,
+    createdAt: new Date().toISOString()
+  };
+  economy.vinyls = Math.max(0, economy.vinyls + transaction.amount);
+  economy.xp += Math.max(0, transaction.amount);
+  economy.level = Math.max(economy.level || 1, Math.floor(economy.xp / 1000) + 1);
+  economy.transactions = [...(economy.transactions || []), transaction].slice(-80);
+  if (transaction.amount > 0) user.stats.vinylsEarned = Number(user.stats.vinylsEarned || 0) + transaction.amount;
+  return transaction;
+}
+
+function unlockCosmetic(user, itemId, source = "achievement") {
+  const item = catalogItemById(itemId);
+  if (!item) return false;
+  const economy = ensureUserProgress(user);
+  if (economy.ownedCosmetics.includes(itemId)) return false;
+  economy.ownedCosmetics.push(itemId);
+  economy.transactions = [...(economy.transactions || []), {
+    id: crypto.randomUUID(),
+    amount: 0,
+    reason: `unlock:${source}`,
+    itemId,
+    createdAt: new Date().toISOString()
+  }].slice(-80);
+  return true;
+}
+
+function evaluateAchievements(user) {
+  ensureUserProgress(user);
+  const unlocked = [];
+  for (const achievement of ACHIEVEMENTS) {
+    const current = Math.floor(Number(user.stats?.[achievement.stat] || 0));
+    const existing = user.economy.achievements[achievement.id] || {};
+    const completed = current >= achievement.target;
+    user.economy.achievements[achievement.id] = {
+      progress: Math.min(current, achievement.target),
+      target: achievement.target,
+      completed,
+      claimedAt: existing.claimedAt || (completed ? new Date().toISOString() : null)
+    };
+    if (completed && !existing.completed) {
+      if (achievement.vinyls) addVinylTransaction(user, achievement.vinyls, `achievement:${achievement.id}`);
+      if (achievement.unlock) unlockCosmetic(user, achievement.unlock, achievement.id);
+      unlocked.push({ ...achievement, progress: current });
+    }
+  }
+  return unlocked;
+}
+
+function hasFriendInLobby(userId, players = []) {
+  return players.some((player) => player.accountId && player.accountId !== userId && usersAreFriends(userId, player.accountId));
+}
+
+function sameUtcDay(a, b) {
+  if (!a || !b) return false;
+  return String(a).slice(0, 10) === String(b).slice(0, 10);
+}
+
+function buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected) {
+  const now = new Date().toISOString();
+  const rewards = [];
+  const activePlayerIds = new Set(lobby.players.map((player) => player.id));
+  const spyVoteCounts = Object.fromEntries(lobby.spies.map((spyId) => [spyId, Number(finalVotes?.[spyId] || 0)]));
+  const perfectSpyIds = lobby.spies.filter((spyId) => !civiliansWin && (spyVoteCounts[spyId] || 0) === 0);
+  const correctVoters = new Set(Object.entries(lobby.votes || {}).filter(([, targetId]) => lobby.spies.includes(targetId)).map(([voterId]) => voterId));
+  const friendMatchAccountIds = new Set(lobby.players.filter((player) => player.accountId && hasFriendInLobby(player.accountId, lobby.players)).map((player) => player.accountId));
+  const longMatch = (lobby.trackHistory || []).length >= Math.max(8, lobby.players.length * 2);
+
+  for (const player of lobby.players) {
+    if (!player.accountId) continue;
+    const user = findUserById(player.accountId);
+    if (!user) continue;
+    ensureUserProgress(user);
+    const isSpy = lobby.spies.includes(player.id);
+    const won = isSpy ? !civiliansWin : civiliansWin;
+    const lines = [];
+    let total = 0;
+    const add = (amount, label, code) => {
+      total += amount;
+      lines.push({ amount, label, code });
+    };
+
+    if (!isSpy && civiliansWin) add(100, "Победа мирных", "civilian_win");
+    if (isSpy && !civiliansWin) add(perfectSpyIds.includes(player.id) ? 500 : 300, perfectSpyIds.includes(player.id) ? "Идеальная победа шпиона" : "Победа шпиона", perfectSpyIds.includes(player.id) ? "perfect_spy_win" : "spy_win");
+    if (!isSpy && correctVoters.has(player.id)) add(75, "Верное обвинение", "correct_accusation");
+    if (activePlayerIds.has(player.id)) add(50, "Выжил до финала", "survive_match");
+    if (won && Number(user.stats.winStreak || 0) > 1) add(Math.min(150, Number(user.stats.winStreak || 0) * 25), "Серия побед", "win_streak");
+    if (!isSpy && civiliansWin && lobby.spies.every((spyId) => Number(finalVotes?.[spyId] || 0) > 0)) add(50, "Чистая командная работа", "flawless_civilians");
+    if (!sameUtcDay(user.economy.lastDailyMatchAt, now)) add(100, "Первый матч дня", "daily_first_match");
+    if (longMatch) add(35, "Длинная партия", "long_match");
+    if (friendMatchAccountIds.has(user.id)) add(25, "Игра с друзьями", "social_friend");
+
+    rewards.push({ user, player, isSpy, won, total, lines });
+  }
+
+  const mvp = rewards.slice().sort((a, b) => b.total - a.total)[0];
+  if (mvp && mvp.total > 0) {
+    mvp.total += 100;
+    mvp.lines.push({ amount: 100, label: "MVP партии", code: "mvp" });
+    mvp.user.stats.mvpAwards = Number(mvp.user.stats.mvpAwards || 0) + 1;
+  }
+
+  for (const reward of rewards) {
+    if (reward.total > 0) addVinylTransaction(reward.user, reward.total, "match_reward", { code: lobby.code, lines: reward.lines });
+    reward.user.economy.lastDailyMatchAt = now;
+    if (friendMatchAccountIds.has(reward.user.id)) reward.user.stats.friendMatches = Number(reward.user.stats.friendMatches || 0) + 1;
+    if (!reward.isSpy && correctVoters.has(reward.player.id)) reward.user.stats.correctAccusations = Number(reward.user.stats.correctAccusations || 0) + 1;
+    if (perfectSpyIds.includes(reward.player.id)) {
+      reward.user.stats.perfectSpyGames = Number(reward.user.stats.perfectSpyGames || 0) + 1;
+      unlockCosmetic(reward.user, "title_perfect_manipulator", "perfect_spy_game");
+    }
+    reward.achievements = evaluateAchievements(reward.user);
+  }
+
+  return rewards.map((reward) => ({
+    playerId: reward.player.id,
+    accountId: reward.user.id,
+    total: reward.total,
+    lines: reward.lines,
+    balance: reward.user.economy.vinyls,
+    achievements: reward.achievements || []
+  }));
+}
+
+function updateUserProgressForGame(lobby, civiliansWin, finalVotes = {}, suspected = []) {
   let changed = false;
   const playerByAccount = new Map(lobby.players.filter((player) => player.accountId).map((player) => [player.accountId, player]));
   for (const user of usersStore.users) {
     const player = playerByAccount.get(user.id);
     if (!player) continue;
+    ensureUserProgress(user);
     const isSpy = lobby.spies.includes(player.id);
     const won = isSpy ? !civiliansWin : civiliansWin;
     const stats = { ...defaultStats(), ...(user.stats || {}) };
@@ -1489,7 +1755,9 @@ function updateUserStatsForGame(lobby, civiliansWin) {
     user.updatedAt = new Date().toISOString();
     changed = true;
   }
-  if (changed) saveUsersStore();
+  const economyRewards = buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected);
+  if (changed || economyRewards.length) saveUsersStore();
+  return economyRewards;
 }
 
 function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
@@ -1505,7 +1773,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const decoyReveal = !caughtSpy && suspected.length > 0;
   const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
-  updateUserStatsForGame(lobby, civiliansWin);
+  const economyRewards = updateUserProgressForGame(lobby, civiliansWin, finalVotes, suspected);
   lobby.phase = "ended";
   clearTimer(code);
 
@@ -1529,7 +1797,8 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     settings: lobby.settings,
     trackHistory: lobby.trackHistory || [],
     breakdown,
-    finalComments: lobby.finalComments || []
+    finalComments: lobby.finalComments || [],
+    economyRewards
   });
   emitLobbyUpdate(code);
 }
@@ -1730,6 +1999,7 @@ io.on("connection", (socket) => {
       displayName: normalizeName(displayName || username),
       avatar: "",
       stats: defaultStats(),
+      economy: defaultEconomy(),
       salt,
       passwordHash: hash,
       sessions: [],
@@ -1789,6 +2059,46 @@ io.on("connection", (socket) => {
     cb({ success: true, profile: profileForSocket(socket) });
   });
 
+
+  socket.on("economy:get", (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть магазин" });
+    ensureUserProgress(user);
+    cb({ success: true, catalog: SHOP_CATALOG, categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
+  });
+
+  socket.on("shop:purchase", ({ itemId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы покупать косметику" });
+    ensureUserProgress(user);
+    const item = catalogItemById(String(itemId || ""));
+    if (!item) return cb({ error: "Предмет не найден" });
+    if (item.achievementOnly) return cb({ error: "Этот предмет открывается достижением" });
+    if (user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Уже в коллекции" });
+    if (user.economy.vinyls < item.price) return cb({ error: "Недостаточно Vinyls" });
+    addVinylTransaction(user, -item.price, "shop_purchase", { itemId: item.id });
+    user.economy.ownedCosmetics.push(item.id);
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    cb({ success: true, item, economy: publicEconomy(user), profile: profileForSocket(socket) });
+    io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
+  });
+
+  socket.on("shop:equip", ({ itemId } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы экипировать косметику" });
+    ensureUserProgress(user);
+    const item = catalogItemById(String(itemId || ""));
+    if (!item) return cb({ error: "Предмет не найден" });
+    if (!user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Сначала купи или открой предмет" });
+    const category = SHOP_CATEGORIES.find((entry) => entry.id === item.category);
+    if (!category) return cb({ error: "Категория недоступна" });
+    user.economy.equipped[category.equipSlot] = item.id;
+    user.updatedAt = new Date().toISOString();
+    saveUsersStore();
+    cb({ success: true, item, economy: publicEconomy(user), profile: profileForSocket(socket) });
+    io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
+  });
 
   socket.on("social:get", (cb = () => {}) => {
     const user = socket.data.user;
@@ -2438,5 +2748,13 @@ module.exports = {
   pauseTurnTimer,
   resumeTurnTimer,
   adjustTurnTimer,
-  publicOpenLobbies
+  publicOpenLobbies,
+  COSMETIC_RARITIES,
+  SHOP_CATEGORIES,
+  SHOP_CATALOG,
+  ACHIEVEMENTS,
+  defaultEconomy,
+  normalizeEconomy,
+  ensureUserProgress,
+  buildEconomyRewardsForGame
 };

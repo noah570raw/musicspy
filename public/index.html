@@ -179,6 +179,7 @@
         <nav class="site-menu-tabs" aria-label="Разделы меню">
           <span class="site-menu-tabs-label">System</span>
           <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')"><span class="site-menu-tab-icon" aria-hidden="true">◉</span><span>Профиль</span></button>
+          <button id="settingsTabShop" class="site-menu-tab" type="button" onclick="openSettingsSection('shop')"><span class="site-menu-tab-icon" aria-hidden="true">◍</span><span>Магазин</span></button>
           <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')"><span class="site-menu-tab-icon" aria-hidden="true">✦</span><span>Внешний вид</span></button>
           <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')"><span class="site-menu-tab-icon" aria-hidden="true">≋</span><span>Игра</span></button>
           <button id="settingsTabLanguage" class="site-menu-tab" type="button" onclick="openSettingsSection('language')"><span class="site-menu-tab-icon" aria-hidden="true">⌁</span><span>Язык</span></button>
@@ -216,6 +217,7 @@
                 </div>
               </div>
               <div id="profileStatsGrid" class="profile-stats-grid"></div>
+              <div id="profileCosmeticShowcase" class="profile-cosmetic-showcase"></div>
               <div class="profile-editor-panel">
                 <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
                 <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
@@ -229,6 +231,10 @@
                 </div>
               </div>
             </div>
+          </section>
+
+          <section id="settingsPanelShop" class="site-menu-panel" data-settings-panel="shop">
+            <div id="shopPanelRoot" class="shop-panel-root"></div>
           </section>
 
           <section id="settingsPanelAppearance" class="site-menu-panel" data-settings-panel="appearance">
@@ -877,6 +883,7 @@
       <div class="results-main">
         <canvas id="shareCanvas" width="1200" height="1600" class="hidden" aria-hidden="true"></canvas>
         <div id="resultSharePreview" class="share-preview"></div>
+        <div id="resultEconomyRewards" class="result-economy-rewards"></div>
         <div id="resultBreakdown" class="result-breakdown"></div>
       </div>
       <aside class="results-side" aria-label="Послеигровой разбор">
