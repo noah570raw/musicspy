@@ -2131,7 +2131,7 @@ function updateAccountToggle(displayName, user) {
       : (guestLocked ? t("Гость") : t("Аккаунт и статистика"));
     toggle.setAttribute("aria-disabled", String(locked));
   }
-  if (label) label.innerHTML = user ? nameWithDevBadge(user, "Игрок", { showBadge: true }) : t("Гость");
+  if (label) label.innerHTML = user ? nameWithDevBadge(user, "Игрок", { showBadge: false }) : t("Гость");
   if (!avatar) return;
   avatar.innerHTML = user?.avatar
     ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
