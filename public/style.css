@@ -2798,9 +2798,16 @@ html[lang="ru"] .language-switcher span:first-child {
   max-width: min(280px, calc(100vw - 36px));
 }
 
-.account-toggle span:first-child {
+.account-toggle {
+  gap: 0.48rem;
+  max-width: 100%;
+  padding: 7px 13px 7px 8px;
+}
+
+.account-toggle > span:first-child {
   overflow: hidden;
   display: inline-grid;
+  flex: 0 0 auto;
   width: 30px;
   height: 30px;
   place-items: center;
@@ -2808,6 +2815,20 @@ html[lang="ru"] .language-switcher span:first-child {
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.34), rgba(255, 255, 255, 0.12));
   font-weight: 900;
+}
+
+.account-toggle strong {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.account-toggle strong .player-name-text,
+.account-toggle strong .dev-name-glow {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .account-toggle img,
