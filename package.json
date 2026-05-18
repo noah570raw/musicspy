@@ -12,7 +12,13 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "connect-pg-simple": "^10.0.0",
     "express": "^5.2.1",
+    "express-session": "^1.18.1",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.13.1",
     "socket.io": "^4.8.3"
   }
 }
