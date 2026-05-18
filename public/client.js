@@ -88,7 +88,8 @@ const state = {
   xpBooster: { canActivate: false, active: false, displayMultiplier: 2, activeUntil: null, cooldownUntil: null, remainingActiveMs: 0, remainingCooldownMs: 0 },
   xpBoosterTimer: null,
   xpBoosterHoldTimer: null,
-  xpBoosterHolding: false
+  xpBoosterHolding: false,
+  xpBoosterHoldStart: 0
 };
 
 function hasDevRole(entity) {
@@ -2253,35 +2254,66 @@ function currentXpBoosterTimes() {
 
 function renderXpBooster() {
   const root = $("xpBoosterCard");
-  const button = $("xpBoosterButton");
+  const core = $("xpBoosterButton");
   const buttonLabel = $("xpBoosterButtonLabel");
+  const modeLabel = $("xpBoosterModeLabel");
   const activeTimer = $("xpBoosterActiveTimer");
   const cooldownTimer = $("xpBoosterCooldownTimer");
   const stateLabel = $("xpBoosterStateLabel");
-  if (!root && !button) return;
+  if (!root && !core) return;
 
   const { activeRemaining, cooldownRemaining } = currentXpBoosterTimes();
   const active = activeRemaining > 0;
   const coolingDown = cooldownRemaining > 0;
-  const canActivate = Boolean(state.profile && !coolingDown);
+  const canActivate = Boolean(state.profile && !coolingDown && !active);
+  const cooldownMs = Math.max(1, Number(state.xpBooster?.cooldownMs || 6 * 60 * 60 * 1000));
+  const chargeRatio = active ? 1 : (state.profile ? (coolingDown ? Math.min(1, Math.max(0, 1 - (cooldownRemaining / cooldownMs))) : 1) : 0);
+  const chargePercent = `${Math.round(chargeRatio * 100)}%`;
+  const orbScale = (0.62 + (chargeRatio * 0.38)).toFixed(3);
+  const glowRatio = (0.35 + (chargeRatio * 0.75)).toFixed(3);
+  const ringOpacity = (0.34 + (chargeRatio * 0.52)).toFixed(3);
+  const orbitOpacity = (0.35 + (chargeRatio * 0.5)).toFixed(3);
+  const orbGlowTight = `${Math.round(18 + (38 * Number(glowRatio)))}px`;
+  const orbGlowWide = `${Math.round(42 + (68 * Number(glowRatio)))}px`;
+  const orbInnerGlow = `${Math.round(12 + (24 * Number(glowRatio)))}px`;
+  const chargeGlow = `${Math.round(16 * Number(glowRatio))}px`;
+  const pulseScale = (Number(active ? "1.04" : orbScale) * 1.045).toFixed(3);
+  const holdPulseFrom = (Number(active ? "1.04" : orbScale) * 1.03).toFixed(3);
+  const holdPulseTo = (Number(active ? "1.04" : orbScale) * 1.13).toFixed(3);
 
   if (root) {
     root.dataset.xpState = active ? "active" : (coolingDown ? "cooldown" : (state.profile ? "ready" : "locked"));
     root.classList.toggle("charging", state.xpBoosterHolding);
+    root.style.setProperty("--charge-progress", chargePercent);
+    root.style.setProperty("--charge-ratio", chargeRatio.toFixed(3));
+    root.style.setProperty("--orb-scale", active ? "1.04" : orbScale);
+    root.style.setProperty("--glow-ratio", active ? "1.18" : glowRatio);
+    root.style.setProperty("--ring-opacity", active ? "1" : ringOpacity);
+    root.style.setProperty("--orbit-opacity", active ? "1" : orbitOpacity);
+    root.style.setProperty("--orb-glow-tight", active ? "64px" : orbGlowTight);
+    root.style.setProperty("--orb-glow-wide", active ? "122px" : orbGlowWide);
+    root.style.setProperty("--orb-inner-glow", active ? "42px" : orbInnerGlow);
+    root.style.setProperty("--charge-glow", active ? "24px" : chargeGlow);
+    root.style.setProperty("--orb-pulse-scale", active ? "1.085" : pulseScale);
+    root.style.setProperty("--hold-pulse-from", active ? "1.07" : holdPulseFrom);
+    root.style.setProperty("--hold-pulse-to", active ? "1.18" : holdPulseTo);
+    root.style.setProperty("--hold-progress", state.xpBoosterHolding ? "100%" : "0%");
   }
   if (activeTimer) activeTimer.textContent = active ? formatXpBoosterActiveCountdown(activeRemaining) : "--:--";
-  if (cooldownTimer) cooldownTimer.textContent = coolingDown ? `Available in ${formatDailyRewardCountdown(cooldownRemaining)}` : (state.profile ? "READY" : "LOGIN");
+  if (cooldownTimer) cooldownTimer.textContent = active ? "BOOST ACTIVE" : (coolingDown ? `${chargePercent} · ${formatDailyRewardCountdown(cooldownRemaining)}` : (state.profile ? "100% READY" : "LOGIN"));
+  if (modeLabel) modeLabel.textContent = active ? "2X XP ACTIVE" : (coolingDown ? "CORE RECHARGING" : "2X XP BOOST");
   if (stateLabel) {
     stateLabel.textContent = active
-      ? "2x XP multiplier online — играй матчи прямо сейчас"
-      : (coolingDown ? "Core is cooling down before next overcharge" : "Hold core button for 1.5 seconds to activate");
+      ? "Unstable energized core is boosting every XP reward."
+      : (coolingDown ? "Energy is rebuilding inside the sphere during the 6h cooldown." : "Hold the glowing sphere for 1.5 seconds — release cancels charge.");
   }
-  if (button) {
-    button.disabled = !canActivate || active;
-    button.style.setProperty("--hold-progress", state.xpBoosterHolding ? "100%" : "0%");
+  if (core) {
+    core.setAttribute("aria-disabled", String(!canActivate));
+    core.setAttribute("aria-pressed", String(state.xpBoosterHolding));
+    core.setAttribute("aria-label", active ? "2X XP active" : (coolingDown ? `XP Booster recharging: ${chargePercent}` : "Hold the energy core for 1.5 seconds to activate XP Booster"));
   }
   if (buttonLabel) {
-    buttonLabel.textContent = active ? "BOOSTER ACTIVE" : (coolingDown ? "RECHARGING" : "HOLD TO ACTIVATE");
+    buttonLabel.textContent = active ? "BOOST ACTIVE" : (coolingDown ? "Charging from cooldown" : "Press and hold the sphere");
   }
 
   if (state.xpBoosterTimer) window.clearTimeout(state.xpBoosterTimer);
@@ -2291,19 +2323,36 @@ function renderXpBooster() {
 
 function startXpBoosterHold(event) {
   event?.preventDefault?.();
+  const core = $("xpBoosterButton");
+  if (event?.currentTarget?.setPointerCapture && event.pointerId !== undefined) {
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) {}
+  }
+  if (core && event?.clientX !== undefined && event?.clientY !== undefined) {
+    const rect = core.getBoundingClientRect();
+    core.style.setProperty("--pointer-x", `${event.clientX - rect.left}px`);
+    core.style.setProperty("--pointer-y", `${event.clientY - rect.top}px`);
+  }
   const { activeRemaining, cooldownRemaining } = currentXpBoosterTimes();
   if (!state.profile) return setStatus("xpBoosterStatus", "Войди в аккаунт, чтобы использовать XP Booster", true);
   if (activeRemaining > 0 || cooldownRemaining > 0) return;
   cancelXpBoosterHold();
   state.xpBoosterHolding = true;
+  state.xpBoosterHoldStart = Date.now();
   renderXpBooster();
   playSoundCue("click");
   state.xpBoosterHoldTimer = window.setTimeout(activateXpBooster, 1500);
 }
 
+function handleXpBoosterCoreKey(event) {
+  if (![" ", "Enter"].includes(event?.key)) return;
+  if (state.xpBoosterHolding) return event.preventDefault();
+  startXpBoosterHold(event);
+}
+
 function cancelXpBoosterHold() {
   if (state.xpBoosterHoldTimer) window.clearTimeout(state.xpBoosterHoldTimer);
   state.xpBoosterHoldTimer = null;
+  state.xpBoosterHoldStart = 0;
   if (state.xpBoosterHolding) {
     state.xpBoosterHolding = false;
     renderXpBooster();
