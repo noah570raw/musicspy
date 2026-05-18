@@ -339,41 +339,38 @@
               </div>
 
               <div class="xp-booster-stage">
-                <div class="xp-core-wrap" aria-hidden="true">
-                  <span class="xp-ring xp-ring-one"></span>
-                  <span class="xp-ring xp-ring-two"></span>
-                  <span class="xp-ring xp-ring-three"></span>
-                  <span class="xp-core-orb"><i></i></span>
-                  <span class="xp-shockwave"></span>
+                <div id="xpBoosterButton" class="xp-core-wrap" role="button" tabindex="0" aria-label="Hold the energy core for 1.5 seconds to activate XP Booster"
+                  onpointerdown="startXpBoosterHold(event)" onpointerup="cancelXpBoosterHold()" onpointerleave="cancelXpBoosterHold()" onpointercancel="cancelXpBoosterHold()"
+                  onkeydown="handleXpBoosterCoreKey(event)" onkeyup="cancelXpBoosterHold()">
+                  <span class="xp-core-orbit xp-core-orbit-one" aria-hidden="true"></span>
+                  <span class="xp-core-orbit xp-core-orbit-two" aria-hidden="true"></span>
+                  <span class="xp-charge-track" aria-hidden="true"></span>
+                  <span class="xp-ring xp-ring-one" aria-hidden="true"></span>
+                  <span class="xp-ring xp-ring-two" aria-hidden="true"></span>
+                  <span class="xp-ring xp-ring-three" aria-hidden="true"></span>
+                  <span class="xp-cursor-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                  <span class="xp-core-orb" aria-hidden="true"><i></i><b></b></span>
+                  <span class="xp-hold-progress" aria-hidden="true"></span>
+                  <span class="xp-shockwave" aria-hidden="true"></span>
                 </div>
                 <div class="xp-boost-copy">
-                  <span>2X XP BOOST</span>
-                  <strong>Duration: 1 hour</strong>
-                  <small id="xpBoosterStateLabel">Hold core button to charge booster</small>
+                  <span id="xpBoosterModeLabel">2X XP BOOST</span>
+                  <strong id="xpBoosterButtonLabel">Hold energy core</strong>
+                  <small id="xpBoosterStateLabel">Hold the glowing sphere for 1.5 seconds</small>
+                  <div class="xp-booster-metrics" aria-live="polite">
+                    <div class="xp-metric active-metric">
+                      <span>Booster time</span>
+                      <strong id="xpBoosterActiveTimer">--:--</strong>
+                    </div>
+                    <div class="xp-metric cooldown-metric">
+                      <span>Core charge</span>
+                      <strong id="xpBoosterCooldownTimer">READY</strong>
+                    </div>
+                  </div>
+                  <p id="xpBoosterStatus" class="status xp-booster-status" aria-live="polite"></p>
                 </div>
               </div>
-
-              <div class="xp-booster-metrics" aria-live="polite">
-                <div class="xp-metric active-metric">
-                  <span>Booster time</span>
-                  <strong id="xpBoosterActiveTimer">--:--</strong>
-                </div>
-                <div class="xp-metric cooldown-metric">
-                  <span>Next use</span>
-                  <strong id="xpBoosterCooldownTimer">READY</strong>
-                </div>
-              </div>
-
-              <div class="xp-activate-panel">
-                <button id="xpBoosterButton" class="xp-hold-button" type="button"
-                  onpointerdown="startXpBoosterHold(event)" onpointerup="cancelXpBoosterHold()" onpointerleave="cancelXpBoosterHold()" onpointercancel="cancelXpBoosterHold()">
-                  <span class="xp-button-progress" aria-hidden="true"></span>
-                  <span class="xp-button-energy" aria-hidden="true"></span>
-                  <strong id="xpBoosterButtonLabel">HOLD TO ACTIVATE</strong>
-                </button>
-                <div id="xpBoosterSuccess" class="xp-success-popup" aria-live="polite">2X XP Activated</div>
-                <p id="xpBoosterStatus" class="status xp-booster-status" aria-live="polite"></p>
-              </div>
+              <div id="xpBoosterSuccess" class="xp-success-popup" aria-live="polite">2X XP Activated</div>
             </div>
           </section>
 
