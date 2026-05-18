@@ -6297,12 +6297,27 @@ body[data-screen="lobby"] .app-shell {
 }
 
 .lobby-player-info strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-width: 0;
   overflow: hidden;
   font-size: 1.06rem;
   letter-spacing: -0.02em;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.lobby-player-info strong .dev-badge {
+  flex: 0 0 auto;
+  margin-right: 0;
+}
+
+.lobby-player-info strong .dev-name-glow,
+.lobby-player-info strong .player-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lobby-player-info span {
@@ -9176,21 +9191,26 @@ body,
   background:
     linear-gradient(110deg, rgba(5, 46, 22, 0.95), rgba(34, 197, 94, 0.34), rgba(20, 83, 45, 0.95));
   color: #dcfce7;
-  box-shadow:
-    0 0 10px rgba(34, 197, 94, 0.75),
-    inset 0 0 12px rgba(187, 247, 208, 0.22);
+  overflow: hidden;
+  box-shadow: inset 0 0 7px rgba(187, 247, 208, 0.16);
   font-size: 0.68em;
   font-weight: 950;
   letter-spacing: 0.13em;
   line-height: 1.25;
-  text-shadow: 0 0 10px rgba(220, 252, 231, 0.92);
+  text-shadow: 0 0 5px rgba(220, 252, 231, 0.5);
   vertical-align: middle;
   animation: devBadgePulse 1.9s ease-in-out infinite;
 }
 
 .dev-name-glow {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   color: #dcfce7;
   font-weight: 850;
+  text-overflow: ellipsis;
+  vertical-align: middle;
   text-shadow:
     0 0 5px rgba(220, 252, 231, 0.48),
     0 0 12px rgba(34, 197, 94, 0.32);
@@ -9198,10 +9218,7 @@ body,
 
 .dev-badge:hover {
   transform: translateY(-1px) scale(1.04);
-  box-shadow:
-    0 0 16px rgba(34, 197, 94, 0.95),
-    0 0 28px rgba(34, 197, 94, 0.38),
-    inset 0 0 14px rgba(187, 247, 208, 0.28);
+  box-shadow: inset 0 0 8px rgba(187, 247, 208, 0.2);
 }
 
 .dev-profile-card,
@@ -9236,17 +9253,12 @@ body,
 
 @keyframes devBadgePulse {
   0%, 100% {
-    filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.55));
-    box-shadow:
-      0 0 9px rgba(34, 197, 94, 0.62),
-      inset 0 0 11px rgba(187, 247, 208, 0.18);
+    filter: none;
+    box-shadow: inset 0 0 6px rgba(187, 247, 208, 0.14);
   }
   50% {
-    filter: drop-shadow(0 0 11px rgba(34, 197, 94, 0.9));
-    box-shadow:
-      0 0 16px rgba(34, 197, 94, 0.88),
-      0 0 26px rgba(34, 197, 94, 0.28),
-      inset 0 0 15px rgba(187, 247, 208, 0.3);
+    filter: none;
+    box-shadow: inset 0 0 8px rgba(187, 247, 208, 0.2);
   }
 }
 
