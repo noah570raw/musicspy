@@ -48,6 +48,10 @@ const DEFAULT_MAX_PLAYERS = 9;
 const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8, 9];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const DEV_USERNAMES = new Set(["noah570raw"]);
+const DEV_ROLE = "dev";
+const DEV_VINYL_BALANCE = 999_999_999;
+
 
 const lobbies = {};
 const timers = {};
@@ -171,6 +175,7 @@ const SIMILAR_THEME_GROUPS = [
 
 let usersStore = userStorePersistence.read();
 ensureSocialCollections();
+if ((usersStore.users || []).some((user) => applyRoleEntitlements(user))) saveUsersStore();
 
 function saveUsersStore() {
   userStorePersistence.write(usersStore);
@@ -227,6 +232,37 @@ function catalogItemById(itemId) {
   return SHOP_CATALOG.find((item) => item.id === itemId) || null;
 }
 
+function isDeveloperUser(user) {
+  return Boolean(user && DEV_USERNAMES.has(String(user.username || "").trim().toLowerCase()));
+}
+
+function normalizeRoles(user) {
+  const roles = new Set(Array.isArray(user?.roles) ? user.roles.map((role) => String(role).toLowerCase()) : []);
+  if (isDeveloperUser(user)) roles.add(DEV_ROLE);
+  return Array.from(roles);
+}
+
+function hasRole(user, role) {
+  return normalizeRoles(user).includes(String(role || "").toLowerCase());
+}
+
+function applyRoleEntitlements(user) {
+  if (!user) return false;
+  user.roles = normalizeRoles(user);
+  if (!hasRole(user, DEV_ROLE)) return false;
+  const economy = normalizeEconomy(user.economy || {});
+  const allCosmetics = SHOP_CATALOG.map((item) => item.id);
+  const owned = new Set([...(economy.ownedCosmetics || []), ...allCosmetics]);
+  economy.ownedCosmetics = Array.from(owned);
+  economy.vinyls = Math.max(Number(economy.vinyls || 0), DEV_VINYL_BALANCE);
+  user.economy = economy;
+  return true;
+}
+
+function publicRoles(user) {
+  return normalizeRoles(user);
+}
+
 function normalizeEconomy(economy = {}) {
   const owned = new Set(Array.isArray(economy.ownedCosmetics) ? economy.ownedCosmetics.map(String) : []);
   for (const item of SHOP_CATALOG.filter((entry) => entry.price === 0 && entry.achievementOnly !== true)) owned.add(item.id);
@@ -253,6 +289,7 @@ function ensureUserProgress(user) {
   if (!user) return null;
   user.stats = { ...defaultStats(), ...(user.stats || {}) };
   user.economy = normalizeEconomy(user.economy || {});
+  applyRoleEntitlements(user);
   return user.economy;
 }
 
@@ -279,6 +316,8 @@ function publicUser(user) {
     createdAt: user.createdAt,
     stats: { ...defaultStats(), ...(user.stats || {}) },
     economy: publicEconomy(user),
+    roles: publicRoles(user),
+    permissions: { dev: hasRole(user, DEV_ROLE) },
     settings: { ...(user.settings || {}) }
   };
 }
@@ -338,7 +377,9 @@ function publicSocialUser(user, viewerId = "") {
     online: status.online,
     activity: status.activity,
     lobby: status.lobby,
-    unread: getUnreadDirectCount(viewerId, user.id)
+    unread: getUnreadDirectCount(viewerId, user.id),
+    roles: publicRoles(user),
+    permissions: { dev: hasRole(user, DEV_ROLE) }
   };
 }
 
@@ -513,6 +554,7 @@ function markDirectRead(userId, friendId) {
 
 function registerAuthenticatedSocket(socket, user) {
   if (!user) return;
+  ensureUserProgress(user);
   if (socket.data.user?.id && socket.data.user.id !== user.id) unregisterAuthenticatedSocket(socket);
   socket.data.user = user;
   socket.join(`user:${user.id}`);
@@ -592,6 +634,7 @@ function upsertOAuthUser(provider, profile) {
       createdAt: now,
       updatedAt: now
     };
+    ensureUserProgress(user);
     usersStore.users.push(user);
   } else {
     user.displayName = user.displayName || displayName;
@@ -685,6 +728,8 @@ function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
     guest: !user,
     name,
     avatar: user?.avatar || "",
+    roles: publicRoles(user),
+    permissions: { dev: hasRole(user, DEV_ROLE) },
     ready: false,
     reconnectToken: normalizeReconnectToken(reconnectToken),
     disconnected: false,
@@ -1602,6 +1647,7 @@ function startSpyGuess(code, suspected, voteTotals) {
 function addVinylTransaction(user, amount, reason, meta = {}) {
   const economy = ensureUserProgress(user);
   if (!economy || !amount) return null;
+  if (hasRole(user, DEV_ROLE) && amount < 0) return null;
   const transaction = {
     id: crypto.randomUUID(),
     amount: Math.floor(amount),
@@ -1609,7 +1655,7 @@ function addVinylTransaction(user, amount, reason, meta = {}) {
     meta,
     createdAt: new Date().toISOString()
   };
-  economy.vinyls = Math.max(0, economy.vinyls + transaction.amount);
+  economy.vinyls = hasRole(user, DEV_ROLE) ? Math.max(DEV_VINYL_BALANCE, economy.vinyls) : Math.max(0, economy.vinyls + transaction.amount);
   economy.xp += Math.max(0, transaction.amount);
   economy.level = Math.max(economy.level || 1, Math.floor(economy.xp / 1000) + 1);
   economy.transactions = [...(economy.transactions || []), transaction].slice(-80);
@@ -1997,6 +2043,7 @@ io.on("connection", (socket) => {
       id: crypto.randomUUID(),
       username: normalizedUsername,
       displayName: normalizeName(displayName || username),
+      roles: DEV_USERNAMES.has(normalizedUsername) ? [DEV_ROLE] : [],
       avatar: "",
       stats: defaultStats(),
       economy: defaultEconomy(),
@@ -2075,8 +2122,9 @@ io.on("connection", (socket) => {
     if (!item) return cb({ error: "Предмет не найден" });
     if (item.achievementOnly) return cb({ error: "Этот предмет открывается достижением" });
     if (user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Уже в коллекции" });
-    if (user.economy.vinyls < item.price) return cb({ error: "Недостаточно Vinyls" });
-    addVinylTransaction(user, -item.price, "shop_purchase", { itemId: item.id });
+    const isDev = hasRole(user, DEV_ROLE);
+    if (!isDev && user.economy.vinyls < item.price) return cb({ error: "Недостаточно Vinyls" });
+    if (!isDev) addVinylTransaction(user, -item.price, "shop_purchase", { itemId: item.id });
     user.economy.ownedCosmetics.push(item.id);
     user.updatedAt = new Date().toISOString();
     saveUsersStore();
@@ -2090,7 +2138,7 @@ io.on("connection", (socket) => {
     ensureUserProgress(user);
     const item = catalogItemById(String(itemId || ""));
     if (!item) return cb({ error: "Предмет не найден" });
-    if (!user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Сначала купи или открой предмет" });
+    if (!hasRole(user, DEV_ROLE) && !user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Сначала купи или открой предмет" });
     const category = SHOP_CATEGORIES.find((entry) => entry.id === item.category);
     if (!category) return cb({ error: "Категория недоступна" });
     user.economy.equipped[category.equipSlot] = item.id;
@@ -2474,6 +2522,8 @@ io.on("connection", (socket) => {
       id: `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
       playerId: socket.id,
       playerName: player.name,
+      roles: player.roles || [],
+      permissions: player.permissions || {},
       text: messageText,
       createdAt: Date.now()
     };
@@ -2497,6 +2547,8 @@ io.on("connection", (socket) => {
       id: `${Date.now()}-${crypto.randomBytes(3).toString("hex")}`,
       playerId: socket.id,
       playerName: player.name,
+      roles: player.roles || [],
+      permissions: player.permissions || {},
       text: messageText,
       createdAt: Date.now()
     };

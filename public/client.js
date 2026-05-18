@@ -85,6 +85,24 @@ const state = {
   shopStatus: ""
 };
 
+function hasDevRole(entity) {
+  const roles = Array.isArray(entity?.roles) ? entity.roles.map((role) => String(role).toLowerCase()) : [];
+  return Boolean(entity?.permissions?.dev || roles.includes("dev"));
+}
+
+function devBadgeMarkup() {
+  return `<span class="dev-badge" title="Official developer account">[ DEV ]</span>`;
+}
+
+function nameWithDevBadge(entity, fallback = "Игрок") {
+  const name = escapeHtml(entity?.name || entity?.displayName || entity?.nickname || entity?.username || t(fallback));
+  return `${hasDevRole(entity) ? devBadgeMarkup() : ""}<span class="player-name-text">${name}</span>`;
+}
+
+function vinylBalanceLabel() {
+  return hasDevRole(state.profile) ? "∞ Vinyls" : `${vinylBalance().toLocaleString("ru-RU")} Vinyls`;
+}
+
 const APPEARANCE_STORAGE_KEY = "musicSpyAppearance";
 const GAME_PREFERENCES_STORAGE_KEY = "musicSpyGamePreferences";
 const LOCAL_APPEARANCE_SCREENS = new Set(["menu", "playRooms", "createLobbySetup", "lobby"]);
@@ -220,7 +238,7 @@ function renderFriendCard(friend) {
       </div>
       <div class="friend-meta">
         <div class="friend-name-row">
-          <strong class="friend-name">${escapeHtml(name)}</strong>
+          <strong class="friend-name">${nameWithDevBadge(friend)}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -255,7 +273,7 @@ function renderFriendRequests() {
     <article class="friend-request-card" data-request-id="${escapeAttribute(request.id)}">
       <div class="friend-avatar" aria-hidden="true">${friendAvatarMarkup(user)}</div>
       <div class="friend-meta">
-        <strong class="friend-name">${escapeHtml(name)}</strong>
+        <strong class="friend-name">${nameWithDevBadge(user)}</strong>
         <span class="friend-activity">хочет стать другом</span>
       </div>
       <div class="friend-request-actions">
@@ -2054,10 +2072,11 @@ function applyProfile(profileData = { user: null, guest: true }) {
   const user = state.profile;
   const displayName = user?.displayName || $("name").value.trim() || t("Гость");
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
+  $("accountProfileView")?.classList.toggle("dev-profile-card", hasDevRole(user));
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
-  if ($("profileName")) $("profileName").textContent = displayName;
-  if ($("profileLogin")) $("profileLogin").textContent = user ? `@${user.username}` : t("гость без регистрации");
+  if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName });
+  if ($("profileLogin")) $("profileLogin").innerHTML = user ? `${hasDevRole(user) ? devBadgeMarkup() : ""}@${escapeHtml(user.username)}` : t("гость без регистрации");
   if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
   if ($("profileAvatar")) {
     $("profileAvatar").innerHTML = user?.avatar
@@ -2098,7 +2117,7 @@ function updateAccountToggle(displayName, user) {
       : (guestLocked ? t("Гость") : t("Аккаунт и статистика"));
     toggle.setAttribute("aria-disabled", String(locked));
   }
-  if (label) label.textContent = user ? displayName : t("Гость");
+  if (label) label.innerHTML = user ? nameWithDevBadge(user) : t("Гость");
   if (!avatar) return;
   avatar.innerHTML = user?.avatar
     ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
@@ -2130,7 +2149,7 @@ function renderProfileStats() {
     ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
     ["🎯", t("Любимая роль"), bestRole],
     ["🔥", t("Серия побед"), stats.winStreak || 0],
-    ["◍", "Vinyls", vinylBalance().toLocaleString("ru-RU")],
+    ["◍", "Vinyls", hasDevRole(state.profile) ? "∞" : vinylBalance().toLocaleString("ru-RU")],
     ["⭐", "Уровень", state.profile.economy?.level || 1]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">
@@ -2281,7 +2300,7 @@ function renderShop(celebrate = false) {
       <div class="shop-balance-card">
         <div class="vinyl-coin"><span></span></div>
         <small>Баланс</small>
-        <strong>${vinylBalance().toLocaleString("ru-RU")} Vinyls</strong>
+        <strong class="${hasDevRole(state.profile) ? "dev-balance" : ""}">${vinylBalanceLabel()}</strong>
         <em>Level ${Number(state.profile.economy?.level || 1)} · ${Number(state.profile.economy?.xp || 0).toLocaleString("ru-RU")} XP</em>
       </div>
     </div>
@@ -2296,7 +2315,7 @@ function renderShopItemCard(item, owned, equipped) {
   const category = state.shopCategories.find((entry) => entry.id === item.category) || {};
   const isOwned = owned.has(item.id);
   const isEquipped = equipped[category.equipSlot] === item.id;
-  const canAfford = vinylBalance() >= Number(item.price || 0);
+  const canAfford = hasDevRole(state.profile) || vinylBalance() >= Number(item.price || 0);
   const action = isEquipped
     ? `<button class="secondary" type="button" disabled>Экипировано</button>`
     : isOwned
@@ -2517,7 +2536,7 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
         <span class="lobby-online-dot" aria-hidden="true"></span>
       </div>
       <div class="lobby-player-info">
-        <strong>${escapeHtml(player.name || t("Игрок"))}</strong>
+        <strong>${nameWithDevBadge(player)}</strong>
         <span>${isMe ? t("это ты") : t("в комнате")}</span>
       </div>
       <div class="lobby-player-badges">
@@ -3644,7 +3663,7 @@ function canSeeSpyMarkers() {
 }
 
 function playerNameMarkup(player, fallback = "Игрок") {
-  const name = escapeHtml(player?.name || t(fallback));
+  const name = nameWithDevBadge(player, fallback);
   const isVisibleSpy = canSeeSpyMarkers() && state.spyIds.includes(player?.id);
   return `<strong class="${isVisibleSpy ? "spy-visible-name" : ""}">${name}</strong>${isVisibleSpy ? `<small class="spy-visible-badge">${t("Шпион")}</small>` : ""}`;
 }
@@ -3698,7 +3717,7 @@ function renderHostControls() {
     const isCurrent = player.id === state.currentPlayerId;
     return `
       <div class="kick-row host-player-row">
-        <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
+        <span>${nameWithDevBadge(player)} ${isMe ? `(${t("ты")})` : ""}</span>
         <div class="host-player-actions">
           <button class="mini-action" ${isCurrent ? "disabled" : ""} onclick="hostSetTurn('${escapeAttribute(player.id)}')">${isCurrent ? t("ходит") : t("передать")}</button>
           <button class="mini-action danger" ${isMe ? "disabled" : ""} onclick="hostKickPlayer('${escapeAttribute(player.id)}')">${isMe ? t("хост") : t("кик")}</button>
@@ -3801,7 +3820,7 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
     return `
       <div class="history-row">
         <span>${t(`Раунд ${track.round}, ход ${track.turnNumber || "?"}`)}</span>
-        <strong>${escapeHtml(track.playerName || t("Игрок"))}</strong>
+        <strong>${nameWithDevBadge(state.players.find((player) => player.id === track.playerId) || { name: track.playerName })}</strong>
         <small>${formatReactions(track.reactions)}</small>
         <div class="history-row-link">${link}</div>
       </div>
@@ -3838,7 +3857,7 @@ function renderChat(messages = state.chatMessages) {
     return `
       <div class="chat-message ${isMine ? "mine" : ""}">
         <div class="chat-message-meta">
-          <strong>${escapeHtml(message.playerName || t("Игрок"))}</strong>
+          <strong>${nameWithDevBadge({ name: message.playerName, roles: message.roles, permissions: message.permissions })}</strong>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
         <p>${escapeHtml(message.text || "")}</p>
@@ -4107,7 +4126,7 @@ function renderVoteList(votes = {}) {
     const countMarkup = state.anonymousVoting ? "<strong>?</strong>" : `<strong>${voteCounts[player.id] || 0}</strong>`;
     return `
       <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
-        <span>${escapeHtml(player.name)} ${isMe ? `(${t("ты")})` : ""}</span>
+        <span>${nameWithDevBadge(player)} ${isMe ? `(${t("ты")})` : ""}</span>
         ${countMarkup}
       </button>
     `;
@@ -4161,7 +4180,7 @@ function renderFinalComments(comments = state.finalComments) {
   state.finalComments = comments || [];
   box.classList.toggle("empty", !state.finalComments.length);
   box.innerHTML = state.finalComments.length ? state.finalComments.map((comment) => `
-    <div class="final-comment"><strong>${escapeHtml(comment.playerName || t("Игрок"))}</strong><span>${escapeHtml(comment.text || "")}</span></div>
+    <div class="final-comment"><strong>${nameWithDevBadge(state.players.find((player) => player.id === comment.playerId) || { name: comment.playerName })}</strong><span>${escapeHtml(comment.text || "")}</span></div>
   `).join("") : t("Комментариев пока нет");
 }
 
@@ -4323,7 +4342,7 @@ function renderResults(data) {
 
   $("resultVotes").innerHTML = state.players.map((player) => `
     <div class="vote-row static">
-      <span>${escapeHtml(player.name)}</span>
+      <span>${nameWithDevBadge(player)}</span>
       <strong>${data.votes[player.id] || 0}</strong>
     </div>
   `).join("");
