@@ -484,85 +484,35 @@
   </div>
 
   <main class="app-shell">
-    <section id="menu" class="screen neon-os hero-card" aria-label="Music Spy neon vinyl terminal">
-      <nav class="neon-side-nav" aria-label="Навигация Music Spy">
-        <span class="nav-scanline" aria-hidden="true"></span>
-        <button class="neon-nav-item active" type="button" onclick="showScreen('menu')"><span aria-hidden="true">⌂</span><b>Главная</b></button>
-        <button class="neon-nav-item" type="button" onclick="showPlayRooms()"><span aria-hidden="true">▷</span><b>Играть</b></button>
-        <button class="neon-nav-item" type="button" onclick="openMainMenu(); openSettingsSection('daily')"><span aria-hidden="true">✦</span><b>Награды</b></button>
-        <button class="neon-nav-item" type="button" onclick="openMainMenu(); openSettingsSection('xpbooster')"><span aria-hidden="true">⚡</span><b>XP Booster</b></button>
-        <button class="neon-nav-item" type="button" onclick="openMainMenu(); openSettingsSection('shop')"><span aria-hidden="true">◇</span><b>Инвентарь</b></button>
-        <button class="neon-nav-item" type="button" onclick="openMainMenu(); openSettingsSection('profile')"><span aria-hidden="true">◉</span><b>Профиль</b></button>
-        <button class="neon-nav-item" type="button" onclick="openMainMenu(); openSettingsSection('appearance')"><span aria-hidden="true">⌁</span><b>Настройки</b></button>
-      </nav>
+    <section id="menu" class="screen card hero-card">
+      <p class="eyebrow">Шпион помузыкальски</p>
+      <h1>Music Spy</h1>
+      <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
 
-      <div class="vinyl-command-center">
-        <p class="eyebrow">classified audio intelligence</p>
-        <h1>Music Spy</h1>
-        <p class="lead">Секретная музыкальная система разведки: собери комнату, включи треки и вычисли шпиона по аудио-уликам.</p>
-
-        <div class="home-vinyl-core" aria-hidden="true">
-          <div class="home-vinyl-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="home-vinyl-disc">
-            <span class="vinyl-outer-ring"></span>
-            <span class="vinyl-scanner-ring"></span>
-            <span class="vinyl-groove-layer"></span>
-            <span class="vinyl-reflection"></span>
-            <span class="vinyl-inner-core">
-              <b>▶</b>
-              <i></i><i></i><i></i><i></i><i></i>
-              <small>MATCH IDLE</small>
-            </span>
-          </div>
-        </div>
-
-        <div class="terminal-access-panel">
-          <div class="form-grid access-grid">
-            <label>
-              <span>Никнейм</span>
-              <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-            </label>
-            <label>
-              <span>Код комнаты</span>
-              <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-            </label>
-          </div>
-
-          <div class="actions two-col neon-actions">
-            <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
-            <button class="secondary" onclick="joinLobby()">Войти по коду</button>
-            <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
-            <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
-          </div>
-          <p id="menuError" class="status error"></p>
-        </div>
+      <div class="form-grid">
+        <label>
+          <span>Никнейм</span>
+          <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
+        </label>
+        <label>
+          <span>Код комнаты</span>
+          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+        </label>
       </div>
 
-      <aside class="system-modules" aria-label="System modules">
-        <article class="system-module daily-module">
-          <span class="module-kicker">Daily Reward</span>
-          <div class="reward-disc" aria-hidden="true"><i></i></div>
-          <strong>Забрать награду</strong>
-          <small>live countdown · premium streak</small>
-        </article>
-        <article class="system-module booster-module">
-          <span class="module-kicker">XP Booster</span>
-          <div class="mini-core" aria-hidden="true"></div>
-          <strong>Energy core ready</strong>
-          <small>hold · overcharge · rebuild</small>
-        </article>
-        <article class="system-module friends-module">
-          <span class="module-kicker">Friends Online</span>
-          <div class="friend-signals" aria-hidden="true"><i></i><i></i><i></i></div>
-          <strong>Signal stack</strong>
-          <small>avatar glow · voice pulse</small>
-        </article>
-        <article class="system-module event-module">
-          <span class="module-kicker">Event Card</span>
-          <strong>Neon vinyl ops</strong>
-          <small>holographic rarity active</small>
-        </article>
-      </aside>
+      <div class="actions two-col">
+        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
+        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
+        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
+        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
+      </div>
+
+      <div class="rules">
+        <div><strong>3+</strong><span>игрока</span></div>
+        <div><strong>30с</strong><span>на трек</span></div>
+        <div><strong>3</strong><span>круга</span></div>
+      </div>
+      <p id="menuError" class="status error"></p>
     </section>
 
     <section id="playRooms" class="screen card play-rooms-card hidden" aria-labelledby="playRoomsTitle">
@@ -938,21 +888,16 @@
         </div>
       </aside>
 
-      <section id="gamePlayerPanel" class="card player-card vinyl-player-card">
-        <div class="player-stage vinyl-player-core">
-          <div class="game-vinyl-shell">
-            <div class="timer-ring vinyl-timer-ring">
-              <svg viewBox="0 0 120 120" aria-hidden="true">
-                <circle class="track" cx="60" cy="60" r="54"></circle>
-                <circle id="timerCircle" class="progress" cx="60" cy="60" r="54"></circle>
-              </svg>
-              <div><strong id="timer">∞</strong><span>сек</span></div>
-            </div>
-            <span class="game-vinyl-outer"></span>
-            <span class="game-vinyl-surface"></span>
-            <span class="game-vinyl-visualizer"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-            <span class="game-vinyl-center"><b>LIVE</b><small>AUDIO DECK</small></span>
-          </div>
+      <section id="gamePlayerPanel" class="card player-card">
+        <div class="timer-ring">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="54"></circle>
+            <circle id="timerCircle" class="progress" cx="60" cy="60" r="54"></circle>
+          </svg>
+          <div><strong id="timer">∞</strong><span>сек</span></div>
+        </div>
+
+        <div class="player-stage">
           <div id="embed" class="embed empty">
             <span>Ждем трек от текущего игрока</span>
           </div>
