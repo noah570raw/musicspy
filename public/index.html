@@ -246,15 +246,62 @@
           </section>
 
           <section id="settingsPanelDaily" class="site-menu-panel" data-settings-panel="daily">
-            <div class="settings-block daily-reward-card">
-              <div class="settings-title compact">
-                <strong>Daily reward</strong>
-                <span>Каждые 24 часа забирай 300 Vinyls на аккаунт.</span>
+            <div id="dailyRewardCard" class="settings-block daily-reward-card daily-reward-arena">
+              <div class="daily-ambient daily-ambient-a" aria-hidden="true"></div>
+              <div class="daily-ambient daily-ambient-b" aria-hidden="true"></div>
+              <div class="daily-particle-field" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
               </div>
-              <div class="daily-reward-amount"><span aria-hidden="true">◍</span><strong>+300 Vinyls</strong></div>
-              <p id="dailyRewardTimer" class="daily-reward-timer">Загрузка таймера...</p>
-              <button id="dailyRewardButton" class="primary" type="button" onclick="claimDailyReward()">Получить награду</button>
-              <p id="dailyRewardStatus" class="status" aria-live="polite"></p>
+
+              <div class="daily-reward-header">
+                <div class="daily-title-stack">
+                  <span class="daily-kicker">Premium login streak</span>
+                  <h3>Daily Reward</h3>
+                  <p>Возвращайся каждый день и собирай винилы</p>
+                </div>
+                <div class="daily-countdown-capsule" aria-live="polite">
+                  <span>Next reward in:</span>
+                  <strong id="dailyRewardTimer">23:14:02</strong>
+                </div>
+              </div>
+
+              <div class="daily-reward-stage">
+                <div class="daily-main-reward" id="dailyMainReward">
+                  <div class="daily-vinyl-orbit" aria-hidden="true">
+                    <span class="daily-vinyl-coin"><i></i></span>
+                  </div>
+                  <div class="daily-main-copy">
+                    <span class="daily-reward-label">Сегодняшний дроп</span>
+                    <strong id="dailyRewardAmount">+300 VINYLS</strong>
+                    <small>AAA бонус за вход • цикл из 7 дней</small>
+                  </div>
+                </div>
+
+                <div class="daily-claim-panel">
+                  <button id="dailyRewardButton" class="daily-claim-button" type="button" onclick="claimDailyReward()">
+                    <span>Получить награду</span>
+                    <i aria-hidden="true"></i>
+                  </button>
+                  <div id="dailyRewardSuccess" class="daily-success-popup" aria-live="polite">+300 VINYLS added</div>
+                  <p id="dailyRewardStatus" class="status daily-reward-status" aria-live="polite"></p>
+                </div>
+              </div>
+
+              <div class="daily-streak-system">
+                <div class="daily-section-title">
+                  <strong>Daily streak</strong>
+                  <span>Day 7 завершает цикл и запускает новый раунд наград</span>
+                </div>
+                <div id="dailyStreakTrack" class="daily-streak-track" aria-label="Daily reward streak"></div>
+              </div>
+
+              <div class="daily-bonus-missions">
+                <div class="daily-section-title">
+                  <strong>Bonus missions</strong>
+                  <span>Короткие квесты для ускорения экономики</span>
+                </div>
+                <div id="dailyBonusMissions" class="daily-mission-grid"></div>
+              </div>
             </div>
           </section>
 

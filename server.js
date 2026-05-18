@@ -80,8 +80,10 @@ const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const DEV_USERNAMES = new Set(["noah570raw"]);
 const DEV_ROLE = "dev";
 const DEV_VINYL_BALANCE = 999_999_999;
-const DAILY_REWARD_AMOUNT = 300;
+const DAILY_REWARD_STREAK_AMOUNTS = [300, 350, 400, 450, 500, 650, 700];
+const DAILY_REWARD_AMOUNT = DAILY_REWARD_STREAK_AMOUNTS[0];
 const DAILY_REWARD_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
 
 
 const lobbies = {};
@@ -290,7 +292,8 @@ function defaultEconomy() {
     equipped: {},
     achievements: {},
     transactions: [],
-    lastDailyRewardAt: null
+    lastDailyRewardAt: null,
+    dailyRewardStreak: 0
   };
 }
 
@@ -348,7 +351,8 @@ function normalizeEconomy(economy = {}) {
     equipped: safeEquipped,
     achievements: economy.achievements && typeof economy.achievements === "object" ? economy.achievements : {},
     transactions: Array.isArray(economy.transactions) ? economy.transactions.slice(-80) : [],
-    lastDailyRewardAt: economy.lastDailyRewardAt && !Number.isNaN(Date.parse(economy.lastDailyRewardAt)) ? economy.lastDailyRewardAt : null
+    lastDailyRewardAt: economy.lastDailyRewardAt && !Number.isNaN(Date.parse(economy.lastDailyRewardAt)) ? economy.lastDailyRewardAt : null,
+    dailyRewardStreak: Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Math.floor(Number(economy.dailyRewardStreak || 0))))
   };
 }
 
@@ -369,7 +373,8 @@ function publicEconomy(user) {
     ownedCosmetics: economy.ownedCosmetics,
     equipped: economy.equipped,
     achievements: economy.achievements,
-    lastDailyRewardAt: economy.lastDailyRewardAt || null
+    lastDailyRewardAt: economy.lastDailyRewardAt || null,
+    dailyRewardStreak: economy.dailyRewardStreak || 0
   };
 }
 
@@ -379,9 +384,17 @@ function dailyRewardState(user, now = Date.now()) {
   const lastClaimTime = lastClaimAt ? Date.parse(lastClaimAt) : 0;
   const nextClaimTime = lastClaimTime ? lastClaimTime + DAILY_REWARD_INTERVAL_MS : now;
   const canClaim = !lastClaimTime || now >= nextClaimTime;
+  const streakBroken = Boolean(lastClaimTime && now - lastClaimTime > DAILY_REWARD_STREAK_RESET_MS);
+  const currentStreak = streakBroken ? 0 : Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Number(economy?.dailyRewardStreak || 0)));
+  const nextRewardDay = canClaim ? ((currentStreak % DAILY_REWARD_STREAK_AMOUNTS.length) + 1) : Math.max(1, currentStreak || 1);
+  const claimedDays = canClaim ? (nextRewardDay === 1 ? 0 : currentStreak) : nextRewardDay;
   return {
     canClaim,
-    rewardAmount: DAILY_REWARD_AMOUNT,
+    rewardAmount: DAILY_REWARD_STREAK_AMOUNTS[nextRewardDay - 1] || DAILY_REWARD_AMOUNT,
+    rewardSchedule: DAILY_REWARD_STREAK_AMOUNTS,
+    cycleDay: nextRewardDay,
+    claimedDays,
+    streak: currentStreak,
     lastClaimAt,
     nextClaimAt: new Date(canClaim ? now : nextClaimTime).toISOString(),
     remainingMs: canClaim ? 0 : nextClaimTime - now
@@ -2421,12 +2434,13 @@ io.on("connection", (socket) => {
     if (!user) return cb({ error: "Войди в аккаунт, чтобы получать ежедневную награду" });
     const currentState = dailyRewardState(user);
     if (!currentState.canClaim) return cb({ error: "Новая награда будет доступна позже", dailyReward: currentState });
-    addVinylTransaction(user, DAILY_REWARD_AMOUNT, "daily_reward", { intervalHours: 24 });
+    addVinylTransaction(user, currentState.rewardAmount, "daily_reward", { intervalHours: 24, cycleDay: currentState.cycleDay });
+    user.economy.dailyRewardStreak = currentState.cycleDay;
     user.economy.lastDailyRewardAt = new Date().toISOString();
     user.updatedAt = user.economy.lastDailyRewardAt;
     saveUsersStore();
     const nextState = dailyRewardState(user);
-    cb({ success: true, amount: DAILY_REWARD_AMOUNT, economy: publicEconomy(user), dailyReward: nextState, profile: profileForSocket(socket) });
+    cb({ success: true, amount: currentState.rewardAmount, economy: publicEconomy(user), dailyReward: nextState, profile: profileForSocket(socket) });
     io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
   });
 
