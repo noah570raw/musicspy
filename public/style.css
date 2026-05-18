@@ -7490,6 +7490,42 @@ body[data-effects-density="low"] .sound-toggle {
   padding-right: 2px;
   padding-bottom: 2px;
   animation: site-menu-panel-in 0.32s cubic-bezier(.2,.8,.2,1) both;
+  scrollbar-gutter: stable;
+}
+
+.site-menu-card #settingsPanelProfile.active,
+.site-menu-card #settingsPanelShop.active {
+  overflow: hidden;
+}
+
+.site-menu-card #settingsPanelProfile.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.site-menu-card #settingsPanelProfile.active > :not(.hidden) {
+  min-height: 0;
+}
+
+.site-menu-card #settingsPanelProfile.active > .account-profile-view:not(.hidden),
+.site-menu-card #settingsPanelShop.active > .shop-panel-root {
+  flex: 1 1 auto;
+  max-height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: clamp(4px, 0.8vw, 8px);
+  scrollbar-gutter: stable;
+}
+
+.site-menu-card #settingsPanelShop.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.site-menu-card #settingsPanelShop.active > .shop-panel-root {
+  padding-bottom: 4px;
 }
 
 .site-menu-card #settingsPanelLanguage.active {
@@ -8793,7 +8829,8 @@ body,
 /* Vinyl economy and premium shop */
 .shop-panel-root {
   display: grid;
-  gap: clamp(10px, 1.35vw, 14px);
+  align-content: start;
+  gap: clamp(12px, 1.45vw, 16px);
   min-width: 0;
   max-width: 100%;
   overflow-x: hidden;
@@ -8927,8 +8964,8 @@ body,
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
-  gap: clamp(10px, 1.3vw, 13px);
+  grid-template-columns: repeat(auto-fit, minmax(min(178px, 100%), 1fr));
+  gap: clamp(12px, 1.45vw, 16px);
   min-width: 0;
 }
 
@@ -8936,7 +8973,7 @@ body,
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-rows: clamp(78px, 10vh, 96px) 1fr auto;
+  grid-template-rows: clamp(92px, 12vh, 118px) 1fr auto;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 24px;
   background: rgba(15, 23, 42, 0.72);
