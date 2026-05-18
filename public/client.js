@@ -2085,6 +2085,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
     $("profileLogin").innerHTML = user ? (hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : login) : t("гость без регистрации");
   }
   if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
+  if ($("profileUsername")) $("profileUsername").value = user?.username ? `@${user.username}` : "";
   if ($("profileAvatar")) {
     $("profileAvatar").innerHTML = user?.avatar
       ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
@@ -2510,7 +2511,11 @@ function clearAvatar() {
 }
 
 function saveProfile() {
-  const payload = { displayName: $("profileDisplayName").value.trim() || state.profile?.displayName || getName() };
+  const usernameInput = $("profileUsername")?.value.trim().replace(/^@+/, "");
+  const payload = {
+    displayName: $("profileDisplayName").value.trim() || state.profile?.displayName || getName(),
+    username: usernameInput || state.profile?.username
+  };
   if (state.pendingAvatar !== undefined) payload.avatar = state.pendingAvatar;
   socket.emit("profile:update", payload, (res) => {
     if (res?.error) return setAuthStatus(res.error, true);

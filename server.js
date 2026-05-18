@@ -393,6 +393,14 @@ function findUserByNicknameOrUsername(value) {
     || null;
 }
 
+function validateAccountTag(value, currentUserId = "") {
+  const username = normalizeUsername(value);
+  if (username.length < 3) return { error: "Тег должен быть от 3 символов: латиница, цифры, _ или -" };
+  const owner = usersStore.users.find((user) => user.username === username);
+  if (owner && owner.id !== currentUserId) return { error: "Такой тег уже занят" };
+  return { username };
+}
+
 function friendIdsForUser(userId) {
   const id = String(userId || "");
   return (usersStore.friendships || [])
@@ -2228,15 +2236,20 @@ io.on("connection", (socket) => {
     cb({ success: true, profile: profileForSocket(socket) });
   });
 
-  socket.on("profile:update", ({ displayName, avatar } = {}, cb = () => {}) => {
+  socket.on("profile:update", ({ displayName, username, avatar } = {}, cb = () => {}) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы менять профиль" });
     try {
+      const requestedUsername = String(username ?? (user.username || "")).trim();
+      const tagResult = validateAccountTag(requestedUsername, user.id);
+      if (tagResult.error) return cb({ error: tagResult.error });
+      user.username = tagResult.username;
       user.displayName = normalizeName(displayName || user.displayName || user.username);
       if (avatar !== undefined) user.avatar = normalizeAvatar(avatar);
       user.updatedAt = new Date().toISOString();
       saveUsersStore();
       syncUserProfileInLobbies(user);
+      emitSocialForUserAndFriends(user.id);
       cb({ success: true, profile: profileForSocket(socket) });
     } catch (error) {
       cb({ error: error.message || "Не удалось обновить профиль" });
@@ -2961,6 +2974,7 @@ module.exports = {
   resumeTurnTimer,
   adjustTurnTimer,
   publicOpenLobbies,
+  validateAccountTag,
   COSMETIC_RARITIES,
   SHOP_CATEGORIES,
   SHOP_CATALOG,
