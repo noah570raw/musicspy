@@ -65,20 +65,29 @@ body {
   overflow-x: hidden;
   background:
     radial-gradient(circle at 20% 10%, rgba(var(--accent-rgb), 0.22), transparent 28rem),
-    radial-gradient(circle at 80% 70%, rgba(52, 255, 177, 0.07), transparent 24rem),
+    radial-gradient(circle at 80% 70%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 24rem),
     var(--bg);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   transition: background 0.85s ease, color 0.85s ease;
 }
 
+body[data-screen="menu"],
 body[data-screen="lobby"],
 body.site-menu-modal-open {
   overflow: hidden;
 }
 
+body[data-screen="menu"] .app-shell,
 body[data-screen="lobby"] .app-shell {
-  padding: clamp(8px, 1.4vh, 14px) 0;
+  overflow: hidden;
+  padding: clamp(6px, 1.2vh, 14px) 0;
+}
+
+body[data-screen="menu"] .app-shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
 
 button,
@@ -10716,21 +10725,23 @@ body[data-screen="spyGuess"] .friends-system {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  width: min(100%, 720px);
-  padding: clamp(22px, 3.4vw, 42px);
-  border-color: rgba(34, 211, 238, 0.28);
+  width: min(100%, 650px);
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  padding: clamp(16px, 2.6vw, 30px);
+  border-color: rgba(var(--accent-rgb), 0.34);
   background:
-    radial-gradient(circle at 18% 12%, rgba(34, 211, 238, 0.22), transparent 18rem),
-    radial-gradient(circle at 84% 20%, rgba(168, 85, 247, 0.24), transparent 19rem),
-    radial-gradient(circle at 50% 72%, rgba(0, 0, 0, 0.88), transparent 19rem),
-    linear-gradient(150deg, rgba(7, 13, 30, 0.93), rgba(3, 5, 15, 0.84) 48%, rgba(14, 7, 28, 0.92)),
+    radial-gradient(circle at 18% 12%, rgba(var(--accent-rgb), 0.2), transparent 15rem),
+    radial-gradient(circle at 84% 20%, color-mix(in srgb, var(--accent-2) 24%, transparent), transparent 16rem),
+    radial-gradient(circle at 50% 72%, rgba(0, 0, 0, 0.82), transparent 17rem),
+    linear-gradient(150deg, rgba(var(--surface-strong-rgb), 0.88), rgba(var(--surface-rgb), 0.78) 48%, color-mix(in srgb, var(--accent) 13%, var(--panel))),
     var(--panel);
   box-shadow:
-    0 34px 110px rgba(0, 0, 0, 0.64),
-    0 0 72px rgba(139, 92, 246, 0.18),
-    0 0 48px rgba(34, 211, 238, 0.12),
+    0 24px 80px rgba(0, 0, 0, 0.58),
+    0 0 62px rgba(var(--accent-rgb), 0.2),
+    0 0 42px color-mix(in srgb, var(--accent-2) 14%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 0 80px rgba(34, 211, 238, 0.04);
+    inset 0 0 70px rgba(var(--accent-rgb), 0.045);
 }
 
 .vinyl-terminal-card::before,
@@ -10744,7 +10755,7 @@ body[data-screen="spyGuess"] .friends-system {
 .vinyl-terminal-card::before {
   inset: -35% -25%;
   background:
-    conic-gradient(from 115deg at 50% 50%, transparent, rgba(34, 211, 238, 0.16), transparent 18%, rgba(168, 85, 247, 0.15), transparent 36%);
+    conic-gradient(from 115deg at 50% 50%, transparent, rgba(var(--accent-rgb), 0.16), transparent 18%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 36%);
   filter: blur(22px);
   opacity: 0.58;
   animation: terminalLightSweep 13s linear infinite;
@@ -10754,7 +10765,7 @@ body[data-screen="spyGuess"] .friends-system {
   inset: 1px;
   border-radius: inherit;
   background:
-    linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.12), transparent),
+    linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.12), transparent),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 8px);
   mix-blend-mode: screen;
   opacity: 0.38;
@@ -10774,8 +10785,8 @@ body[data-screen="spyGuess"] .friends-system {
   width: 3px;
   height: 3px;
   border-radius: 999px;
-  background: rgba(165, 243, 252, 0.78);
-  box-shadow: 0 0 14px rgba(34, 211, 238, 0.88), 0 0 28px rgba(168, 85, 247, 0.44);
+  background: color-mix(in srgb, var(--accent-2) 72%, var(--text));
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.86), 0 0 28px color-mix(in srgb, var(--accent-2) 36%, transparent);
   animation: terminalParticleFloat 8s ease-in-out infinite;
 }
 
@@ -10793,7 +10804,7 @@ body[data-screen="spyGuess"] .friends-system {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent 0%, rgba(34, 211, 238, 0.12) 49%, transparent 52%);
+  background: linear-gradient(180deg, transparent 0%, rgba(var(--accent-rgb), 0.12) 49%, transparent 52%);
   opacity: 0.2;
   transform: translateY(-58%);
   animation: terminalScanLine 9s ease-in-out infinite;
@@ -10805,47 +10816,49 @@ body[data-screen="spyGuess"] .friends-system {
 }
 
 .terminal-eyebrow {
-  margin-bottom: 12px;
-  color: #67e8f9;
-  text-shadow: 0 0 18px rgba(34, 211, 238, 0.72);
+  margin-bottom: clamp(6px, 1.2vh, 10px);
+  color: color-mix(in srgb, var(--accent-2) 72%, var(--text));
+  letter-spacing: 0.14em;
+  text-shadow: 0 0 18px rgba(var(--accent-rgb), 0.7);
+  text-transform: lowercase;
 }
 
 .terminal-title {
   display: block;
-  padding: 0 0 0.1em;
-  font-size: clamp(4.2rem, 13vw, 8.7rem);
+  padding: 0 0 0.08em;
+  font-size: clamp(3.4rem, min(11vw, 11vh), 7.2rem);
   line-height: 0.82;
   letter-spacing: -0.095em;
   text-transform: uppercase;
   background:
-    linear-gradient(92deg, #f8fbff 0%, #67e8f9 25%, #a855f7 58%, #f0abfc 78%, #ffffff 100%);
+    linear-gradient(92deg, var(--text) 0%, color-mix(in srgb, var(--accent-2) 72%, var(--text)) 25%, var(--accent) 58%, color-mix(in srgb, var(--accent-2) 68%, var(--accent)) 78%, #ffffff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   text-shadow:
-    0 0 24px rgba(34, 211, 238, 0.32),
-    0 0 48px rgba(168, 85, 247, 0.28);
-  filter: drop-shadow(0 0 18px rgba(139, 92, 246, 0.28));
+    0 0 24px rgba(var(--accent-rgb), 0.32),
+    0 0 48px color-mix(in srgb, var(--accent-2) 24%, transparent);
+  filter: drop-shadow(0 0 18px rgba(var(--accent-rgb), 0.28));
 }
 
 .terminal-subtitle {
-  margin: 8px auto 22px;
-  max-width: 39rem;
-  color: rgba(226, 232, 240, 0.68);
-  font-size: clamp(0.66rem, 1.55vw, 0.88rem);
+  margin: clamp(4px, 0.8vh, 7px) auto clamp(12px, 2vh, 18px);
+  max-width: 35rem;
+  color: var(--theme-text-soft);
+  font-size: clamp(0.62rem, 1.35vw, 0.82rem);
   font-weight: 800;
-  letter-spacing: 0.22em;
-  line-height: 1.65;
-  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  line-height: 1.55;
+  text-transform: lowercase;
 }
 
 .vinyl-stage {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, 470px);
+  width: min(100%, 390px, 40vh);
   aspect-ratio: 1;
-  margin: 0 auto clamp(18px, 2.6vw, 26px);
+  margin: 0 auto clamp(12px, 2vh, 18px);
 }
 
 .vinyl-glow-orbit {
@@ -10853,8 +10866,8 @@ body[data-screen="spyGuess"] .friends-system {
   inset: 4.5%;
   border-radius: 999px;
   background:
-    conic-gradient(from 0deg, rgba(34, 211, 238, 0.12), rgba(34, 211, 238, 0.86), rgba(168, 85, 247, 0.18), rgba(168, 85, 247, 0.92), rgba(34, 211, 238, 0.12));
-  filter: blur(9px);
+    conic-gradient(from 0deg, rgba(var(--accent-rgb), 0.12), rgba(var(--accent-rgb), 0.84), color-mix(in srgb, var(--accent-2) 18%, transparent), color-mix(in srgb, var(--accent-2) 88%, transparent), rgba(var(--accent-rgb), 0.12));
+  filter: blur(8px);
   opacity: 0.72;
   animation: terminalPulse 3.8s ease-in-out infinite;
 }
@@ -10863,19 +10876,19 @@ body[data-screen="spyGuess"] .friends-system {
   position: relative;
   display: grid;
   place-items: center;
-  width: 86%;
+  width: 84%;
   aspect-ratio: 1;
   border-radius: 999px;
   overflow: hidden;
   background:
     repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.075) 0 1px, transparent 1px 7px),
-    conic-gradient(from 22deg, rgba(255, 255, 255, 0.12), transparent 9%, rgba(103, 232, 249, 0.1) 13%, transparent 22%, rgba(168, 85, 247, 0.1) 35%, transparent 48%, rgba(255, 255, 255, 0.08) 58%, transparent 70%),
-    radial-gradient(circle at 50% 50%, #0f172a 0 7%, #020617 7.2% 10%, #111827 10.2% 15%, #02030a 15.3% 100%),
-    conic-gradient(from 22deg, #050812, #141827, #02040b, #1d1730, #04050c, #101522, #050812);
+    conic-gradient(from 22deg, rgba(255, 255, 255, 0.12), transparent 9%, rgba(var(--accent-rgb), 0.1) 13%, transparent 22%, color-mix(in srgb, var(--accent-2) 10%, transparent) 35%, transparent 48%, rgba(255, 255, 255, 0.08) 58%, transparent 70%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--panel-strong) 78%, #000000) 0 7%, #020617 7.2% 10%, rgba(var(--surface-strong-rgb), 0.92) 10.2% 15%, #02030a 15.3% 100%),
+    conic-gradient(from 22deg, #050812, rgba(var(--surface-strong-rgb), 0.86), #02040b, color-mix(in srgb, var(--accent) 16%, #111827), #04050c, rgba(var(--surface-rgb), 0.9), #050812);
   box-shadow:
-    0 28px 72px rgba(0, 0, 0, 0.74),
-    0 0 52px rgba(34, 211, 238, 0.28),
-    0 0 72px rgba(168, 85, 247, 0.2),
+    0 22px 60px rgba(0, 0, 0, 0.72),
+    0 0 46px rgba(var(--accent-rgb), 0.27),
+    0 0 66px color-mix(in srgb, var(--accent-2) 19%, transparent),
     inset 0 0 38px rgba(255, 255, 255, 0.045),
     inset 0 0 95px rgba(0, 0, 0, 0.92);
   animation: vinylSpin 18s linear infinite;
@@ -10888,7 +10901,7 @@ body[data-screen="spyGuess"] .friends-system {
   border-radius: inherit;
   background:
     repeating-radial-gradient(circle at 50% 50%, transparent 0 8px, rgba(255, 255, 255, 0.105) 9px 10px, transparent 11px 15px),
-    conic-gradient(from 210deg, transparent 0 10%, rgba(255, 255, 255, 0.16) 13%, transparent 18% 54%, rgba(103, 232, 249, 0.12) 59%, transparent 66%);
+    conic-gradient(from 210deg, transparent 0 10%, rgba(255, 255, 255, 0.16) 13%, transparent 18% 54%, rgba(var(--accent-rgb), 0.12) 59%, transparent 66%);
   mix-blend-mode: screen;
   opacity: 0.62;
 }
@@ -10898,8 +10911,8 @@ body[data-screen="spyGuess"] .friends-system {
   position: absolute;
   inset: 43%;
   border-radius: 999px;
-  background: radial-gradient(circle, #dffbff 0 9%, #67e8f9 10% 18%, #1e1b4b 20% 58%, #020617 60% 100%);
-  box-shadow: 0 0 22px rgba(34, 211, 238, 0.52), inset 0 0 14px rgba(255, 255, 255, 0.24);
+  background: radial-gradient(circle, var(--text) 0 9%, color-mix(in srgb, var(--accent-2) 78%, var(--accent)) 10% 18%, color-mix(in srgb, var(--accent) 28%, #111827) 20% 58%, #020617 60% 100%);
+  box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.52), inset 0 0 14px rgba(255, 255, 255, 0.24);
 }
 
 .vinyl-reflection {
@@ -10918,7 +10931,7 @@ body[data-screen="spyGuess"] .friends-system {
 
 .reflection-two {
   inset: 54% 20% 12% 55%;
-  background: linear-gradient(132deg, rgba(34, 211, 238, 0.18), transparent 62%);
+  background: linear-gradient(132deg, rgba(var(--accent-rgb), 0.18), transparent 62%);
   filter: blur(8px);
   opacity: 0.6;
 }
@@ -10930,16 +10943,16 @@ body[data-screen="spyGuess"] .friends-system {
   place-items: center;
   width: 25%;
   aspect-ratio: 1;
-  border: 1px solid rgba(103, 232, 249, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.24), rgba(88, 28, 135, 0.44) 54%, rgba(2, 6, 23, 0.98));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 24px rgba(168, 85, 247, 0.26);
-  color: #e0faff;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.24), color-mix(in srgb, var(--accent-2) 22%, rgba(var(--surface-strong-rgb), 0.72)) 54%, rgba(2, 6, 23, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 24px color-mix(in srgb, var(--accent-2) 25%, transparent);
+  color: color-mix(in srgb, var(--accent-2) 72%, var(--text));
   text-transform: uppercase;
 }
 
 .vinyl-label b {
-  font-size: clamp(1rem, 3.5vw, 1.75rem);
+  font-size: clamp(0.95rem, 3vw, 1.55rem);
   letter-spacing: -0.08em;
 }
 
@@ -10968,8 +10981,8 @@ body[data-screen="spyGuess"] .friends-system {
   width: 27%;
   aspect-ratio: 1;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(226, 232, 240, 0.9), rgba(15, 23, 42, 0.88) 55%, rgba(2, 6, 23, 0.95));
-  box-shadow: 0 0 24px rgba(34, 211, 238, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  background: radial-gradient(circle, rgba(226, 232, 240, 0.9), rgba(var(--surface-strong-rgb), 0.88) 55%, rgba(2, 6, 23, 0.95));
+  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .tonearm-beam {
@@ -10977,10 +10990,10 @@ body[data-screen="spyGuess"] .friends-system {
   top: 20%;
   right: 19%;
   width: 76%;
-  height: 8px;
+  height: 7px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(103, 232, 249, 0.95), rgba(226, 232, 240, 0.9) 38%, rgba(168, 85, 247, 0.82));
-  box-shadow: 0 0 18px rgba(34, 211, 238, 0.34), 0 0 24px rgba(168, 85, 247, 0.22);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 78%, var(--accent)), rgba(226, 232, 240, 0.9) 38%, rgba(var(--accent-rgb), 0.82));
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.34), 0 0 24px color-mix(in srgb, var(--accent-2) 22%, transparent);
   transform: rotate(34deg);
   transform-origin: 100% 50%;
 }
@@ -10992,8 +11005,8 @@ body[data-screen="spyGuess"] .friends-system {
   width: 18%;
   height: 16%;
   border-radius: 8px 8px 14px 14px;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(88, 28, 135, 0.9));
-  box-shadow: 0 0 18px rgba(34, 211, 238, 0.56), 0 0 28px rgba(168, 85, 247, 0.34);
+  background: linear-gradient(135deg, rgba(var(--surface-strong-rgb), 0.96), color-mix(in srgb, var(--accent) 34%, rgba(var(--surface-rgb), 0.9)));
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.56), 0 0 28px color-mix(in srgb, var(--accent-2) 32%, transparent);
   transform: rotate(26deg);
 }
 
@@ -11005,34 +11018,40 @@ body[data-screen="spyGuess"] .friends-system {
   width: 24%;
   height: 60%;
   border-radius: 999px;
-  background: #67e8f9;
-  box-shadow: 0 0 14px #67e8f9, 0 0 28px rgba(168, 85, 247, 0.84);
+  background: color-mix(in srgb, var(--accent-2) 82%, var(--accent));
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.82), 0 0 28px color-mix(in srgb, var(--accent-2) 58%, transparent);
 }
 
 .terminal-controls {
-  width: min(100%, 580px);
+  width: min(100%, 540px);
   margin: 0 auto;
 }
 
 .terminal-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .terminal-form-grid label span {
-  color: rgba(165, 243, 252, 0.74);
-  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--accent-2) 62%, var(--theme-text-soft));
+  letter-spacing: 0.12em;
 }
 
 .terminal-form-grid input {
-  border-color: rgba(34, 211, 238, 0.18);
-  background: linear-gradient(180deg, rgba(2, 6, 23, 0.74), rgba(15, 23, 42, 0.58));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 22px rgba(34, 211, 238, 0.05);
+  padding: 12px 14px;
+  border-color: rgba(var(--accent-rgb), 0.18);
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.74), rgba(var(--surface-rgb), 0.58));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 22px rgba(var(--accent-rgb), 0.05);
 }
 
 .terminal-actions {
-  gap: 12px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.terminal-actions button {
+  min-height: 44px;
+  padding: 11px 16px;
 }
 
 .terminal-primary,
@@ -11044,26 +11063,26 @@ body[data-screen="spyGuess"] .friends-system {
 .terminal-primary {
   border: 1px solid rgba(255, 255, 255, 0.18);
   background:
-    linear-gradient(135deg, #22d3ee 0%, #8b5cf6 45%, #d946ef 72%, #67e8f9 100%);
-  box-shadow: 0 18px 42px rgba(139, 92, 246, 0.36), 0 0 34px rgba(34, 211, 238, 0.2);
+    linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 62%, var(--accent-2)) 46%, var(--accent-2) 100%);
+  box-shadow: 0 16px 38px rgba(var(--accent-rgb), 0.34), 0 0 32px color-mix(in srgb, var(--accent-2) 18%, transparent);
 }
 
 .terminal-primary:hover:not(:disabled) {
-  box-shadow: 0 22px 54px rgba(139, 92, 246, 0.48), 0 0 42px rgba(34, 211, 238, 0.32);
+  box-shadow: 0 20px 48px rgba(var(--accent-rgb), 0.46), 0 0 40px color-mix(in srgb, var(--accent-2) 28%, transparent);
 }
 
 .terminal-secondary,
 button.terminal-secondary {
-  border: 1px solid rgba(103, 232, 249, 0.22);
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.64), rgba(2, 6, 23, 0.44));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 24px rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  background: linear-gradient(145deg, rgba(var(--surface-strong-rgb), 0.64), rgba(2, 6, 23, 0.44));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 24px rgba(var(--accent-rgb), 0.06);
 }
 
 .terminal-secondary:hover:not(:disabled),
 button.terminal-secondary:hover:not(:disabled) {
-  border-color: rgba(168, 85, 247, 0.52);
-  background: linear-gradient(145deg, rgba(34, 211, 238, 0.14), rgba(88, 28, 135, 0.2));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 0 30px rgba(168, 85, 247, 0.16);
+  border-color: rgba(var(--accent-rgb), 0.52);
+  background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.14), color-mix(in srgb, var(--accent-2) 18%, rgba(var(--surface-rgb), 0.2)));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 0 30px rgba(var(--accent-rgb), 0.16);
 }
 
 @keyframes vinylSpin {
@@ -11103,11 +11122,11 @@ button.terminal-secondary:hover:not(:disabled) {
 @media (max-width: 720px) {
   .vinyl-terminal-card {
     width: min(100%, 560px);
-    padding: 20px;
+    padding: clamp(14px, 4vw, 20px);
   }
 
   .terminal-title {
-    font-size: clamp(3.35rem, 18vw, 5.6rem);
+    font-size: clamp(3.15rem, min(17vw, 10vh), 5.6rem);
   }
 
   .terminal-subtitle {
@@ -11115,12 +11134,45 @@ button.terminal-secondary:hover:not(:disabled) {
   }
 
   .vinyl-stage {
-    width: min(100%, 360px);
+    width: min(100%, 340px, 37vh);
   }
 
-  .terminal-form-grid,
-  .terminal-actions {
+  .terminal-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .terminal-actions button {
+    font-size: clamp(0.72rem, 2.8vw, 0.88rem);
+  }
+}
+
+@media (max-height: 700px) {
+  .vinyl-terminal-card {
+    padding: clamp(12px, 2vh, 18px);
+  }
+
+  .terminal-subtitle {
+    margin-bottom: clamp(8px, 1.4vh, 12px);
+    line-height: 1.38;
+  }
+
+  .vinyl-stage {
+    width: min(100%, 310px, 32vh);
+    margin-bottom: clamp(8px, 1.4vh, 12px);
+  }
+
+  .terminal-form-grid input {
+    padding: 10px 12px;
+  }
+
+  .terminal-actions {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .terminal-actions button {
+    min-height: 40px;
+    padding: 9px 12px;
   }
 }
 
