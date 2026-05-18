@@ -2315,12 +2315,12 @@ function renderShop(celebrate = false) {
       <div class="shop-tabs" aria-label="Категории магазина">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory.id ? "active" : ""}" type="button" onclick="selectShopCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
       <p class="shop-status ${state.shopStatus ? "visible" : ""}">${escapeHtml(state.shopStatus || "")}</p>
     </div>
-    <div class="shop-items-area neon-shop-scrollbar" data-shop-items-area>
+    <div class="shop-items-area" data-shop-items-area>
       <div class="shop-grid">
         ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card shop-empty-card">Скоро новые дропы.</div>`}
       </div>
     </div>
-    ${achievementHtml ? `<div class="shop-achievements-footer">${achievementHtml}</div>` : ""}
+    ${achievementHtml ? `<div class="shop-achievements-section">${achievementHtml}</div>` : ""}
   `;
 }
 
