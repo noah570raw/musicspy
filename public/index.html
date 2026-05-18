@@ -509,19 +509,18 @@
           <button class="spy-nav-item" type="button" data-home-tab="daily" onclick="switchHomeTab('daily', this)"><span aria-hidden="true">◈</span>Daily Reward</button>
           <button class="spy-nav-item" type="button" data-home-tab="booster" onclick="switchHomeTab('booster', this)"><span aria-hidden="true">✦</span>XP Booster</button>
           <button class="spy-nav-item" type="button" data-home-tab="friends" onclick="switchHomeTab('friends', this)"><span aria-hidden="true">☷</span>Друзья</button>
-          <button class="spy-nav-item" type="button" data-home-tab="stats" onclick="switchHomeTab('stats', this)"><span aria-hidden="true">⌁</span>Статистика</button>
           <button class="spy-nav-item" type="button" data-home-tab="shop" onclick="switchHomeTab('shop', this)"><span aria-hidden="true">◇</span>Магазин</button>
           <button class="spy-nav-item" type="button" data-home-tab="settings" onclick="switchHomeTab('settings', this)"><span aria-hidden="true">⚙</span>Настройки</button>
         </nav>
 
         <button class="mini-profile" type="button" onclick="switchHomeTab('profile')" aria-label="Открыть профиль агента">
-          <div class="mini-avatar" aria-hidden="true">MS</div>
+          <div id="homeMiniAvatar" class="mini-avatar" aria-hidden="true">MS</div>
           <div class="mini-profile-copy">
-            <strong>Agent Neon</strong>
-            <span><i></i> Online</span>
+            <strong id="homeMiniName">Гость</strong>
+            <span><i></i> <em id="homeMiniStatus">Online</em></span>
           </div>
-          <div class="xp-readout"><span></span></div>
-          <small>LVL 27 · XP 6 420 / 8 000</small>
+          <div class="xp-readout"><span id="homeMiniXpBar"></span></div>
+          <small id="homeMiniMeta">Войдите в аккаунт</small>
         </button>
       </aside>
 
@@ -574,92 +573,41 @@
             <button class="ops-card" type="button" onclick="joinLobby()"><b>Join by Code</b><span>использовать поле room code</span></button>
             <button class="ops-card" type="button" onclick="showHowToPlay()"><b>Rules Simulation</b><span>обучающий брифинг</span></button>
           </div>
-          <div class="mission-strip"><span>LIVE LOBBIES</span><b>24</b><span>RANKED SIGNAL</span><b>ONLINE</b><span>AVG QUEUE</span><b>00:18</b></div>
+          <div class="mission-strip"><span>LIVE LOBBIES</span><b id="homeLiveLobbyCount">0</b><span>RANKED SIGNAL</span><b id="homeOnlineSignal">SYNC</b><span>AVG QUEUE</span><b>LIVE</b></div>
         </article>
 
-        <article class="home-viewport app-page" data-home-panel="profile">
-          <div class="profile-dashboard-head">
-            <div class="profile-avatar-xl">AN</div>
-            <div><p class="eyebrow">agent profile</p><h2>Agent Neon</h2><span>Rank S-7 · Level 27 · 6 420 XP</span></div>
-          </div>
-          <div class="dashboard-grid compact">
-            <div><span>Winrate</span><b>68%</b></div><div><span>Favorite role</span><b>Spy</b></div><div><span>Matches</span><b>184</b></div><div><span>Accuracy</span><b>91%</b></div>
-          </div>
-          <div class="recent-panel"><h3>Recent matches</h3><p>Spy victory · synthwave vault · +320 XP</p><p>Civilian win · midnight pop · +180 XP</p><p>Ranked draw · neon jazz · +90 XP</p></div>
-          <div class="badge-row"><i>VNL</i><i>ACE</i><i>RANK</i><i>GLOW</i></div>
-        </article>
+        <article id="homeProfilePage" class="home-viewport app-page" data-home-panel="profile"></article>
 
-        <article class="home-viewport app-page inventory-page" data-home-panel="inventory">
-          <div class="page-header"><p class="eyebrow">vinyl collection system</p><h2>Инвентарь</h2><span>Винилы, темы, эффекты, скины интерфейса и редкие титулы.</span></div>
-          <div class="inventory-layout">
-            <div class="vinyl-card-grid">
-              <button class="vinyl-card selected"><i></i><b>Neon Agent</b><span>Mythic</span></button>
-              <button class="vinyl-card rare"><i></i><b>Cyber Rain</b><span>Epic theme</span></button>
-              <button class="vinyl-card"><i></i><b>Deep Cover</b><span>Audio FX</span></button>
-              <button class="vinyl-card legendary"><i></i><b>Black Lab</b><span>Legendary</span></button>
-            </div>
-            <aside class="vinyl-preview-panel"><div class="preview-vinyl"></div><p class="eyebrow">selected collectible</p><h3>Neon Agent Vinyl</h3><span>Holographic mythic skin with cyan sweep and purple bass glow.</span><button class="primary" type="button">Equip</button></aside>
-          </div>
-        </article>
+        <article id="homeInventoryPage" class="home-viewport app-page inventory-page" data-home-panel="inventory"></article>
 
-        <article class="home-viewport app-page" data-home-panel="daily">
-          <div class="page-header"><p class="eyebrow">login streak</p><h2>Daily Reward</h2><span>Ежедневные кейсы, винилы и импульсы опыта.</span></div>
-          <div class="reward-track"><i>1</i><i>2</i><i class="ready">3</i><i>4</i><i>5</i><i>7</i></div>
-          <div class="ops-card reward-focus"><b>Сегодня доступен Rare Signal Crate</b><span>Следующий drop через 11:42:09</span><button class="primary" type="button">Collect reward</button></div>
-        </article>
+        <article id="homeDailyPage" class="home-viewport app-page" data-home-panel="daily"></article>
 
-        <article class="home-viewport app-page" data-home-panel="booster">
-          <div class="page-header"><p class="eyebrow">xp amplifier</p><h2>XP Booster</h2><span>Активируйте ускорители прогресса для матчей и ranked streak.</span></div>
-          <div class="booster-core"><i></i><b>2X XP ACTIVE</b><span>24:00 remaining · party bonus enabled</span></div>
-          <div class="dashboard-grid compact"><div><span>Boost pool</span><b>4</b></div><div><span>Party bonus</span><b>+15%</b></div><div><span>Next unlock</span><b>LVL 28</b></div></div>
-        </article>
+        <article id="homeBoosterPage" class="home-viewport app-page" data-home-panel="booster"></article>
 
-        <article class="home-viewport app-page" data-home-panel="friends">
-          <div class="page-header"><p class="eyebrow">party network</p><h2>Друзья</h2><span>Онлайн-агенты, активные лобби и последние тиммейты.</span></div>
-          <div class="friends-os-grid"><div class="friend-os-card"><i>NX</i><b>Nova</b><span>Online · lobby open</span><button>Invite</button></div><div class="friend-os-card"><i>VX</i><b>Vox</b><span>Ranked queue</span><button>Join</button></div><div class="friend-os-card"><i>DJ</i><b>DJ Zero</b><span>Recent teammate</span><button>Add</button></div></div>
-          <div class="recent-panel"><h3>Active lobbies</h3><p>Nova's squad · 3/6 · synthwave</p><p>Neon ranked · 5/6 · private code</p></div>
-        </article>
+        <article id="homeFriendsPage" class="home-viewport app-page" data-home-panel="friends"></article>
 
-        <article class="home-viewport app-page" data-home-panel="stats">
-          <div class="page-header"><p class="eyebrow">analytics dashboard</p><h2>Статистика</h2><span>Ранги, жанры, серии побед и точность вычисления шпиона.</span></div>
-          <div class="dashboard-grid"><div><span>Matches played</span><b>184</b></div><div><span>Spy wins</span><b>72</b></div><div><span>Civilian wins</span><b>91</b></div><div><span>Streak</span><b>12</b></div><div><span>Accuracy</span><b>91%</b></div><div><span>Ranking</span><b>S-7</b></div></div>
-          <div class="progress-graph"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        </article>
+        <article id="homeShopPage" class="home-viewport app-page" data-home-panel="shop"></article>
 
-        <article class="home-viewport app-page" data-home-panel="shop">
-          <div class="page-header"><p class="eyebrow">black market audio lab</p><h2>Магазин</h2><span>Винил-скины, animated themes, profile effects, boosters.</span></div>
-          <div class="shop-grid"><div class="shop-card"><b>Aurora Vinyl</b><span>1 200 Vinyls</span></div><div class="shop-card"><b>Ghost UI Skin</b><span>900 Vinyls</span></div><div class="shop-card"><b>Profile Pulse</b><span>650 Vinyls</span></div><div class="shop-card"><b>XP Booster</b><span>300 Vinyls</span></div></div>
-        </article>
-
-        <article class="home-viewport app-page" data-home-panel="settings">
-          <div class="page-header"><p class="eyebrow">system settings</p><h2>Настройки</h2><span>Интерфейс, звук, язык и игровые предпочтения.</span></div>
-          <div class="settings-grid"><button type="button">Внешний вид · Neon Club</button><button type="button">Звук · 70%</button><button type="button">Язык · RU</button><button type="button">Игра · Classic</button></div>
-        </article>
+        <article id="homeSettingsPage" class="home-viewport app-page" data-home-panel="settings"></article>
       </section>
 
       <aside class="control-sidebar global-chat-panel" aria-label="Global signal chat">
         <header class="global-chat-header">
-          <div><p class="eyebrow">GLOBAL SIGNAL CHAT</p><h2>128 agents online</h2></div>
+          <div><p class="eyebrow">GLOBAL SIGNAL CHAT</p><h2 id="globalOnlineCount">0 agents online</h2></div>
           <span class="signal-live"><i></i>LIVE</span>
         </header>
-        <div class="global-chat-feed" aria-label="Live chat messages">
-          <article class="signal-message"><button class="chat-avatar" onclick="openSignalProfile('Nova','42')">N</button><div><button class="chat-name" onclick="openSignalProfile('Nova','42')">Nova <span>LVL 42</span></button><p>новый трек загружен</p><time>12:04</time></div></article>
-          <article class="signal-message"><button class="chat-avatar violet" onclick="openSignalProfile('Vox','31')">V</button><div><button class="chat-name" onclick="openSignalProfile('Vox','31')">Vox <span>LVL 31</span></button><p>кто идет ranked?</p><time>12:05</time></div></article>
-          <article class="signal-message"><button class="chat-avatar cyan" onclick="openSignalProfile('Neon','27')">N</button><div><button class="chat-name" onclick="openSignalProfile('Neon','27')">Neon <span>LVL 27</span></button><p>шпион снова выиграл 💀</p><time>12:07</time></div></article>
-          <article class="signal-message"><button class="chat-avatar pink" onclick="openSignalProfile('Echo','18')">E</button><div><button class="chat-name" onclick="openSignalProfile('Echo','18')">Echo <span>LVL 18</span></button><p>ищу party на 6 игроков</p><time>12:08</time></div></article>
-          <article class="signal-message"><button class="chat-avatar" onclick="openSignalProfile('DJ Zero','50')">D</button><div><button class="chat-name" onclick="openSignalProfile('DJ Zero','50')">DJ Zero <span>LVL 50</span></button><p>скинул vinyl сет в магазин</p><time>12:10</time></div></article>
-        </div>
-        <form class="chat-input-bar" onsubmit="event.preventDefault();">
-          <button type="button" aria-label="Emoji">✦</button>
-          <input placeholder="send signal..." aria-label="send signal">
+        <div id="globalChatFeed" class="global-chat-feed" aria-label="Live chat messages"></div>
+        <form id="globalChatForm" class="chat-input-bar" onsubmit="sendGlobalChatMessage(event)">
+          <button type="button" aria-label="Emoji" onclick="insertGlobalChatGlyph()">✦</button>
+          <input id="globalChatInput" maxlength="240" placeholder="send signal..." aria-label="send signal" autocomplete="off">
           <button type="submit">SEND</button>
         </form>
         <div id="signalProfileModal" class="signal-profile-popover hidden" role="dialog" aria-label="Mini profile">
           <button class="signal-close" type="button" onclick="closeSignalProfile()">×</button>
           <div id="signalProfileAvatar" class="profile-avatar-xl small">N</div>
-          <h3 id="signalProfileName">Nova</h3>
-          <span id="signalProfileMeta">Level 42 · Online</span>
-          <div class="signal-profile-actions"><button type="button">Add friend</button><button type="button">Invite to lobby</button><button type="button" onclick="switchHomeTab('profile')">View profile</button></div>
+          <h3 id="signalProfileName">Agent</h3>
+          <span id="signalProfileMeta">Level 1 · Online</span>
+          <div class="signal-profile-actions"><button type="button" onclick="addSignalProfileFriend()">Add friend</button><button type="button" onclick="inviteSignalProfileToLobby()">Invite to lobby</button><button type="button" onclick="viewSignalProfile()">View profile</button></div>
         </div>
       </aside>
     </section>

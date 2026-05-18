@@ -476,15 +476,16 @@ test("persistence normalizes missing social collections and writes atomically", 
   });
 
   files.set("/tmp/musicspy-test/users.json", JSON.stringify({ users: [{ id: "u1" }] }));
-  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [] });
+  assert.deepEqual(persistence.read(), { users: [{ id: "u1" }], friendships: [], friendRequests: [], directMessages: [], globalChatMessages: [] });
 
-  persistence.write({ users: [], friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2" }], friendRequests: [{ id: "r1" }], directMessages: [{ id: "m1" }] });
+  persistence.write({ users: [], friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2" }], friendRequests: [{ id: "r1" }], directMessages: [{ id: "m1" }], globalChatMessages: [{ id: "g1" }] });
   assert.equal(files.has(`/tmp/musicspy-test/users.json.${process.pid}.tmp`), false);
   assert.deepEqual(JSON.parse(files.get("/tmp/musicspy-test/users.json")), {
     users: [],
     friendships: [{ id: "u1:u2", userAId: "u1", userBId: "u2", createdAt: "1970-01-01T00:00:00.000Z" }],
     friendRequests: [{ id: "r1" }],
-    directMessages: [{ id: "m1" }]
+    directMessages: [{ id: "m1" }],
+    globalChatMessages: [{ id: "g1" }]
   });
   assert.ok(mkdirs.includes("/tmp/musicspy-test"));
 });
