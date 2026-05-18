@@ -9174,8 +9174,7 @@ body,
   border: 1px solid rgba(34, 197, 94, 0.82);
   border-radius: 999px;
   background:
-    linear-gradient(110deg, rgba(5, 46, 22, 0.95), rgba(34, 197, 94, 0.34), rgba(187, 247, 208, 0.75), rgba(20, 83, 45, 0.95));
-  background-size: 240% 100%;
+    linear-gradient(110deg, rgba(5, 46, 22, 0.95), rgba(34, 197, 94, 0.34), rgba(20, 83, 45, 0.95));
   color: #dcfce7;
   box-shadow:
     0 0 10px rgba(34, 197, 94, 0.75),
@@ -9186,7 +9185,7 @@ body,
   line-height: 1.25;
   text-shadow: 0 0 10px rgba(220, 252, 231, 0.92);
   vertical-align: middle;
-  animation: devBadgeShimmer 2.8s linear infinite, devBadgePulse 1.9s ease-in-out infinite;
+  animation: devBadgePulse 1.9s ease-in-out infinite;
 }
 
 .dev-badge:hover {
@@ -9227,14 +9226,20 @@ body,
   text-shadow: 0 0 14px rgba(34, 197, 94, 0.95), 0 0 26px rgba(34, 197, 94, 0.35);
 }
 
-@keyframes devBadgeShimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 240% 50%; }
-}
-
 @keyframes devBadgePulse {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.55)); }
-  50% { filter: drop-shadow(0 0 11px rgba(34, 197, 94, 0.9)); }
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.55));
+    box-shadow:
+      0 0 9px rgba(34, 197, 94, 0.62),
+      inset 0 0 11px rgba(187, 247, 208, 0.18);
+  }
+  50% {
+    filter: drop-shadow(0 0 11px rgba(34, 197, 94, 0.9));
+    box-shadow:
+      0 0 16px rgba(34, 197, 94, 0.88),
+      0 0 26px rgba(34, 197, 94, 0.28),
+      inset 0 0 15px rgba(187, 247, 208, 0.3);
+  }
 }
 
 @keyframes devCardSweep {
