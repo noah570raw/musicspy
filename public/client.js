@@ -2013,11 +2013,9 @@ function selectAuthMode(mode) {
   $("accountProfileView").classList.toggle("hidden", !isProfile);
   $("authRegisterHint").classList.toggle("hidden", !isRegister);
   $("authModalTitle").textContent = t("Меню");
-  $("authModalText").textContent = isProfile
-    ? t("Твоя музыкальная легенда, аватар и статистика партий.")
-    : isChoice
-      ? ""
-      : t("Войди, если уже регистрировался раньше.");
+  $("authModalText").textContent = isProfile || isChoice
+    ? ""
+    : t("Войди, если уже регистрировался раньше.");
   $("authSubmitBtn").textContent = t("Войти");
   if (isProfile) renderProfileStats();
   setAuthStatus();
@@ -2079,7 +2077,6 @@ function applyProfile(profileData = { user: null, guest: true }) {
   const user = state.profile;
   const displayName = user?.displayName || $("name").value.trim() || t("Гость");
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
-  $("accountProfileView")?.classList.toggle("dev-profile-card", hasDevRole(user));
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
   if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName }, "Игрок", { showBadge: true });
@@ -2303,7 +2300,7 @@ function renderShop(celebrate = false) {
   root.innerHTML = `
     <div class="shop-hero ${celebrate ? "purchase-flash" : ""}">
       <div class="shop-hero-copy">
-        <p class="eyebrow">premium cosmetic economy</p>
+        <p class="eyebrow">cosmetic shop</p>
         <h3>Vinyls Shop</h3>
         <p>Голографические монеты, редкие титулы, рамки, баннеры и анимации. Система полностью косметическая и не дает преимущества в партии.</p>
       </div>
