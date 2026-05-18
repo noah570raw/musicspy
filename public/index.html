@@ -484,34 +484,53 @@
   </div>
 
   <main class="app-shell">
-    <section id="menu" class="screen card hero-card">
-      <p class="eyebrow">Шпион помузыкальски</p>
-      <h1>Music Spy</h1>
-      <p class="lead">Собери руму, получи секретную тему и ставь треки так, чтобы вычислить шпиона за 3 круга</p>
+    <section id="menu" class="screen card hero-card vinyl-terminal-card">
+      <div class="vinyl-terminal-particles" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="vinyl-terminal-scan" aria-hidden="true"></div>
 
-      <div class="form-grid">
-        <label>
-          <span>Никнейм</span>
-          <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
-        </label>
-        <label>
-          <span>Код комнаты</span>
-          <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
-        </label>
+      <p class="eyebrow terminal-eyebrow">CLASSIFIED AUDIO INTELLIGENCE</p>
+      <h1 class="terminal-title">Music Spy</h1>
+      <p class="terminal-subtitle">encrypted signal · secret rhythm protocol · find the hidden agent</p>
+
+      <div class="vinyl-stage" aria-hidden="true">
+        <div class="tonearm">
+          <span class="tonearm-base"></span>
+          <span class="tonearm-beam"></span>
+          <span class="tonearm-head"></span>
+        </div>
+        <div class="vinyl-glow-orbit"></div>
+        <div class="vinyl-record">
+          <span class="vinyl-reflection reflection-one"></span>
+          <span class="vinyl-reflection reflection-two"></span>
+          <span class="vinyl-label">
+            <b>MS</b>
+            <small>classified</small>
+          </span>
+        </div>
       </div>
 
-      <div class="actions two-col">
-        <button class="primary" type="button" onclick="showPlayRooms()">Играть</button>
-        <button class="secondary" onclick="joinLobby()">Войти по коду</button>
-        <button class="secondary" type="button" onclick="showHowToPlay()">Как играть?</button>
-        <button class="ghost-button" type="button" onclick="showDemoFlow()">Демо за 30 секунд</button>
+      <div class="terminal-controls">
+        <div class="form-grid terminal-form-grid">
+          <label>
+            <span>Никнейм</span>
+            <input id="name" maxlength="18" placeholder="например, мотя" autocomplete="nickname">
+          </label>
+          <label>
+            <span>Код комнаты</span>
+            <input id="code" maxlength="5" placeholder="если подключаешься" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="actions two-col terminal-actions">
+          <button class="primary terminal-primary" type="button" onclick="showPlayRooms()">ИГРАТЬ</button>
+          <button class="secondary terminal-secondary" onclick="joinLobby()">ВОЙТИ ПО КОДУ</button>
+          <button class="secondary terminal-secondary" type="button" onclick="showHowToPlay()">HOW TO PLAY</button>
+          <button class="ghost-button terminal-secondary" type="button" onclick="showDemoFlow()">DEMO</button>
+        </div>
       </div>
 
-      <div class="rules">
-        <div><strong>3+</strong><span>игрока</span></div>
-        <div><strong>30с</strong><span>на трек</span></div>
-        <div><strong>3</strong><span>круга</span></div>
-      </div>
       <p id="menuError" class="status error"></p>
     </section>
 
