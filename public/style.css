@@ -2282,6 +2282,10 @@ select:focus-visible {
   font-size: clamp(2.2rem, 8vw, 4rem);
 }
 
+#publicProfileTitle {
+  margin-top: -6px;
+}
+
 .auth-modal-text,
 .auth-register-hint {
   color: var(--muted);
@@ -3257,6 +3261,10 @@ body[data-screen="game"] .language-switcher {
 .chat-player-meta-wrap {
   position: relative;
   min-width: 0;
+}
+
+.chat-message:not(.mine) .chat-player-meta-wrap {
+  margin-left: -5px;
 }
 
 .chat-player-trigger {
@@ -8503,13 +8511,21 @@ body,
 
 .friend-lobby-pill {
   flex: 0 0 auto;
-  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
   border: 1px solid rgba(var(--accent-rgb), 0.32);
-  border-radius: 999px;
+  border-radius: 14px;
   color: var(--text);
   background: rgba(var(--accent-rgb), 0.12);
   font-size: 0.67rem;
   font-weight: 900;
+  line-height: 1;
 }
 
 .friend-actions {
