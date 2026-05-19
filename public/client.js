@@ -2038,8 +2038,7 @@ function hideHowToPlay() {
 function focusNicknameInput() {
   const nameInput = $("name");
   if (!nameInput) return;
-  nameInput.focus({ preventScroll: false });
-  nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
+  nameInput.focus({ preventScroll: true });
 }
 
 function showDemoFlow() {
