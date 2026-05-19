@@ -4431,7 +4431,7 @@ function renderChat(messages = state.chatMessages) {
     const nickname = player.name || message.playerName || "Игрок";
     const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
     const playerActions = isMine ? "" : `
-      <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}" aria-hidden="true">
+      <div class="chat-player-actions" data-player-actions="${escapeAttribute(message.playerId || '')}" aria-hidden="true">
         <div class="chat-player-actions-header">
           <span class="chat-player-actions-avatar" aria-hidden="true">${avatar}</span>
           <div class="chat-player-actions-copy">
@@ -4485,7 +4485,8 @@ function toggleChatPlayerActions(event, playerId) {
   event?.preventDefault();
   event?.stopPropagation();
   const trigger = event.currentTarget;
-  const menu = document.getElementById(`chatPlayerActions-${playerId}`);
+  const scope = trigger?.closest?.('.chat-player-meta-wrap');
+  const menu = scope?.querySelector?.('.chat-player-actions');
   if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
