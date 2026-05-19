@@ -3192,6 +3192,17 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("global_message", ({ text, username } = {}) => {
+    const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_GLOBAL_CHAT_MESSAGE_LENGTH);
+    if (!messageText) return;
+    const messageObj = {
+      username: String(username || "Аноним").trim().slice(0, 40) || "Аноним",
+      text: messageText,
+      createdAt: Date.now()
+    };
+    io.emit("global_message", messageObj);
+  });
+
 
   socket.on("chat:send", ({ code, text }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
