@@ -5424,5 +5424,3 @@ socket.on("gameCancelled", ({ reason }) => {
   setStatus("lobbyStatus", reason, true);
 });
 
-document.getElementById("chat-send")?.addEventListener("click", sendGlobalChatMessage);
-document.getElementById("chat-input")?.addEventListener("keydown", handleGlobalChatKeydown);
