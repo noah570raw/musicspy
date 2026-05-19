@@ -479,6 +479,12 @@ function findUserByNicknameOrUsername(value) {
     || null;
 }
 
+function grantShopItemToUser(user, item) {
+  if (!user.economy.ownedCosmetics.includes(item.id)) user.economy.ownedCosmetics.push(item.id);
+  const category = SHOP_CATEGORIES.find((entry) => entry.id === item.category);
+  if (category?.equipSlot) user.economy.equipped[category.equipSlot] = item.id;
+}
+
 function parseDevCommandInput(raw) {
   const input = String(raw || "").trim();
   if (!input) return { error: "Команда пустая. Напиши -help для списка." };
@@ -496,9 +502,22 @@ function parseDevCommandInput(raw) {
   match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+xp\s+(\d{1,9})$/i);
   if (match) return { type: "giveXp", username: match[1], xp: Number(match[2]) };
   if (input.toLowerCase() === "-list nickname colors") return { type: "listNicknameColors" };
+  if (input.toLowerCase() === "-list avatar frames") return { type: "listAvatarFrames" };
+  if (input.toLowerCase() === "-list profile banners") return { type: "listProfileBanners" };
+  if (input.toLowerCase() === "-list all shop items") return { type: "listAllShopItems" };
+  match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+avatar\s+frame\s+"([^"]+)"$/i);
+  if (match) return { type: "giveAvatarFrame", username: match[1], itemName: match[2] };
+  match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+profile\s+banner\s+"([^"]+)"$/i);
+  if (match) return { type: "giveProfileBanner", username: match[1], itemName: match[2] };
+  match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+shop\s+item\s+"([^"]+)"$/i);
+  if (match) return { type: "giveShopItem", username: match[1], itemName: match[2] };
   match = input.match(/^-rainbow\s+@?([a-z0-9_-]{3,24})$/i);
   if (match) return { type: "rainbowNicknameColor", username: match[1] };
   return { error: "Неизвестная команда. Напиши -help." };
+}
+
+function normalizeShopItemName(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, "_");
 }
 
 function validateAccountTag(value, currentUserId = "") {
@@ -2636,21 +2655,34 @@ io.on("connection", (socket) => {
           "-help",
           "-level up @username to 25",
           "-give @username nickname color \"white chrome\"",
+          "-give @username avatar frame \"pulse ring\"",
+          "-give @username profile banner \"sunset boulevard\"",
+          "-give @username shop item \"any exact item name\"",
           "-vinyls add @username 5000",
           "-xp set @username 9000",
           "-give @username vinyls 5000",
           "-give @username xp 9000",
           "-list nickname colors",
+          "-list avatar frames",
+          "-list profile banners",
+          "-list all shop items",
           "-rainbow @username"
         ]
       });
     }
-    if (parsed.type === "listNicknameColors") {
-      const names = SHOP_CATALOG
-        .filter((entry) => entry.category === "nicknameColor")
-        .map((entry) => entry.name)
-        .sort((a, b) => a.localeCompare(b));
-      return cb({ success: true, output: [`Nickname colors (${names.length}):`, ...names] });
+    if (["listNicknameColors", "listAvatarFrames", "listProfileBanners", "listAllShopItems"].includes(parsed.type)) {
+      const byCategory = {
+        listNicknameColors: "nicknameColor",
+        listAvatarFrames: "avatarFrame",
+        listProfileBanners: "profileBanner"
+      };
+      if (parsed.type === "listAllShopItems") {
+        const allItems = SHOP_CATALOG.map((entry) => `${entry.name} [${entry.category}]`).sort((a, b) => a.localeCompare(b));
+        return cb({ success: true, output: [`Shop items (${allItems.length}):`, ...allItems] });
+      }
+      const categoryId = byCategory[parsed.type];
+      const names = SHOP_CATALOG.filter((entry) => entry.category === categoryId).map((entry) => entry.name).sort((a, b) => a.localeCompare(b));
+      return cb({ success: true, output: [`${categoryId} (${names.length}):`, ...names] });
     }
     const target = findUserByNicknameOrUsername(parsed.username);
     if (!target) return cb({ error: "Пользователь не найден" });
@@ -2663,11 +2695,23 @@ io.on("connection", (socket) => {
       return cb({ success: true, output: [`${target.username}: level => ${target.economy.level}`] });
     }
     if (parsed.type === "giveNicknameColor") {
-      const wanted = parsed.colorName.trim().toLowerCase().replace(/\s+/g, "_");
-      const item = SHOP_CATALOG.find((entry) => entry.category === "nicknameColor" && entry.name.trim().toLowerCase().replace(/\s+/g, "_") === wanted);
+      const wanted = normalizeShopItemName(parsed.colorName);
+      const item = SHOP_CATALOG.find((entry) => entry.category === "nicknameColor" && normalizeShopItemName(entry.name) === wanted);
       if (!item) return cb({ error: "Цвет не найден в магазине" });
-      if (!target.economy.ownedCosmetics.includes(item.id)) target.economy.ownedCosmetics.push(item.id);
-      target.economy.equipped.nicknameColor = item.id;
+      grantShopItemToUser(target, item);
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: выдан и экипирован ${item.name}`] });
+    }
+    if (["giveAvatarFrame", "giveProfileBanner", "giveShopItem"].includes(parsed.type)) {
+      const wanted = normalizeShopItemName(parsed.itemName);
+      const categoryByType = { giveAvatarFrame: "avatarFrame", giveProfileBanner: "profileBanner" };
+      const item = parsed.type === "giveShopItem"
+        ? SHOP_CATALOG.find((entry) => normalizeShopItemName(entry.name) === wanted)
+        : SHOP_CATALOG.find((entry) => entry.category === categoryByType[parsed.type] && normalizeShopItemName(entry.name) === wanted);
+      if (!item) return cb({ error: "Предмет не найден в магазине" });
+      grantShopItemToUser(target, item);
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
