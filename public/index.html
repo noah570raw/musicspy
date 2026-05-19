@@ -494,6 +494,19 @@
   </div>
 
   <main class="app-shell">
+    <aside id="globalChatSidebar" class="global-chat-sidebar" aria-label="Глобальный чат">
+      <header class="global-chat-header">
+        <strong>Global chat</strong><span id="globalChatOnlineCount">0 online</span>
+      </header>
+      <div class="global-chat-scroll">
+        <div id="globalChatMessages" class="global-chat-messages empty" aria-live="polite">Пока сообщений нет</div>
+      </div>
+      <div class="global-chat-input-wrap">
+        <input id="globalChatInput" maxlength="250" placeholder="Написать всем игрокам…" onkeydown="handleGlobalChatKeydown(event)">
+        <button type="button" class="secondary" onclick="sendGlobalChatMessage()">➤</button>
+      </div>
+      <p id="globalChatStatus" class="status"></p>
+    </aside>
     <section id="menu" class="screen card hero-card vinyl-terminal-card">
       <div class="vinyl-terminal-particles" aria-hidden="true">
         <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>

@@ -67,6 +67,8 @@ const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
+const MAX_GLOBAL_CHAT_MESSAGES = 120;
+const MAX_GLOBAL_CHAT_MESSAGE_LENGTH = 250;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
 const MAX_DIRECT_MESSAGES = 5000;
@@ -243,6 +245,35 @@ function saveUsersStore() {
   return userStoreSaveChain;
 }
 
+
+
+async function loadGlobalChatMessages(limit = MAX_GLOBAL_CHAT_MESSAGES) {
+  const capped = Math.max(1, Math.min(300, Number(limit) || MAX_GLOBAL_CHAT_MESSAGES));
+  const { rows } = await pool.query(`
+    SELECT gcm.id, gcm.user_id, gcm.message, gcm.created_at,
+      u.username, u.display_name, u.avatar, u.roles, u.settings
+    FROM global_chat_messages gcm
+    JOIN users u ON u.id = gcm.user_id
+    ORDER BY gcm.created_at DESC
+    LIMIT $1
+  `, [capped]);
+
+  return rows.reverse().map((row) => ({
+    id: row.id,
+    userId: String(row.user_id),
+    username: row.username || '',
+    displayName: row.display_name || row.username || 'Игрок',
+    avatar: row.avatar || '',
+    roles: Array.isArray(row.roles) ? row.roles : [],
+    text: row.message || '',
+    online: userSockets.has(String(row.user_id)),
+    createdAt: row.created_at instanceof Date ? row.created_at.getTime() : Date.parse(row.created_at) || Date.now()
+  }));
+}
+
+function emitGlobalChatUpdate(messages) {
+  io.emit('globalChat:update', { messages });
+}
 function createSession(user) {
   const session = createAuthSession(user, { save: saveUsersStore });
   console.info(`[auth] created persistent session for user=${user.id} accessExpiresAt=${session.accessExpiresAt} refreshExpiresAt=${session.refreshExpiresAt}`);
@@ -750,6 +781,7 @@ function registerAuthenticatedSocket(socket, user) {
   }
   if (deliveredChanged) saveUsersStore();
   emitSocialForUserAndFriends(user.id);
+  loadGlobalChatMessages().then(emitGlobalChatUpdate).catch(() => {});
 }
 
 function unregisterAuthenticatedSocket(socket) {
@@ -763,6 +795,7 @@ function unregisterAuthenticatedSocket(socket) {
   }
   socket.data.user = null;
   emitSocialForUserAndFriends(userId);
+  loadGlobalChatMessages().then(emitGlobalChatUpdate).catch(() => {});
 }
 
 function sanitizeDisplayName(value, fallback = "Игрок") {
@@ -3116,6 +3149,41 @@ io.on("connection", (socket) => {
     }
 
     emitLobbyUpdate(lobby.code);
+  });
+
+
+  socket.on("globalChat:get", async (cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войдите в аккаунт" });
+    try {
+      const messages = await loadGlobalChatMessages();
+      cb({ success: true, messages });
+    } catch (error) {
+      console.error("[global-chat] load failed", error);
+      cb({ error: "Не удалось загрузить чат" });
+    }
+  });
+
+  socket.on("globalChat:send", async ({ text } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войдите в аккаунт" });
+
+    const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_GLOBAL_CHAT_MESSAGE_LENGTH);
+    if (!messageText) return cb({ error: "Напиши сообщение" });
+
+    const messageId = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+    try {
+      await pool.query(`
+        INSERT INTO global_chat_messages (id, user_id, message)
+        VALUES ($1, $2, $3)
+      `, [messageId, Number(user.id), messageText]);
+      const messages = await loadGlobalChatMessages();
+      emitGlobalChatUpdate(messages);
+      cb({ success: true });
+    } catch (error) {
+      console.error("[global-chat] send failed", error);
+      cb({ error: "Не удалось отправить сообщение" });
+    }
   });
 
 

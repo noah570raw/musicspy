@@ -33,6 +33,7 @@ const state = {
   currentTrackId: null,
   trackHistory: [],
   chatMessages: [],
+  globalChatMessages: [],
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
   audio: null,
@@ -2193,6 +2194,8 @@ function applyProfile(profileData = { user: null, guest: true }) {
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
   else requestSocialState();
+  if (state.profile) requestGlobalChatHistory();
+  else renderGlobalChat([]);
   restoreServerBackedSettings(user);
   attemptReconnectToGame();
   attemptAutoJoinFromInvite();
@@ -4377,6 +4380,69 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
 }
 
 
+
+function requestGlobalChatHistory() {
+  if (!socket.connected || !state.profile) return renderGlobalChat();
+  socket.emit("globalChat:get", (res) => {
+    if (res?.error) return setGlobalChatStatus(res.error, true);
+    renderGlobalChat(res?.messages || []);
+  });
+}
+
+function setGlobalChatStatus(message = "", isError = false) {
+  const el = $("globalChatStatus");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("error", Boolean(isError));
+}
+
+function renderGlobalChat(messages = state.globalChatMessages) {
+  const root = $("globalChatSidebar");
+  const box = $("globalChatMessages");
+  if (!root || !box) return;
+  const list = Array.isArray(messages) ? messages : [];
+  state.globalChatMessages = list;
+  const onlineCount = new Set(list.filter((m) => m.online).map((m) => m.userId)).size;
+  const onlineEl = $("globalChatOnlineCount");
+  if (onlineEl) onlineEl.textContent = `${onlineCount} online`;
+  if (!list.length) { box.classList.add('empty'); box.textContent = 'Пока сообщений нет'; return; }
+  box.classList.remove('empty');
+  box.innerHTML = list.map((m)=>`<article class="global-chat-message">
+    <button class="global-chat-avatar ${m.online ? 'online' : ''}" onclick="openChatUserProfile('${escapeAttribute(m.userId)}')">${m.avatar ? `<img src="${escapeAttribute(m.avatar)}" alt="">` : escapeHtml((m.displayName||'?').slice(0,1).toUpperCase())}</button>
+    <div class="global-chat-body">
+      <div class="global-chat-meta"><button class="global-chat-user" onclick="openChatUserProfile('${escapeAttribute(m.userId)}')">${nameWithDevBadge(m, 'Игрок', { showBadge: true })}</button><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
+      <p>${escapeHtml(m.text || '')}</p>
+    </div>
+  </article>`).join('');
+  const scroll = box.parentElement;
+  scroll?.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' });
+}
+
+function openChatUserProfile(userId) {
+  if (typeof window.openUserProfileModal === 'function') return window.openUserProfileModal(userId);
+  if (typeof window.openProfileModal === 'function') return window.openProfileModal(userId);
+  if (String(userId) === String(state.profile?.id)) return openMainMenu('profile');
+  messageFriend(userId);
+}
+
+function handleGlobalChatKeydown(event) {
+  if (event.key !== 'Enter' || event.shiftKey) return;
+  event.preventDefault();
+  sendGlobalChatMessage();
+}
+
+function sendGlobalChatMessage() {
+  const input = $("globalChatInput");
+  const text = String(input?.value || '').trim();
+  if (!text) return setGlobalChatStatus('Напиши сообщение', true);
+  if (text.length > 250) return setGlobalChatStatus('Максимум 250 символов', true);
+  socket.emit('globalChat:send', { text }, (res) => {
+    if (res?.error) return setGlobalChatStatus(res.error, true);
+    if (input) input.value = '';
+    setGlobalChatStatus('');
+  });
+}
+
 function formatChatTime(createdAt) {
   const date = new Date(Number(createdAt) || Date.now());
   return date.toLocaleTimeString(currentLanguage() === "en" ? "en-US" : "ru-RU", { hour: "2-digit", minute: "2-digit" });
@@ -5094,6 +5160,7 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("chat:update", ({ messages }) => renderChat(messages || []));
+socket.on("globalChat:update", ({ messages }) => renderGlobalChat(messages || []));
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
