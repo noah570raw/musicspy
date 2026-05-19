@@ -2767,6 +2767,14 @@ io.on("connection", (socket) => {
     cb({ success: true, ...getSocialState(user.id) });
   });
 
+  socket.on("profile:view", async ({ accountId } = {}, cb = () => {}) => {
+    const userId = String(accountId || "").trim();
+    if (!userId) return cb({ error: "Профиль игрока недоступен" });
+    const user = findUserById(userId) || await getUser(userId);
+    if (!user) return cb({ error: "Профиль игрока не найден" });
+    cb({ success: true, user: publicUser(user) });
+  });
+
   socket.on("friend:request", ({ nickname } = {}, cb = () => {}) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы добавлять друзей" });

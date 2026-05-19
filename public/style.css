@@ -2660,6 +2660,10 @@ html[lang="ru"] .language-switcher span:first-child {
   width: min(100%, 560px);
 }
 
+.public-profile-card {
+  width: min(100%, 940px);
+}
+
 .host-modal-list {
   max-height: min(420px, 54vh);
   margin: 18px 0;
