@@ -466,8 +466,13 @@
     <p id="accountStatus" class="status"></p>
     <button id="accountToggle" class="corner-toggle account-toggle" type="button" onclick="openAccountPanel()" aria-label="Открыть аккаунт" title="Аккаунт и статистика">
       <span id="accountToggleAvatar">👤</span>
-      <strong id="accountToggleLabel">Загрузка</strong>
+      <span class="account-toggle-meta">
+        <strong id="accountToggleLabel">Загрузка</strong>
+        <span id="accountToggleLevel" class="account-toggle-level">LVL 1</span>
+      </span>
+      <span class="account-toggle-check" aria-hidden="true">✓</span>
     </button>
+    <div id="accountXpBar" class="account-xp-bar hidden" aria-live="polite"></div>
   </div>
 
   <div id="volumeControl" class="volume-control" aria-label="Громкость сайта">

@@ -2131,6 +2131,7 @@ function updateAccountToggle(displayName, user) {
   const oauthLocked = isOAuthProfile(user);
   const guestLocked = !user;
   const locked = oauthLocked || guestLocked;
+  const xpMeta = getEconomyXpMeta(user);
   if (toggle) {
     toggle.disabled = locked;
     toggle.classList.toggle("locked", locked);
@@ -2141,15 +2142,39 @@ function updateAccountToggle(displayName, user) {
     toggle.setAttribute("aria-disabled", String(locked));
   }
   if (label) label.innerHTML = user ? nameWithDevBadge(user, "Игрок", { showBadge: false }) : t("Гость");
-  if (!avatar) return;
-  avatar.innerHTML = user?.avatar
-    ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
-    : (user ? escapeHtml(displayName.slice(0, 1).toUpperCase() || "?") : "👤");
+  const levelLabel = $("accountToggleLevel");
+  if (levelLabel) levelLabel.textContent = `LVL ${xpMeta.level}`;
+  if (avatar) {
+    avatar.innerHTML = user?.avatar
+      ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
+      : (user ? escapeHtml(displayName.slice(0, 1).toUpperCase() || "?") : "👤");
+  }
+  const xpBar = $("accountXpBar");
+  if (xpBar) {
+    xpBar.classList.toggle("hidden", !user);
+    if (user) {
+      xpBar.innerHTML = `<div class="xp-bar-head"><strong>EXP</strong><span>${xpMeta.clampedXp}/${xpMeta.required}</span></div>
+      <div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
+      <small>До следующего уровня: ${xpMeta.left.toLocaleString("ru-RU")} EXP</small>`;
+    }
+  }
 }
 
 function percent(value, total) {
   if (!total) return "0%";
   return `${Math.round((Number(value || 0) / total) * 100)}%`;
+}
+
+function getLevelRequirement(level = 1) {
+  return Math.max(1, Math.round(100 * Math.pow(1.2, Math.max(1, Number(level || 1)) - 1)));
+}
+
+function getEconomyXpMeta(user = state.profile) {
+  const level = Math.max(1, Number(user?.economy?.level || 1));
+  const xp = Math.max(0, Number(user?.economy?.xp || 0));
+  const required = getLevelRequirement(level);
+  const clampedXp = Math.min(xp, required);
+  return { level, required, clampedXp, left: Math.max(0, required - clampedXp), progress: required ? Math.min(100, Math.round((clampedXp / required) * 100)) : 0 };
 }
 
 function renderProfileStats() {
@@ -2165,6 +2190,7 @@ function renderProfileStats() {
   const spyRate = spyGames ? spyWins / spyGames : 0;
   const civilianRate = civilianGames ? civilianWins / civilianGames : 0;
   const bestRole = spyGames && spyRate >= civilianRate ? t("теневой шпион") : t("народный детектив");
+  const xpMeta = getEconomyXpMeta(state.profile);
   grid.innerHTML = [
     ["🎮", t("Игр сыграно"), games],
     ["🏆", t("Общий винрейт"), percent(wins, games)],
@@ -2173,14 +2199,20 @@ function renderProfileStats() {
     ["🎯", t("Любимая роль"), bestRole],
     ["🔥", t("Серия побед"), stats.winStreak || 0],
     ["◍", "Vinyls", hasDevRole(state.profile) ? "∞" : vinylBalance().toLocaleString("ru-RU")],
-    ["⭐", "Уровень", state.profile.economy?.level || 1]
+    ["⭐", "Уровень", `LVL ${xpMeta.level}`]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">
       <span>${icon}</span>
       <small>${escapeHtml(label)}</small>
       <strong>${escapeHtml(String(value))}</strong>
     </div>
-  `).join("");
+  `).join("") + `<div class="profile-stat-card profile-xp-card">
+      <span>⚡</span>
+      <small>EXP Progress</small>
+      <strong>${xpMeta.clampedXp}/${xpMeta.required} EXP</strong>
+      <div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
+      <em>До следующего уровня: ${xpMeta.left.toLocaleString("ru-RU")} EXP</em>
+    </div>`;
 }
 
 function vinylBalance() {
