@@ -555,10 +555,11 @@ function initDevConsole() {
   shell.className = "dev-console-popup hidden";
   shell.innerHTML = `
     <header class="dev-console-header"><strong>DEV Console</strong><button type="button" onclick="toggleDevConsole(false)">×</button></header>
-    <div id="devConsoleOutput" class="dev-console-output">Введите /help для списка команд.</div>
-    <input id="devConsoleInput" class="dev-console-input" placeholder="Команда..." autocomplete="off" spellcheck="false">
+    <div id="devConsoleOutput" class="dev-console-output">Введите -help для списка команд.</div>
+    <input id="devConsoleInput" class="dev-console-input" placeholder="-команда..." autocomplete="off" spellcheck="false">
   `;
   document.body.appendChild(shell);
+  initDevConsoleDrag(shell);
   $("devConsoleInput").addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     const command = event.target.value.trim();
@@ -570,6 +571,49 @@ function initDevConsole() {
       $("devConsoleOutput").textContent = state.devConsoleLines.join("\n");
     });
   });
+}
+
+function initDevConsoleDrag(shell) {
+  const header = shell?.querySelector(".dev-console-header");
+  if (!header) return;
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let originLeft = 0;
+  let originTop = 0;
+  header.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    dragging = true;
+    shell.setPointerCapture(event.pointerId);
+    startX = event.clientX;
+    startY = event.clientY;
+    const rect = shell.getBoundingClientRect();
+    originLeft = rect.left;
+    originTop = rect.top;
+    shell.classList.add("dragging");
+    event.preventDefault();
+  });
+  header.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const nextLeft = Math.max(0, Math.min(window.innerWidth - 180, originLeft + (event.clientX - startX)));
+    const nextTop = Math.max(0, Math.min(window.innerHeight - 120, originTop + (event.clientY - startY)));
+    shell.style.left = `${nextLeft}px`;
+    shell.style.top = `${nextTop}px`;
+    shell.style.right = "auto";
+    shell.style.bottom = "auto";
+  });
+  const stopDragging = (event) => {
+    if (!dragging) return;
+    dragging = false;
+    shell.classList.remove("dragging");
+    try {
+      shell.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore stale pointer releases.
+    }
+  };
+  header.addEventListener("pointerup", stopDragging);
+  header.addEventListener("pointercancel", stopDragging);
 }
 
 function toggleDevConsole(force) {
@@ -4923,7 +4967,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeFriendsPanel();
-    if (event.shiftKey && event.key.toLowerCase() === "c") {
+    if (event.shiftKey && ["c", "с"].includes(event.key.toLowerCase())) {
       event.preventDefault();
       toggleDevConsole();
     }

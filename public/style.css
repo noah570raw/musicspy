@@ -11222,6 +11222,8 @@ button.terminal-secondary:hover:not(:disabled) {
 }
 .dev-console-popup.hidden { display: none; }
 .dev-console-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; color:#e2e8f0; }
+.dev-console-header { cursor: move; user-select: none; touch-action: none; }
+.dev-console-popup.dragging { opacity: .94; }
 .dev-console-header button { background:transparent; color:#cbd5e1; border:0; font-size:20px; cursor:pointer; }
 .dev-console-output {
   white-space: pre-wrap;
