@@ -2268,16 +2268,13 @@ function renderProfileStats() {
   const civilianWins = Number(stats.civilianWins || 0);
   const spyRate = spyGames ? spyWins / spyGames : 0;
   const civilianRate = civilianGames ? civilianWins / civilianGames : 0;
-  const bestRole = spyGames && spyRate >= civilianRate ? t("теневой шпион") : t("народный детектив");
   const xpMeta = getEconomyXpMeta(state.profile);
   grid.innerHTML = [
     ["🎮", t("Игр сыграно"), games],
     ["🏆", t("Общий винрейт"), percent(wins, games)],
     ["🕵️", t("Побед за шпиона"), `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
     ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
-    ["🎯", t("Любимая роль"), bestRole],
     ["🔥", t("Серия побед"), stats.winStreak || 0],
-    ["◍", "Vinyls", hasDevRole(state.profile) ? "∞" : vinylBalance().toLocaleString("ru-RU")],
     ["⭐", "Уровень", `LVL ${xpMeta.infinite ? "∞" : xpMeta.level}`]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">
@@ -4484,16 +4481,71 @@ function viewLobbyPlayerProfile(playerId) {
   const player = lobbyPlayerById(playerId);
   closeChatPlayerActions();
   if (!player) return setChatStatus('Профиль игрока недоступен', true);
-  const friend = state.friends.find((item) => item.id === player.accountId);
-  if (friend) {
-    openDirectChat(friend.id);
-    return setChatStatus(`Открыт профиль друга ${friendDisplayName(friend)}`);
+  if (!player.accountId) {
+    return setChatStatus('Публичный профиль гостя недоступен', true);
   }
-  openSettingsSection('profile');
-  setChatStatus(`Публичный профиль ${player.name} пока недоступен, открыт ваш профиль`);
+  socket.emit("profile:view", { accountId: player.accountId }, (res) => {
+    if (res?.error || !res?.user) return setChatStatus(res?.error || "Профиль игрока недоступен", true);
+    showPublicProfileModal(res.user);
+  });
 }
 
 document.addEventListener('click', closeChatPlayerActions);
+
+function profileStatsMarkup(user = {}) {
+  const stats = user.stats || {};
+  const games = Number(stats.games || 0);
+  const spyGames = Number(stats.spyGames || 0);
+  const civilianGames = Number(stats.civilianGames || 0);
+  const wins = Number(stats.wins || 0);
+  const spyWins = Number(stats.spyWins || 0);
+  const civilianWins = Number(stats.civilianWins || 0);
+  const streak = Number(stats.winStreak || 0);
+  const xpMeta = getEconomyXpMeta(user);
+  return [
+    ["🎮", t("Игр сыграно"), games],
+    ["🏆", t("Общий винрейт"), percent(wins, games)],
+    ["🕵️", t("Побед за шпиона"), `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
+    ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
+    ["🔥", t("Серия побед"), streak],
+    ["⭐", "Уровень", `LVL ${xpMeta.infinite ? "∞" : xpMeta.level}`]
+  ].map(([icon, label, value]) => `
+    <div class="profile-stat-card">
+      <span>${icon}</span>
+      <small>${escapeHtml(String(label))}</small>
+      <strong>${escapeHtml(String(value))}</strong>
+    </div>
+  `).join("") + `<div class="profile-stat-card profile-xp-card">
+      <span>⚡</span>
+      <small>EXP Progress</small>
+      <strong>${xpMeta.infinite ? "∞/∞ EXP" : `${xpMeta.clampedXp}/${xpMeta.required} EXP`}</strong>
+      <div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
+      <em>${xpMeta.infinite ? "До следующего уровня: ∞" : `До следующего уровня: ${xpMeta.left.toLocaleString("ru-RU")} EXP`}</em>
+    </div>`;
+}
+
+function showPublicProfileModal(user = {}) {
+  const modal = $("publicProfileModal");
+  const content = $("publicProfileContent");
+  if (!modal || !content) return;
+  const displayName = user.displayName || user.username || "Игрок";
+  const login = user.username ? `@${user.username}` : "без аккаунт-тега";
+  content.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar profile-avatar-large">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар игрока">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
+      <div>
+        <strong>${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
+        <span>${hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : escapeHtml(login)}</span>
+      </div>
+    </div>
+    <div class="profile-stats-grid">${profileStatsMarkup(user)}</div>
+  `;
+  modal.classList.remove("hidden");
+}
+
+function hidePublicProfileModal() {
+  $("publicProfileModal")?.classList.add("hidden");
+}
 
 function handleChatKeydown(event) {
   if (event.key !== "Enter" || event.shiftKey) return;

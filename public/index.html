@@ -439,6 +439,13 @@
       <p id="authStatus" class="status"></p>
     </div>
   </div>
+  <div id="publicProfileModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="publicProfileTitle">
+    <div class="auth-modal-card host-players-card public-profile-card">
+      <button class="modal-close" type="button" onclick="hidePublicProfileModal()" aria-label="Закрыть профиль">×</button>
+      <h2 id="publicProfileTitle">Профиль игрока</h2>
+      <div id="publicProfileContent" class="account-profile-view"></div>
+    </div>
+  </div>
 
 
   <div id="hostPlayersModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="hostPlayersTitle">
