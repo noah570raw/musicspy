@@ -2664,6 +2664,10 @@ html[lang="ru"] .language-switcher span:first-child {
   width: min(100%, 940px);
 }
 
+.public-profile-card #publicProfileTitle {
+  margin-top: -15px;
+}
+
 .host-modal-list {
   max-height: min(420px, 54vh);
   margin: 18px 0;
@@ -3263,6 +3267,7 @@ body[data-screen="game"] .language-switcher {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  margin-left: -8px;
   padding: 0;
   border: 0;
   background: transparent;
