@@ -4542,16 +4542,24 @@ function handleChatKeydown(event) {
   sendChatMessage();
 }
 
+function isVisibleChatNode(node) {
+  return !!(node && node.offsetParent !== null && !node.disabled && node.getAttribute("aria-hidden") !== "true");
+}
+
 function activeChatElements() {
-  const root = document.querySelector(`.screen:not(.hidden)`) || document;
-  return {
-    input: root.querySelector("[data-chat-input]"),
-    status: root.querySelector("[data-chat-status]")
-  };
+  const activeInput = document.activeElement?.matches?.("[data-chat-input]") ? document.activeElement : null;
+  const candidates = [...document.querySelectorAll("[data-chat-input]")];
+  const input = activeInput || candidates.find(isVisibleChatNode) || candidates[0] || null;
+  const status = input
+    ? input.closest(".chat-input-area")?.querySelector("[data-chat-status]")
+    : (document.querySelector(".screen:not(.hidden)") || document).querySelector("[data-chat-status]");
+  return { input, status };
 }
 
 function setChatStatus(message = "", isError = false) {
-  for (const status of document.querySelectorAll("[data-chat-status]")) {
+  const { status: activeStatus } = activeChatElements();
+  const targets = activeStatus ? [activeStatus] : [...document.querySelectorAll("[data-chat-status]")];
+  for (const status of targets) {
     status.textContent = t(message);
     status.classList.toggle("error", isError);
   }
