@@ -2836,7 +2836,7 @@ function renderShopItemCard(item, owned, equipped) {
         ? `<button class="secondary" type="button" disabled>Достижение</button>`
         : `<button class="${canAfford ? "primary" : "secondary"}" type="button" onclick="purchaseShopItem('${escapeAttribute(item.id)}')" ${canAfford ? "" : "disabled"}>${Number(item.price || 0).toLocaleString("ru-RU")} Vinyls</button>`;
   return `
-    <article class="shop-card rarity-${escapeAttribute(item.rarity)} ${isOwned ? "owned" : ""}">
+    <article class="shop-card rarity-${escapeAttribute(item.rarity)} fx-tier-${escapeAttribute(item.rarity || "common")} ${isOwned ? "owned" : ""}">
       <div class="shop-preview" style="--preview:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}">
         <span class="shop-preview-disc"></span>
         ${item.limited ? `<b>limited</b>` : ""}
@@ -3076,7 +3076,7 @@ function cosmeticDisplayName(player = {}, fallback = "Игрок") {
   const rarity = escapeAttribute(nicknameFx?.rarity || "common");
   const gradient = escapeAttribute(nicknameFx?.preview || "linear-gradient(90deg,#e2e8f0,#94a3b8)");
   const title = titleFx ? `<small class="player-title rarity-${escapeAttribute(titleFx.rarity || "common")}">${escapeHtml(titleFx.name || "")}</small>` : "";
-  return `<span class="player-name-stack"><strong class="cosmetic-name rarity-${rarity}" style="--nickname-gradient:${gradient}">${nameWithDevBadge({ ...player, name: rawName }, fallback, { showBadge: true })}</strong>${title}</span>`;
+  return `<span class="player-name-stack" data-rarity="${rarity}"><strong class="cosmetic-name rarity-${rarity} fx-tier-${rarity}" style="--nickname-gradient:${gradient}">${nameWithDevBadge({ ...player, name: rawName }, fallback, { showBadge: true })}</strong>${title}</span>`;
 }
 
 function lobbyPlayerCardMarkup(player, index, lobby) {
@@ -3086,7 +3086,8 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
   const statusText = isReady ? t("готов") : t("не готов");
   const lobbyFx = player?.cosmetics?.active?.lobbyEffect;
   const bannerFx = player?.cosmetics?.active?.profileBanner;
-  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : "", lobbyFx ? `rarity-${lobbyFx.rarity}` : ""].filter(Boolean).join(" ");
+  const fxRarity = lobbyFx?.rarity || bannerFx?.rarity || "common";
+  const cardClass = ["lobby-player-card", "fx-tier-" + fxRarity, isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : "", lobbyFx ? `rarity-${lobbyFx.rarity}` : ""].filter(Boolean).join(" ");
   return `
     <article class="${cardClass}" style="${bannerFx ? `--profile-banner:${escapeAttribute(bannerFx.preview)};` : ""}">
       <div class="lobby-player-glow" aria-hidden="true"></div>
@@ -4458,7 +4459,7 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""} ${message?.cosmetics?.active?.chatEffect ? `rarity-${escapeAttribute(message.cosmetics.active.chatEffect.rarity || "common")}` : ""}">
+      <div class="chat-message ${isMine ? "mine" : ""} ${message?.cosmetics?.active?.chatEffect ? `rarity-${escapeAttribute(message.cosmetics.active.chatEffect.rarity || "common")}` : ""} fx-tier-${escapeAttribute(message?.cosmetics?.active?.chatEffect?.rarity || "common")}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
             ${lobbyPlayerProfileActionMarkup(message)}
