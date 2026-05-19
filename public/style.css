@@ -86,8 +86,8 @@ body[data-screen="lobby"] .app-shell {
 
 #global-chat {
   position: fixed;
-  left: 0;
-  top: 100px;
+  left: 250px;
+  top: 200px;
   width: 300px;
   height: calc(100vh - 320px);
   z-index: 50;
@@ -3271,8 +3271,8 @@ body[data-screen="game"] .language-switcher {
   place-items: center;
   flex: 0 0 32px;
   overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  border: none;
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.42), rgba(255, 255, 255, 0.12));
   color: #fff;
   font-weight: 800;
@@ -3320,7 +3320,7 @@ body[data-screen="game"] .language-switcher {
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border: none;
   flex-shrink: 0;
 }
 .chat-message-meta strong {

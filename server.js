@@ -67,7 +67,7 @@ const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
-const MAX_GLOBAL_CHAT_MESSAGES = 120;
+const MAX_GLOBAL_CHAT_MESSAGES = 50;
 const MAX_GLOBAL_CHAT_MESSAGE_LENGTH = 250;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
@@ -3162,7 +3162,7 @@ io.on("connection", (socket) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войдите в аккаунт" });
     try {
-      const messages = await loadGlobalChatMessages();
+      const messages = await loadGlobalChatMessages(MAX_GLOBAL_CHAT_MESSAGES);
       cb({ success: true, messages, onlineCount: userSockets.size });
     } catch (error) {
       console.error("[global-chat] load failed", error);
@@ -3183,7 +3183,7 @@ io.on("connection", (socket) => {
         INSERT INTO global_chat_messages (id, user_id, message)
         VALUES ($1, $2, $3)
       `, [messageId, Number(user.id), messageText]);
-      const messages = await loadGlobalChatMessages();
+      const messages = await loadGlobalChatMessages(MAX_GLOBAL_CHAT_MESSAGES);
       emitGlobalChatUpdate(messages);
       cb({ success: true });
     } catch (error) {

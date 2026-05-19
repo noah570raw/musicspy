@@ -4381,11 +4381,35 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
 
 
 
+function renderGlobalChat(messages = []) {
+  const box = $("chat-messages");
+  if (!box) return;
+  box.innerHTML = "";
+  const list = Array.isArray(messages) ? messages : [];
+  if (!list.length) {
+    box.classList.add("empty");
+    box.textContent = t("Пока сообщений нет");
+    return;
+  }
+  box.classList.remove("empty");
+  list.forEach(renderMessage);
+}
+
 function requestGlobalChatHistory() {
   const box = $("chat-messages");
   if (!box) return;
   box.classList.add("empty");
-  box.textContent = t("Пока сообщений нет");
+  box.textContent = t("Загрузка...");
+  socket.emit("globalChat:get", (res = {}) => {
+    if (!res.success) {
+      box.textContent = escapeHtml(res.error || t("Не удалось загрузить чат"));
+      return;
+    }
+    state.globalChatMessages = Array.isArray(res.messages) ? res.messages : [];
+    const onlineEl = $("chat-online");
+    if (onlineEl) onlineEl.textContent = `${Number(res.onlineCount || 0)} онлайн`;
+    renderGlobalChat(state.globalChatMessages);
+  });
 }
 
 function renderMessage(msg) {
@@ -4449,8 +4473,10 @@ function sendGlobalChatMessage() {
   const input = $("chat-input");
   const text = String(input?.value || "").trim().slice(0, 200);
   if (!text) return;
-  socket.emit("global_message", { text, username: getGlobalChatUsername(), time: Date.now(), avatar: state?.profile?.avatar || "", badges: Array.isArray(state?.profile?.badges) ? state.profile.badges : [] });
-  if (input) input.value = "";
+  socket.emit("globalChat:send", { text }, (res = {}) => {
+    if (!res.success) return;
+    if (input) input.value = "";
+  });
 }
 
 function formatChatTime(createdAt) {
@@ -5181,15 +5207,11 @@ socket.on("online_count", (count) => {
   if (onlineEl) onlineEl.textContent = `${Number(count || 0)} онлайн`;
 });
 
-socket.on("chat_history", (messages) => {
-  const box = $("chat-messages");
-  if (box) box.innerHTML = "";
-  (messages || []).forEach(renderMessage);
-});
-
-socket.on("global_message", (msg) => {
-  console.log("Получено сообщение:", msg);
-  renderMessage(msg);
+socket.on("globalChat:update", ({ messages, onlineCount } = {}) => {
+  state.globalChatMessages = Array.isArray(messages) ? messages : [];
+  const onlineEl = $("chat-online");
+  if (onlineEl) onlineEl.textContent = `${Number(onlineCount || 0)} онлайн`;
+  renderGlobalChat(state.globalChatMessages);
 });
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
