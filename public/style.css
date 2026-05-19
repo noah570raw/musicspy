@@ -3309,6 +3309,11 @@ body[data-screen="game"] .language-switcher {
   transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,.61,.36,1);
 }
 
+.chat-player-actions[data-placement="bottom"] {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+
 .chat-player-actions.open {
   opacity: 1;
   transform: translate3d(var(--chat-player-actions-offset-x), 0, 0) scale(1);
