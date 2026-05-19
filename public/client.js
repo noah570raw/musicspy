@@ -4487,7 +4487,10 @@ function toggleChatPlayerActions(event, playerId) {
   const trigger = event.currentTarget;
   const scope = trigger?.closest?.('.chat-player-meta-wrap');
   const menu = scope?.querySelector?.('.chat-player-actions');
-  if (!menu) return;
+  if (!menu) {
+    if (playerId) viewLobbyPlayerProfile(playerId);
+    return;
+  }
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
   if (shouldOpen) {
