@@ -11203,3 +11203,44 @@ button.terminal-secondary:hover:not(:disabled) {
     animation: none;
   }
 }
+
+.dev-console-popup {
+  position: fixed;
+  top: 12vh;
+  left: 24px;
+  width: 420px;
+  min-width: 280px;
+  min-height: 180px;
+  resize: both;
+  overflow: auto;
+  z-index: 160;
+  border: 1px solid rgba(148,163,184,.45);
+  background: rgba(2,6,23,.95);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(2,6,23,.45);
+  padding: 10px;
+}
+.dev-console-popup.hidden { display: none; }
+.dev-console-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; color:#e2e8f0; }
+.dev-console-header button { background:transparent; color:#cbd5e1; border:0; font-size:20px; cursor:pointer; }
+.dev-console-output {
+  white-space: pre-wrap;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #94f4c3;
+  background: rgba(15,23,42,.88);
+  border: 1px solid rgba(148,163,184,.3);
+  border-radius: 8px;
+  padding: 8px;
+  height: 140px;
+  overflow: auto;
+}
+.dev-console-input {
+  width: 100%;
+  margin-top: 8px;
+  background: #020617;
+  color: #e2e8f0;
+  border: 1px solid rgba(148,163,184,.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+}

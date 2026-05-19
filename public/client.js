@@ -90,7 +90,9 @@ const state = {
   xpBoosterTimer: null,
   xpBoosterHoldTimer: null,
   xpBoosterHolding: false,
-  xpBoosterHoldStart: 0
+  xpBoosterHoldStart: 0,
+  devConsoleOpen: false,
+  devConsoleLines: []
 };
 
 function hasDevRole(entity) {
@@ -545,6 +547,38 @@ function showSocialToast(message, type = "") {
 }
 
 const $ = (id) => document.getElementById(id);
+
+function initDevConsole() {
+  if ($("devConsolePopup")) return;
+  const shell = document.createElement("section");
+  shell.id = "devConsolePopup";
+  shell.className = "dev-console-popup hidden";
+  shell.innerHTML = `
+    <header class="dev-console-header"><strong>DEV Console</strong><button type="button" onclick="toggleDevConsole(false)">×</button></header>
+    <div id="devConsoleOutput" class="dev-console-output">Введите /help для списка команд.</div>
+    <input id="devConsoleInput" class="dev-console-input" placeholder="Команда..." autocomplete="off" spellcheck="false">
+  `;
+  document.body.appendChild(shell);
+  $("devConsoleInput").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const command = event.target.value.trim();
+    if (!command) return;
+    event.target.value = "";
+    socket.emit("dev:command", { command }, (res) => {
+      const lines = res?.error ? [`Ошибка: ${res.error}`] : (res.output || ["OK"]);
+      state.devConsoleLines = [...state.devConsoleLines, `> ${command}`, ...lines].slice(-30);
+      $("devConsoleOutput").textContent = state.devConsoleLines.join("\n");
+    });
+  });
+}
+
+function toggleDevConsole(force) {
+  if (!hasDevRole(state.profile)) return;
+  initDevConsole();
+  state.devConsoleOpen = typeof force === "boolean" ? force : !state.devConsoleOpen;
+  $("devConsolePopup").classList.toggle("hidden", !state.devConsoleOpen);
+  if (state.devConsoleOpen) $("devConsoleInput").focus();
+}
 
 function translateTheme(theme) {
   const text = String(theme ?? "");
@@ -4889,6 +4923,10 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeFriendsPanel();
+    if (event.shiftKey && event.key.toLowerCase() === "c") {
+      event.preventDefault();
+      toggleDevConsole();
+    }
   });
   const presetCode = normalizeRoomCodeInput(new URL(window.location.href).searchParams.get("room"));
   if (presetCode) {
