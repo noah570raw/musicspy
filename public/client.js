@@ -4396,20 +4396,32 @@ function renderGlobalChat(messages = []) {
 }
 
 function requestGlobalChatHistory() {
-  const box = $("chat-messages");
-  if (!box) return;
-  box.classList.add("empty");
-  box.textContent = t("Загрузка...");
-  socket.emit("globalChat:get", (res = {}) => {
-    if (!res.success) {
-      box.textContent = escapeHtml(res.error || t("Не удалось загрузить чат"));
-      return;
-    }
-    state.globalChatMessages = Array.isArray(res.messages) ? res.messages : [];
-    const onlineEl = $("chat-online");
-    if (onlineEl) onlineEl.textContent = `${Number(res.onlineCount || 0)} онлайн`;
-    renderGlobalChat(state.globalChatMessages);
-  });
+  const errorEl = $("chat-messages");
+  if (!errorEl) return;
+
+  try {
+    const inputEl = $("chat-input");
+    if (!inputEl) throw new Error("Элемент #chat-input не найден");
+    if (typeof io !== "function") throw new Error("socket.io клиент не загружен");
+    if (!socket || typeof socket.emit !== "function") throw new Error("Socket не инициализирован");
+
+    errorEl.classList.add("empty");
+    errorEl.textContent = t("Загрузка...");
+    socket.emit("globalChat:get", (res = {}) => {
+      if (!res.success) {
+        errorEl.textContent = escapeHtml(res.error || t("Не удалось загрузить чат"));
+        return;
+      }
+      state.globalChatMessages = Array.isArray(res.messages) ? res.messages : [];
+      const onlineEl = $("chat-online");
+      if (onlineEl) onlineEl.textContent = `${Number(res.onlineCount || 0)} онлайн`;
+      renderGlobalChat(state.globalChatMessages);
+    });
+  } catch (err) {
+    console.error("Ошибка загрузки чата:", err);
+    errorEl.classList.add("empty");
+    errorEl.textContent = "Ошибка: " + (err?.message || "Неизвестная ошибка");
+  }
 }
 
 function renderMessage(msg) {
