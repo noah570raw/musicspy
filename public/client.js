@@ -119,7 +119,36 @@ function shouldShowDevBadgeInCurrentScreen() {
 function nameWithDevBadge(entity, fallback = "Игрок", options = {}) {
   const { showBadge = shouldShowDevBadgeInCurrentScreen() } = options;
   const name = escapeHtml(entity?.name || entity?.displayName || entity?.nickname || entity?.username || t(fallback));
-  return hasDevRole(entity) ? devBadgeMarkup(name, { showBadge }) : `<span class="player-name-text">${name}</span>`;
+  const cosmeticName = cosmeticNicknameMarkup(entity, name);
+  return hasDevRole(entity) ? devBadgeMarkup(cosmeticName, { showBadge }) : cosmeticName;
+}
+
+function equippedFromEntity(entity = {}) {
+  return entity?.economy?.equipped || entity?.equippedCosmetics || {};
+}
+
+function resolveCosmeticSet(entity = {}) {
+  const equipped = equippedFromEntity(entity);
+  return {
+    nicknameColor: shopItem(equipped.nicknameColor),
+    avatarFrame: shopItem(equipped.avatarFrame),
+    profileBanner: shopItem(equipped.profileBanner),
+    chatEffect: shopItem(equipped.chatEffect),
+    lobbyEffect: shopItem(equipped.lobbyEffect)
+  };
+}
+
+function cosmeticNicknameMarkup(entity = {}, fallbackName = "") {
+  const cosmetics = resolveCosmeticSet(entity);
+  const item = cosmetics.nicknameColor;
+  const rarity = item?.rarity || "common";
+  return `<span class="player-name-text cosmetic-name rarity-${escapeAttribute(rarity)} ${item ? "is-cosmetic" : ""}" style="${item ? `--nick-gradient:${escapeAttribute(item.preview || "linear-gradient(90deg,#fff,#ddd)")};` : ""}">${fallbackName || escapeHtml(entity?.name || "Игрок")}</span>`;
+}
+
+function cosmeticAvatarWrap(content, entity = {}) {
+  const item = resolveCosmeticSet(entity).avatarFrame;
+  if (!item) return content;
+  return `<span class="cosmetic-avatar-frame rarity-${escapeAttribute(item.rarity)}" style="--frame-preview:${escapeAttribute(item.preview || "conic-gradient(#22d3ee,#8b5cf6,#22d3ee)")}">${content}<i class="frame-layer frame-layer-a"></i><i class="frame-layer frame-layer-b"></i></span>`;
 }
 
 function vinylBalanceLabel() {
@@ -3049,8 +3078,10 @@ function saveProfile() {
 }
 
 function playerAvatarMarkup(player, fallback = "?") {
-  if (player?.avatar) return `<span class="avatar image-avatar"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`;
-  return `<span class="avatar">${escapeHtml(fallback)}</span>`;
+  const base = player?.avatar
+    ? `<span class="avatar image-avatar"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`
+    : `<span class="avatar">${escapeHtml(fallback)}</span>`;
+  return cosmeticAvatarWrap(base, player);
 }
 
 
@@ -3068,9 +3099,10 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
   const isMe = player.id === socket.id;
   const isReady = Boolean(player.ready);
   const statusText = isReady ? t("готов") : t("не готов");
-  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
+  const lobbyFx = resolveCosmeticSet(player).lobbyEffect;
+  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : "", lobbyFx ? "has-cosmetic-lobby" : ""].filter(Boolean).join(" ");
   return `
-    <article class="${cardClass}">
+    <article class="${cardClass}" style="${lobbyFx ? `--lobby-cosmetic:${escapeAttribute(lobbyFx.preview)};` : ""}">
       <div class="lobby-player-glow" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap">
         ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
@@ -4415,12 +4447,12 @@ function getChatPlayerActionsState(playerId) {
 function lobbyPlayerProfileActionMarkup(message) {
   const player = lobbyPlayerById(message.playerId) || {};
   const nickname = player.name || message.playerName || "Игрок";
-  const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
+  const avatar = playerAvatarMarkup(player, playerInitials(nickname));
   const triggerLabel = escapeAttribute(`Профиль ${nickname}`);
   return `
     <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
       ${avatar}
-      <span class="chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</span>
+      <span class="chat-player-name">${nameWithDevBadge(player?.id ? player : { name: nickname, roles: message.roles, permissions: message.permissions })}</span>
     </button>
   `;
 }
@@ -4439,8 +4471,9 @@ function renderChat(messages = state.chatMessages) {
         <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
       </div>
     `;
+    const chatFx = resolveCosmeticSet(lobbyPlayerById(message.playerId) || {}).chatEffect;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""}">
+      <div class="chat-message ${isMine ? "mine" : ""} ${chatFx ? "has-chat-cosmetic" : ""}" style="${chatFx ? `--chat-cosmetic:${escapeAttribute(chatFx.preview)};` : ""}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
             ${lobbyPlayerProfileActionMarkup(message)}

@@ -190,6 +190,15 @@ const SHOP_CATALOG = [
   { id: "title_perfect_manipulator", category: "playerTitle", name: "Perfect Manipulator", rarity: "mythic", price: 0, achievementOnly: true, hidden: true, preview: "linear-gradient(90deg,#facc15,#ef4444,#020617)" },
 ];
 
+function isDevCosmetic(item = {}) {
+  return String(item?.id || "").startsWith("dev_");
+}
+
+function visibleCatalogForUser(user) {
+  const isDev = hasDevRole(user);
+  return SHOP_CATALOG.filter((item) => isDev || !isDevCosmetic(item));
+}
+
 const ACHIEVEMENTS = [
   { id: "wins_100", label: "100 wins", target: 100, stat: "wins", vinyls: 1000, unlock: "banner_hologram_royale" },
   { id: "perfect_spy_10", label: "10 perfect spy games", target: 10, stat: "perfectSpyGames", vinyls: 1500, unlock: "dev_banner_emerald_throne" },
@@ -2586,7 +2595,7 @@ io.on("connection", (socket) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть магазин" });
     ensureUserProgress(user);
-    cb({ success: true, catalog: SHOP_CATALOG, categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
+    cb({ success: true, catalog: visibleCatalogForUser(user), categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
   });
 
   socket.on("xpBooster:get", (cb = () => {}) => {
@@ -2637,6 +2646,7 @@ io.on("connection", (socket) => {
     ensureUserProgress(user);
     const item = catalogItemById(String(itemId || ""));
     if (!item) return cb({ error: "Предмет не найден" });
+    if (isDevCosmetic(item) && !hasDevRole(user)) return cb({ error: "DEV cosmetic доступен только разработчику" });
     if (item.achievementOnly) return cb({ error: "Этот предмет открывается достижением" });
     if (user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Уже в коллекции" });
     const isDev = hasRole(user, DEV_ROLE);
@@ -2655,6 +2665,7 @@ io.on("connection", (socket) => {
     ensureUserProgress(user);
     const item = catalogItemById(String(itemId || ""));
     if (!item) return cb({ error: "Предмет не найден" });
+    if (isDevCosmetic(item) && !hasDevRole(user)) return cb({ error: "DEV cosmetic доступен только разработчику" });
     if (!hasRole(user, DEV_ROLE) && !user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Сначала купи или открой предмет" });
     const category = SHOP_CATEGORIES.find((entry) => entry.id === item.category);
     if (!category) return cb({ error: "Категория недоступна" });
