@@ -311,32 +311,6 @@ function catalogItemById(itemId) {
   return SHOP_CATALOG.find((item) => item.id === itemId) || null;
 }
 
-function resolveEquippedCosmetics(equipped = {}) {
-  const resolved = {};
-  for (const category of SHOP_CATEGORIES) {
-    const slot = category.equipSlot;
-    const itemId = String(equipped?.[slot] || "");
-    const item = catalogItemById(itemId);
-    if (!item) continue;
-    resolved[slot] = {
-      id: item.id,
-      name: item.name,
-      rarity: item.rarity,
-      preview: item.preview,
-      category: item.category
-    };
-  }
-  return resolved;
-}
-
-function cosmeticStateForUser(user) {
-  const economy = normalizeEconomy(user?.economy || {});
-  return {
-    equipped: economy.equipped,
-    active: resolveEquippedCosmetics(economy.equipped)
-  };
-}
-
 function isDeveloperUser(user) {
   return Boolean(user && DEV_USERNAMES.has(String(user.username || "").trim().toLowerCase()));
 }
@@ -1031,7 +1005,6 @@ function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
     avatar: user?.avatar || "",
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) },
-    cosmetics: cosmeticStateForUser(user),
     ready: false,
     reconnectToken: normalizeReconnectToken(reconnectToken),
     disconnected: false,
@@ -1057,7 +1030,6 @@ function syncUserProfileInLobbies(user) {
         const nextName = makeUniqueName(lobby, user.displayName || user.username, player.id);
         if (player.name !== nextName) player.name = nextName;
         if (player.avatar !== (user.avatar || "")) player.avatar = user.avatar || "";
-        player.cosmetics = cosmeticStateForUser(user);
         changed = true;
       }
     }
@@ -3173,7 +3145,6 @@ io.on("connection", (socket) => {
       playerName: player.name,
       roles: player.roles || [],
       permissions: player.permissions || {},
-      cosmetics: player.cosmetics || null,
       text: messageText,
       createdAt: Date.now()
     };
