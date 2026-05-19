@@ -4383,20 +4383,37 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
 
 function requestGlobalChatHistory() {
   const box = $("chat-messages");
-  if (box) box.innerHTML = "";
+  if (!box) return;
+  box.classList.add("empty");
+  box.textContent = t("Пока сообщений нет");
 }
 
 function renderMessage(msg) {
   const box = document.getElementById("chat-messages");
   if (!box) return;
+  if (box.classList.contains("empty")) {
+    box.classList.remove("empty");
+    box.innerHTML = "";
+  }
+  const username = String(msg?.username || "Аноним");
+  const text = String(msg?.text || "");
+  const time = Number(msg?.time) || Date.now();
+  const isMine = username === getGlobalChatUsername();
   const div = document.createElement("div");
-  div.className = "chat-msg";
+  div.className = `chat-message ${isMine ? "mine" : ""}`;
   div.innerHTML = `
-    <span class="msg-author">${escapeHtml(msg?.username || "Аноним")}</span>
-    <span class="msg-text">${escapeHtml(msg?.text || "")}</span>
+    <button class="global-chat-avatar" type="button">${escapeHtml(username.slice(0, 1).toUpperCase())}</button>
+    <div class="chat-message-body">
+      <div class="chat-message-meta">
+        <strong>${escapeHtml(username)}</strong>
+        <span>${escapeHtml(new Date(time).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" }))}</span>
+      </div>
+      <p>${escapeHtml(text)}</p>
+    </div>
   `;
   box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
+  const scrollArea = box.closest("[data-chat-scroll]") || box;
+  scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "smooth" });
 }
 
 function handleGlobalChatKeydown(event) {
@@ -4422,7 +4439,7 @@ function sendGlobalChatMessage() {
   const input = $("chat-input");
   const text = String(input?.value || "").trim().slice(0, 200);
   if (!text) return;
-  socket.emit("global_message", { text, username: getGlobalChatUsername() });
+  socket.emit("global_message", { text, username: getGlobalChatUsername(), time: Date.now() });
   if (input) input.value = "";
 }
 

@@ -496,13 +496,17 @@
   <main class="app-shell">
     <div id="global-chat" aria-label="Глобальный чат">
       <div id="chat-header">
-        <h3>💬 Чат</h3>
+        <span>💬 ЧАТ</span>
         <span id="chat-online">0 онлайн</span>
       </div>
-      <div id="chat-messages" aria-live="polite"></div>
-      <div id="chat-input-area">
-        <input id="chat-input" type="text" placeholder="Сообщение..." maxlength="200" />
-        <button id="chat-send" type="button">➤</button>
+      <div class="chat-messages-area" data-chat-scroll>
+        <div id="chat-messages" class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
+      </div>
+      <div id="chat-input-area" class="chat-input-area">
+        <div class="chat-form">
+          <input id="chat-input" type="text" placeholder="Написать в чате..." maxlength="200" />
+          <button id="chat-send" class="secondary chat-send-button" type="button" aria-label="Отправить сообщение"><span aria-hidden="true">➤</span></button>
+        </div>
       </div>
     </div>
     <section id="menu" class="screen card hero-card vinyl-terminal-card">
