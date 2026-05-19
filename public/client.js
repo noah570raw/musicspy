@@ -4397,15 +4397,25 @@ function renderMessage(msg) {
   }
   const username = String(msg?.username || "Аноним");
   const text = String(msg?.text || "");
-  const time = Number(msg?.time) || Date.now();
+  const time = Number(msg?.time || msg?.createdAt) || Date.now();
   const isMine = username === getGlobalChatUsername();
+  const avatarUrl = String(msg?.avatar || (isMine ? state?.profile?.avatar : "") || "").trim();
+  const badges = Array.isArray(msg?.badges) ? msg.badges : [];
+  const badgesHtml = badges.map((badge) => {
+    const value = String(badge || "").trim();
+    if (!value) return "";
+    return `<span class="badge badge-${escapeAttribute(value.toLowerCase())}">${escapeHtml(value)}</span>`;
+  }).join("");
+  const avatarHtml = avatarUrl
+    ? `<img src="${escapeAttribute(avatarUrl)}" class="chat-avatar-img" alt="">`
+    : escapeHtml(username.slice(0, 1).toUpperCase());
   const div = document.createElement("div");
   div.className = `chat-message ${isMine ? "mine" : ""}`;
   div.innerHTML = `
-    <button class="global-chat-avatar" type="button">${escapeHtml(username.slice(0, 1).toUpperCase())}</button>
+    <button class="global-chat-avatar" type="button">${avatarHtml}</button>
     <div class="chat-message-body">
       <div class="chat-message-meta">
-        <strong>${escapeHtml(username)}</strong>
+        <strong class="chat-message-name">${badgesHtml}<span>${escapeHtml(username)}</span></strong>
         <span>${escapeHtml(new Date(time).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" }))}</span>
       </div>
       <p>${escapeHtml(text)}</p>
@@ -4439,7 +4449,7 @@ function sendGlobalChatMessage() {
   const input = $("chat-input");
   const text = String(input?.value || "").trim().slice(0, 200);
   if (!text) return;
-  socket.emit("global_message", { text, username: getGlobalChatUsername(), time: Date.now() });
+  socket.emit("global_message", { text, username: getGlobalChatUsername(), time: Date.now(), avatar: state?.profile?.avatar || "", badges: Array.isArray(state?.profile?.badges) ? state.profile.badges : [] });
   if (input) input.value = "";
 }
 
