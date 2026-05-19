@@ -2660,8 +2660,24 @@ html[lang="ru"] .language-switcher span:first-child {
   width: min(100%, 560px);
 }
 
+
 .public-profile-card {
   width: min(100%, 940px);
+  padding-top: 58px;
+}
+
+#publicProfileTitle {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 120px);
+  margin: 0;
+  text-align: center;
+  font-size: clamp(2.4rem, 5.3vw, 5rem);
+  line-height: 1;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .host-modal-list {
@@ -3032,7 +3048,8 @@ html[lang="ru"] .language-switcher span:first-child {
 .profile-avatar-large {
   width: 4.5rem;
   height: 4.5rem;
-  border-radius: 1.35rem;
+  border-radius: 999px;
+  overflow: hidden;
   font-size: 1.8rem;
 }
 
@@ -3273,6 +3290,7 @@ body[data-screen="game"] .language-switcher {
   background: transparent;
   color: inherit;
   cursor: pointer;
+  transform: translateX(-5px);
 }
 
 .chat-player-trigger .avatar {
@@ -8434,7 +8452,8 @@ body,
   height: 42px;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 15px;
+  border-radius: 999px;
+  overflow: hidden;
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.64), rgba(255, 255, 255, 0.08));
   color: #fff;
   font-size: 1.05rem;
@@ -8581,7 +8600,7 @@ body,
 .friend-request-card .friend-avatar {
   width: 38px;
   height: 38px;
-  border-radius: 14px;
+  border-radius: 999px;
 }
 
 .friend-request-actions {
@@ -8682,6 +8701,7 @@ body,
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   border-radius: inherit;
 }
 
