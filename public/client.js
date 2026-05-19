@@ -2785,10 +2785,7 @@ function renderShop(celebrate = false) {
     { id: "avatarFrame", label: "Avatar Frames" },
     { id: "profileBanner", label: "Profile Banners" },
     { id: "chatEffect", label: "Chat Effects" },
-    { id: "lobbyEffect", label: "Lobby Effects" },
-    { id: "collectible", label: "Rare Collectibles" },
-    { id: "playerTitle", label: "Player Titles" },
-    { id: "victoryAnimation", label: "Victory Animations" }
+    { id: "lobbyEffect", label: "Lobby Effects" }
   ];
   const owned = ownedCosmetics();
   const equipped = equippedCosmetics();
