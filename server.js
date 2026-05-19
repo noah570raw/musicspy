@@ -87,6 +87,11 @@ const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
 const XP_BOOSTER_DURATION_MS = 60 * 60 * 1000;
 const XP_BOOSTER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const XP_BOOSTER_MULTIPLIER = 2;
+const MATCH_XP_REWARDS = Object.freeze({
+  WIN: 100,
+  LOSS: 50,
+  CORRECT_SPY_VOTE: 25
+});
 
 
 const lobbies = {};
@@ -2085,6 +2090,65 @@ function buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected) 
   }));
 }
 
+function awardMatchExpRewards(lobby, civiliansWin, finalVotes = {}) {
+  if (!lobby?.matchId) return [];
+  if (lobby.matchRewardsGranted) {
+    console.info(`[xp] skip duplicate match reward grant matchId=${lobby.matchId} code=${lobby.code}`);
+    return [];
+  }
+
+  const rewards = [];
+  const correctVoters = new Set(Object.entries(lobby.votes || {})
+    .filter(([, targetId]) => lobby.spies.includes(targetId))
+    .map(([voterId]) => voterId));
+  const now = Date.now();
+
+  for (const player of lobby.players || []) {
+    if (!player.accountId) continue;
+    const user = findUserById(player.accountId);
+    if (!user) continue;
+    const economy = ensureUserProgress(user);
+    if (!economy) continue;
+
+    const isSpy = lobby.spies.includes(player.id);
+    const won = isSpy ? !civiliansWin : civiliansWin;
+    const booster = xpBoosterState(user, now);
+    const multiplier = booster.active ? XP_BOOSTER_MULTIPLIER : 1;
+    const lines = [];
+    let base = 0;
+    const add = (amount, label, code) => {
+      base += amount;
+      lines.push({ amount, label, code });
+    };
+
+    add(won ? MATCH_XP_REWARDS.WIN : MATCH_XP_REWARDS.LOSS, won ? "Победа в матче" : "Поражение в матче", won ? "match_win" : "match_loss");
+    if (!isSpy && correctVoters.has(player.id)) add(MATCH_XP_REWARDS.CORRECT_SPY_VOTE, "Верный голос против шпиона", "correct_spy_vote");
+
+    const total = base * multiplier;
+    if (total <= 0) continue;
+
+    economy.xp = Math.max(0, Math.floor(Number(economy.xp || 0))) + total;
+    economy.level = Math.max(1, Math.floor(economy.xp / 1000) + 1);
+    user.updatedAt = new Date().toISOString();
+    rewards.push({
+      playerId: player.id,
+      accountId: user.id,
+      total,
+      base,
+      multiplier,
+      boosterActive: booster.active,
+      matchId: lobby.matchId,
+      lines,
+      xp: economy.xp,
+      level: economy.level
+    });
+    console.info(`[xp] granted matchId=${lobby.matchId} code=${lobby.code} userId=${user.id} playerId=${player.id} amount=${total} base=${base} multiplier=${multiplier} boosterActive=${booster.active}`);
+  }
+
+  lobby.matchRewardsGranted = true;
+  return rewards;
+}
+
 function updateUserProgressForGame(lobby, civiliansWin, finalVotes = {}, suspected = []) {
   let changed = false;
   const playerByAccount = new Map(lobby.players.filter((player) => player.accountId).map((player) => [player.accountId, player]));
@@ -2111,8 +2175,9 @@ function updateUserProgressForGame(lobby, civiliansWin, finalVotes = {}, suspect
     changed = true;
   }
   const economyRewards = buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected);
-  if (changed || economyRewards.length) saveUsersStore();
-  return economyRewards;
+  const expRewards = awardMatchExpRewards(lobby, civiliansWin, finalVotes);
+  if (changed || economyRewards.length || expRewards.length) saveUsersStore();
+  return { economyRewards, expRewards };
 }
 
 function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
@@ -2128,7 +2193,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   const decoyReveal = !caughtSpy && suspected.length > 0;
   const breakdown = buildFinalBreakdown(lobby, suspected, finalVotes);
 
-  const economyRewards = updateUserProgressForGame(lobby, civiliansWin, finalVotes, suspected);
+  const { economyRewards, expRewards } = updateUserProgressForGame(lobby, civiliansWin, finalVotes, suspected);
   lobby.phase = "ended";
   clearTimer(code);
 
@@ -2153,7 +2218,9 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     trackHistory: lobby.trackHistory || [],
     breakdown,
     finalComments: lobby.finalComments || [],
-    economyRewards
+    economyRewards,
+    expRewards,
+    matchId: lobby.matchId
   });
   emitLobbyUpdate(code);
 }
@@ -2186,6 +2253,8 @@ function resetLobbyToWaiting(lobby) {
   lobby.timeLeft = null;
   lobby.turnStage = "waiting";
   lobby.pausedTurnStage = null;
+  lobby.matchId = null;
+  lobby.matchRewardsGranted = false;
 }
 
 function markAllPlayersReady(lobby) {
@@ -2229,6 +2298,8 @@ function initializeGame(lobby) {
   lobby.pausedTurnStage = null;
   lobby.chatMessages = [];
   lobby.finalComments = [];
+  lobby.matchId = crypto.randomUUID();
+  lobby.matchRewardsGranted = false;
 }
 
 function startLobbyGame(lobby) {
@@ -2304,6 +2375,8 @@ function createLobbyState(code, hostId, player, options = {}) {
     spyGuessTargetId: null,
     chatMessages: [],
     finalComments: [],
+    matchId: null,
+    matchRewardsGranted: false,
     submittedThisTurn: false,
     timeLeft: null,
     turnStage: "waiting",
