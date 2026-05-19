@@ -4387,16 +4387,15 @@ function requestGlobalChatHistory() {
 }
 
 function renderMessage(msg) {
-  const box = $("chat-messages");
-  if (!box || !msg) return;
+  const box = document.getElementById("chat-messages");
+  if (!box) return;
   const div = document.createElement("div");
   div.className = "chat-msg";
   div.innerHTML = `
-    <div class="msg-author">${escapeHtml(msg.username || "Аноним")}</div>
-    <div class="msg-text">${escapeHtml(msg.text || "")}</div>
+    <span class="msg-author">${escapeHtml(msg?.username || "Аноним")}</span>
+    <span class="msg-text">${escapeHtml(msg?.text || "")}</span>
   `;
   box.appendChild(div);
-  while (box.children.length > 50) box.removeChild(box.firstChild);
   box.scrollTop = box.scrollHeight;
 }
 
@@ -5162,6 +5161,7 @@ socket.on("chat_history", (messages) => {
 });
 
 socket.on("global_message", (msg) => {
+  console.log("Получено сообщение:", msg);
   renderMessage(msg);
 });
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
