@@ -261,7 +261,7 @@ function renderFriendCard(friend) {
         ${friendAvatarMarkup(friend)}
         <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
       </div>
-      <div class="friend-meta">
+      <div class="friend-meta ${friend.accountId ? 'clickable' : ''}" ${profileAction}>
         <div class="friend-name-row">
           <strong class="friend-name ${friend.accountId ? "clickable" : ""}" ${profileAction}>${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
@@ -4410,6 +4410,18 @@ function lobbyPlayerProfileActionMarkup(message) {
   `;
 }
 
+function isLobbyPlayerAlreadyFriend(player = {}) {
+  if (!player) return false;
+  const playerAccountId = String(player.accountId || "").trim();
+  const playerName = String(player.name || "").trim().toLowerCase();
+  return state.friends.some((friend) => {
+    const friendAccountId = String(friend.accountId || "").trim();
+    const friendName = String(friend.name || friend.nickname || "").trim().toLowerCase();
+    if (playerAccountId && friendAccountId) return playerAccountId === friendAccountId;
+    return Boolean(playerName) && playerName === friendName;
+  });
+}
+
 function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
@@ -4417,10 +4429,12 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
+    const player = lobbyPlayerById(message.playerId);
+    const isAlreadyFriend = isLobbyPlayerAlreadyFriend(player);
     const playerActions = isMine ? "" : `
       <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
-        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
+        <button type="button" ${isAlreadyFriend ? "disabled" : `onclick=\"requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')\"`}>${isAlreadyFriend ? "Пользователь уже в друзьях" : "Добавить в друзья"}</button>
       </div>
     `;
     return `
