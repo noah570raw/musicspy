@@ -4422,7 +4422,7 @@ function lobbyPlayerProfileActionMarkup(message) {
   const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
   const triggerLabel = escapeAttribute(`Профиль ${nickname}`);
   return `
-    <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event, '${escapeAttribute(message.playerId || '')}')" aria-label="${triggerLabel}">
+    <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
       ${avatar}
       <span class="chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</span>
     </button>
@@ -4438,7 +4438,7 @@ function renderChat(messages = state.chatMessages) {
     const isMine = message.playerId === socket.id;
     const actionState = getChatPlayerActionsState(message.playerId);
     const playerActions = isMine ? "" : `
-      <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
+      <div class="chat-player-actions">
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
         <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
       </div>
@@ -4476,13 +4476,16 @@ function closeChatPlayerActions() {
   for (const menu of document.querySelectorAll('.chat-player-actions.open')) {
     menu.classList.remove('open');
     menu.style.removeProperty("--chat-player-actions-offset-x");
+    menu.dataset.placement = "top";
   }
 }
 
-function toggleChatPlayerActions(event, playerId) {
+function toggleChatPlayerActions(event) {
   event?.preventDefault();
   event?.stopPropagation();
-  const menu = document.getElementById(`chatPlayerActions-${playerId}`);
+  const trigger = event?.currentTarget;
+  const container = trigger?.closest('.chat-player-meta-wrap');
+  const menu = container?.querySelector('.chat-player-actions');
   if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
@@ -4496,6 +4499,11 @@ function toggleChatPlayerActions(event, playerId) {
     if (overflowLeft > 0) offsetX += overflowLeft;
     if (overflowRight > 0) offsetX -= overflowRight;
     menu.style.setProperty("--chat-player-actions-offset-x", `${Math.round(offsetX)}px`);
+
+    const topSpace = rect.top - margin;
+    const bottomSpace = window.innerHeight - rect.bottom - margin;
+    const openDown = topSpace < 0 && bottomSpace > topSpace;
+    menu.dataset.placement = openDown ? "bottom" : "top";
   }
 }
 
