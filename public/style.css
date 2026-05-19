@@ -11418,3 +11418,114 @@ button.terminal-secondary:hover:not(:disabled) {
   padding: 8px 10px;
   font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* ===== Premium Cosmetic FX System (common -> mythic) ===== */
+:root {
+  --fx-common: 148, 163, 184;
+  --fx-rare: 56, 189, 248;
+  --fx-epic: 167, 139, 250;
+  --fx-legendary: 245, 158, 11;
+  --fx-mythic: 240, 171, 252;
+}
+
+.fx-tier-common { --fx-rgb: var(--fx-common); --fx-intensity: .35; --fx-speed: 1; }
+.fx-tier-rare { --fx-rgb: var(--fx-rare); --fx-intensity: .6; --fx-speed: .92; }
+.fx-tier-epic { --fx-rgb: var(--fx-epic); --fx-intensity: .78; --fx-speed: .8; }
+.fx-tier-legendary { --fx-rgb: var(--fx-legendary); --fx-intensity: .95; --fx-speed: .68; }
+.fx-tier-mythic { --fx-rgb: var(--fx-mythic); --fx-intensity: 1; --fx-speed: .58; }
+
+/* nickname FX */
+.cosmetic-name { position: relative; isolation: isolate; }
+.cosmetic-name::before {
+  content: "";
+  position: absolute; inset: -0.15em -0.24em;
+  border-radius: .55em;
+  background: linear-gradient(115deg, rgba(var(--fx-rgb, var(--fx-common)), .22), transparent 50%, rgba(255,255,255,.22));
+  mix-blend-mode: screen;
+  opacity: calc(.24 * var(--fx-intensity, .35));
+  filter: blur(7px);
+  animation: fxSweep calc(5.6s * var(--fx-speed, 1)) linear infinite;
+  pointer-events: none;
+}
+.cosmetic-name.rarity-epic, .cosmetic-name.rarity-legendary, .cosmetic-name.rarity-mythic { letter-spacing: .02em; }
+.cosmetic-name.rarity-legendary,
+.cosmetic-name.rarity-mythic {
+  text-shadow: 0 0 10px rgba(var(--fx-rgb), .55), 0 0 26px rgba(var(--fx-rgb), .34), 0 0 44px rgba(244,114,182,.3);
+  animation: premiumGradientFlow 2.4s linear infinite, fxPulse 2.8s ease-in-out infinite;
+}
+.cosmetic-name.rarity-mythic { filter: saturate(1.2) contrast(1.08); }
+
+/* avatar frame FX */
+.avatar-cosmetic-frame {
+  overflow: visible;
+  transform: translateZ(0);
+}
+.avatar-cosmetic-frame::before {
+  content: "";
+  position: absolute; inset: -6px;
+  border-radius: inherit;
+  border: 1px solid rgba(var(--fx-rgb, var(--fx-common)), .45);
+  box-shadow: 0 0 28px rgba(var(--fx-rgb, var(--fx-common)), calc(.25 * var(--fx-intensity, .35)));
+  animation: fxRing calc(6.6s * var(--fx-speed,1)) linear infinite;
+  pointer-events: none;
+}
+
+/* profile banner + player cards */
+.lobby-player-card { position: relative; overflow: hidden; }
+.lobby-player-card::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 20% -10%, rgba(var(--fx-rgb, var(--fx-common)), .22), transparent 45%),
+              linear-gradient(120deg, transparent 20%, rgba(255,255,255,.08) 46%, transparent 70%);
+  mix-blend-mode: screen;
+  opacity: calc(.26 * var(--fx-intensity, .35));
+  transform: translate3d(-18%,0,0);
+  animation: fxSweep calc(8s * var(--fx-speed,1)) linear infinite;
+  pointer-events: none;
+}
+.lobby-player-card.fx-tier-legendary::before,
+.lobby-player-card.fx-tier-mythic::before {
+  opacity: .35;
+  filter: saturate(1.2) blur(0.5px);
+}
+
+/* chat FX */
+.chat-message { position: relative; overflow: hidden; }
+.chat-message::before {
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(125deg, rgba(var(--fx-rgb,var(--fx-common)),.12), transparent 50%, rgba(var(--fx-rgb,var(--fx-common)),.1));
+  opacity: calc(.3 * var(--fx-intensity, .35));
+  pointer-events:none;
+}
+.chat-message .chat-effect-text {
+  text-shadow: 0 0 12px rgba(var(--fx-rgb,var(--fx-common)), .28);
+}
+.chat-message.fx-tier-legendary .chat-effect-text,
+.chat-message.fx-tier-mythic .chat-effect-text {
+  animation: premiumGradientFlow 2.6s linear infinite, fxPulse 2.3s ease-in-out infinite;
+}
+
+/* shop cards */
+.shop-card {
+  transform: translateZ(0);
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, border-color .35s ease;
+}
+.shop-card::before,
+.shop-card::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
+.shop-card::before {
+  background: radial-gradient(80% 60% at 12% 0%, rgba(var(--fx-rgb,var(--fx-common)), .26), transparent 72%);
+  opacity: calc(.38 * var(--fx-intensity, .35));
+}
+.shop-card::after {
+  background: linear-gradient(120deg, transparent 18%, rgba(255,255,255,.16) 42%, transparent 66%);
+  transform: translateX(-115%);
+  animation: fxSweep calc(7.2s * var(--fx-speed,1)) ease-in-out infinite;
+  opacity: .55;
+}
+.shop-card:hover { transform: translateY(-5px) scale(1.015); box-shadow: 0 22px 58px rgba(var(--fx-rgb,var(--fx-common)), .23); }
+.shop-card.fx-tier-legendary, .shop-card.fx-tier-mythic { backdrop-filter: blur(10px) saturate(1.15); }
+
+@keyframes fxSweep { to { transform: translate3d(115%,0,0); } }
+@keyframes fxPulse { 0%,100%{opacity:1;} 50%{opacity:.75;} }
+@keyframes fxRing { to { transform: rotate(1turn); } }
