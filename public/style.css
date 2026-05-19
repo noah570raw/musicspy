@@ -98,6 +98,12 @@ body[data-screen="lobby"] .app-shell {
   backdrop-filter: blur(16px);
 }
 body[data-screen="menu"] .global-chat-sidebar { display: flex; }
+body[data-screen="menu"] .global-chat-sidebar {
+  position: absolute;
+  top: clamp(84px, 15vh, 150px);
+  left: clamp(16px, 7vw, 110px);
+  z-index: 4;
+}
 .global-chat-header { display:flex; justify-content:space-between; font-size:12px; opacity:.9; text-transform:uppercase; letter-spacing:.08em; }
 .global-chat-scroll { flex:1; overflow:auto; padding-right:4px; scroll-behavior:smooth; }
 .global-chat-messages { display:flex; flex-direction:column; gap:10px; }
@@ -123,6 +129,8 @@ body[data-screen="menu"] .app-shell {
   height: 100vh;
   height: 100dvh;
   min-height: 0;
+  display: grid;
+  place-items: center;
 }
 
 button,
