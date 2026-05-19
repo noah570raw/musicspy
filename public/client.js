@@ -2143,7 +2143,7 @@ function updateAccountToggle(displayName, user) {
   }
   if (label) label.innerHTML = user ? nameWithDevBadge(user, "Игрок", { showBadge: false }) : t("Гость");
   const levelLabel = $("accountToggleLevel");
-  if (levelLabel) levelLabel.textContent = `LVL ${xpMeta.level}`;
+  if (levelLabel) levelLabel.innerHTML = `<i class="account-online-dot" aria-hidden="true"></i>${t("Online")}`;
   if (avatar) {
     avatar.innerHTML = user?.avatar
       ? `<img src="${escapeAttribute(user.avatar)}" alt="">`
@@ -2153,9 +2153,8 @@ function updateAccountToggle(displayName, user) {
   if (xpBar) {
     xpBar.classList.toggle("hidden", !user);
     if (user) {
-      xpBar.innerHTML = `<div class="xp-bar-head"><strong>EXP</strong><span>${xpMeta.clampedXp}/${xpMeta.required}</span></div>
-      <div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
-      <small>До следующего уровня: ${xpMeta.left.toLocaleString("ru-RU")} EXP</small>`;
+      xpBar.innerHTML = `<div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
+      <small>LVL ${xpMeta.level} - XP ${xpMeta.clampedXp.toLocaleString("ru-RU")} / ${xpMeta.required.toLocaleString("ru-RU")}</small>`;
     }
   }
 }
