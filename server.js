@@ -474,6 +474,21 @@ function findUserByNicknameOrUsername(value) {
     || null;
 }
 
+function parseDevCommandInput(raw) {
+  const input = String(raw || "").trim();
+  if (!input) return { error: "Команда пустая. Напиши /help для списка." };
+  if (input === "/help" || input.toLowerCase() === "help") return { type: "help" };
+  let match = input.match(/^level\s+up\s+@?([a-z0-9_-]{3,24})\s+to\s+(\d{1,4})$/i);
+  if (match) return { type: "setLevel", username: match[1], level: Number(match[2]) };
+  match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+nickname\s+color\s+"([^"]+)"$/i);
+  if (match) return { type: "giveNicknameColor", username: match[1], colorName: match[2] };
+  match = input.match(/^vinyls\s+add\s+@?([a-z0-9_-]{3,24})\s+(\d{1,9})$/i);
+  if (match) return { type: "addVinyls", username: match[1], amount: Number(match[2]) };
+  match = input.match(/^xp\s+set\s+@?([a-z0-9_-]{3,24})\s+(\d{1,9})$/i);
+  if (match) return { type: "setXp", username: match[1], xp: Number(match[2]) };
+  return { error: "Неизвестная команда. Напиши /help." };
+}
+
 function validateAccountTag(value, currentUserId = "") {
   const username = normalizeUsername(value);
   if (username.length < 3) return { error: "Тег должен быть от 3 символов: латиница, цифры, _ или -" };
@@ -2527,6 +2542,62 @@ io.on("connection", (socket) => {
     saveUsersStore();
     cb({ success: true, item, economy: publicEconomy(user), profile: profileForSocket(socket) });
     io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
+  });
+
+  socket.on("dev:command", ({ command } = {}, cb = () => {}) => {
+    const actor = socket.data.user;
+    if (!actor || !hasRole(actor, DEV_ROLE)) return cb({ error: "Недостаточно прав" });
+    const parsed = parseDevCommandInput(command);
+    if (parsed.error) return cb({ error: parsed.error });
+    if (parsed.type === "help") {
+      return cb({
+        success: true,
+        output: [
+          "/help",
+          "level up @username to 25",
+          "-give @username nickname color \"white chrome\"",
+          "vinyls add @username 5000",
+          "xp set @username 9000"
+        ]
+      });
+    }
+    const target = findUserByNicknameOrUsername(parsed.username);
+    if (!target) return cb({ error: "Пользователь не найден" });
+    ensureUserProgress(target);
+    if (parsed.type === "setLevel") {
+      target.economy.level = Math.max(1, Math.min(999, Math.floor(parsed.level)));
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: level => ${target.economy.level}`] });
+    }
+    if (parsed.type === "giveNicknameColor") {
+      const wanted = parsed.colorName.trim().toLowerCase().replace(/\s+/g, "_");
+      const item = SHOP_CATALOG.find((entry) => entry.category === "nicknameColor" && entry.name.trim().toLowerCase().replace(/\s+/g, "_") === wanted);
+      if (!item) return cb({ error: "Цвет не найден в магазине" });
+      if (!target.economy.ownedCosmetics.includes(item.id)) target.economy.ownedCosmetics.push(item.id);
+      target.economy.equipped.nicknameColor = item.id;
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: выдан и экипирован ${item.name}`] });
+    }
+    if (parsed.type === "addVinyls") {
+      addVinylTransaction(target, Math.max(1, Math.floor(parsed.amount)), "dev_grant");
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: vinyls +${Math.floor(parsed.amount)}`] });
+    }
+    if (parsed.type === "setXp") {
+      target.economy.xp = Math.max(0, Math.floor(parsed.xp));
+      target.economy.level = Math.max(1, Math.floor(target.economy.xp / 1000) + 1);
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: xp => ${target.economy.xp}, level => ${target.economy.level}`] });
+    }
+    return cb({ error: "Команда не выполнена" });
   });
 
   socket.on("social:get", (cb = () => {}) => {
