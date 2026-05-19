@@ -79,7 +79,11 @@ body.site-menu-modal-open {
 }
 
 body[data-screen="menu"] .app-shell,
-body[data-screen="lobby"] 
+body[data-screen="lobby"] .app-shell {
+  overflow: hidden;
+  padding: clamp(6px, 1.2vh, 14px) 0;
+}
+
 .global-chat-sidebar {
   width: min(280px, 26vw);
   min-height: 520px;
