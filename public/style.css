@@ -8253,7 +8253,7 @@ body,
   position: fixed;
   right: clamp(14px, 2.2vw, 34px);
   bottom: clamp(14px, 2.1vw, 32px);
-  z-index: 24;
+  z-index: 12060;
   display: grid;
   justify-items: end;
   gap: 14px;
