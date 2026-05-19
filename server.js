@@ -476,17 +476,24 @@ function findUserByNicknameOrUsername(value) {
 
 function parseDevCommandInput(raw) {
   const input = String(raw || "").trim();
-  if (!input) return { error: "Команда пустая. Напиши /help для списка." };
-  if (input === "/help" || input.toLowerCase() === "help") return { type: "help" };
-  let match = input.match(/^level\s+up\s+@?([a-z0-9_-]{3,24})\s+to\s+(\d{1,4})$/i);
+  if (!input) return { error: "Команда пустая. Напиши -help для списка." };
+  if (input === "-help" || input.toLowerCase() === "help") return { type: "help" };
+  let match = input.match(/^-level\s+up\s+@?([a-z0-9_-]{3,24})\s+to\s+(\d{1,4})$/i);
   if (match) return { type: "setLevel", username: match[1], level: Number(match[2]) };
   match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+nickname\s+color\s+"([^"]+)"$/i);
   if (match) return { type: "giveNicknameColor", username: match[1], colorName: match[2] };
-  match = input.match(/^vinyls\s+add\s+@?([a-z0-9_-]{3,24})\s+(\d{1,9})$/i);
+  match = input.match(/^-vinyls\s+add\s+@?([a-z0-9_-]{3,24})\s+(\d{1,9})$/i);
   if (match) return { type: "addVinyls", username: match[1], amount: Number(match[2]) };
-  match = input.match(/^xp\s+set\s+@?([a-z0-9_-]{3,24})\s+(\d{1,9})$/i);
+  match = input.match(/^-xp\s+set\s+@?([a-z0-9_-]{3,24})\s+(\d{1,9})$/i);
   if (match) return { type: "setXp", username: match[1], xp: Number(match[2]) };
-  return { error: "Неизвестная команда. Напиши /help." };
+  match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+vinyls\s+(\d{1,9})$/i);
+  if (match) return { type: "giveVinyls", username: match[1], amount: Number(match[2]) };
+  match = input.match(/^-give\s+@?([a-z0-9_-]{3,24})\s+xp\s+(\d{1,9})$/i);
+  if (match) return { type: "giveXp", username: match[1], xp: Number(match[2]) };
+  if (input.toLowerCase() === "-list nickname colors") return { type: "listNicknameColors" };
+  match = input.match(/^-rainbow\s+@?([a-z0-9_-]{3,24})$/i);
+  if (match) return { type: "rainbowNicknameColor", username: match[1] };
+  return { error: "Неизвестная команда. Напиши -help." };
 }
 
 function validateAccountTag(value, currentUserId = "") {
@@ -2553,13 +2560,24 @@ io.on("connection", (socket) => {
       return cb({
         success: true,
         output: [
-          "/help",
-          "level up @username to 25",
+          "-help",
+          "-level up @username to 25",
           "-give @username nickname color \"white chrome\"",
-          "vinyls add @username 5000",
-          "xp set @username 9000"
+          "-vinyls add @username 5000",
+          "-xp set @username 9000",
+          "-give @username vinyls 5000",
+          "-give @username xp 9000",
+          "-list nickname colors",
+          "-rainbow @username"
         ]
       });
+    }
+    if (parsed.type === "listNicknameColors") {
+      const names = SHOP_CATALOG
+        .filter((entry) => entry.category === "nicknameColor")
+        .map((entry) => entry.name)
+        .sort((a, b) => a.localeCompare(b));
+      return cb({ success: true, output: [`Nickname colors (${names.length}):`, ...names] });
     }
     const target = findUserByNicknameOrUsername(parsed.username);
     if (!target) return cb({ error: "Пользователь не найден" });
@@ -2596,6 +2614,32 @@ io.on("connection", (socket) => {
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
       return cb({ success: true, output: [`${target.username}: xp => ${target.economy.xp}, level => ${target.economy.level}`] });
+    }
+    if (parsed.type === "giveVinyls") {
+      addVinylTransaction(target, Math.max(1, Math.floor(parsed.amount)), "dev_grant");
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: vinyls +${Math.floor(parsed.amount)}`] });
+    }
+    if (parsed.type === "giveXp") {
+      target.economy.xp = Math.max(0, target.economy.xp + Math.floor(parsed.xp));
+      target.economy.level = Math.max(1, Math.floor(target.economy.xp / 1000) + 1);
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: xp +${Math.floor(parsed.xp)}, level => ${target.economy.level}`] });
+    }
+    if (parsed.type === "rainbowNicknameColor") {
+      const available = SHOP_CATALOG.filter((entry) => entry.category === "nicknameColor");
+      const item = available[Math.floor(Math.random() * available.length)];
+      if (!item) return cb({ error: "Цвета не найдены" });
+      if (!target.economy.ownedCosmetics.includes(item.id)) target.economy.ownedCosmetics.push(item.id);
+      target.economy.equipped.nicknameColor = item.id;
+      target.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
+      return cb({ success: true, output: [`${target.username}: случайный цвет => ${item.name}`] });
     }
     return cb({ error: "Команда не выполнена" });
   });
