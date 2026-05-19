@@ -7664,6 +7664,7 @@ body[data-effects-density="low"] .sound-toggle {
 
 .site-menu-card #settingsPanelProfile.active,
 .site-menu-card #settingsPanelShop.active,
+.site-menu-card #settingsPanelInventory.active,
 .site-menu-card #settingsPanelDaily.active {
   overflow: hidden;
 }
@@ -7689,6 +7690,7 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .site-menu-card #settingsPanelShop.active,
+.site-menu-card #settingsPanelInventory.active,
 .site-menu-card #settingsPanelDaily.active {
   display: flex;
   flex-direction: column;
@@ -7697,6 +7699,7 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .site-menu-card #settingsPanelShop.active > .shop-panel-root,
+.site-menu-card #settingsPanelInventory.active > .shop-panel-root,
 .site-menu-card #settingsPanelDaily.active > .daily-reward-card {
   flex: 1 1 auto;
   max-height: 100%;
