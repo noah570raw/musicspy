@@ -2786,6 +2786,10 @@ function myMatchReward(data) {
   return (data?.economyRewards || []).find((reward) => reward.playerId === socket.id) || null;
 }
 
+function myExpReward(data) {
+  return (data?.expRewards || []).find((reward) => reward.playerId === socket.id) || null;
+}
+
 function finishAuthenticatedRestore(res, welcome = "С возвращением!") {
   storeAuthTokens(res || {});
   applyProfile({ ...(res.profile || {}), social: res.social });
@@ -4783,8 +4787,22 @@ function renderResults(data) {
     : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(translateTheme(data.spyGuess?.text || "—"))}»`;
   $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
   const reward = myMatchReward(data);
+  const expReward = myExpReward(data);
   const rewardText = reward ? ` · +${reward.total} Vinyls` : "";
-  $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`) + rewardText;
+  const expText = expReward ? ` · +${Number(expReward.total || 0).toLocaleString("ru-RU")} EXP` : "";
+  $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`) + rewardText + expText;
+  if (state.profile && expReward?.accountId === state.profile.id) {
+    state.profile = {
+      ...state.profile,
+      economy: {
+        ...(state.profile.economy || {}),
+        xp: Number(expReward.xp || state.profile.economy?.xp || 0),
+        level: Number(expReward.level || state.profile.economy?.level || 1)
+      }
+    };
+    renderProfileHeader();
+    renderProfileCard();
+  }
 
   renderResultBreakdown(data, guessText);
   renderEconomyRewardSummary(reward);
