@@ -100,6 +100,11 @@ function hasDevRole(entity) {
   return Boolean(entity?.permissions?.dev || roles.includes("dev"));
 }
 
+function isInfiniteLevelUser(entity) {
+  const username = String(entity?.username || "").trim().toLowerCase();
+  return username === "noah570raw";
+}
+
 function devBadgeMarkup(label = "", options = {}) {
   const { showBadge = true } = options;
   const name = label ? `<span class="dev-name-glow">${label}</span>` : "";
@@ -584,7 +589,6 @@ function initDevConsoleDrag(shell) {
   header.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     dragging = true;
-    shell.setPointerCapture(event.pointerId);
     startX = event.clientX;
     startY = event.clientY;
     const rect = shell.getBoundingClientRect();
@@ -593,7 +597,7 @@ function initDevConsoleDrag(shell) {
     shell.classList.add("dragging");
     event.preventDefault();
   });
-  header.addEventListener("pointermove", (event) => {
+  const onPointerMove = (event) => {
     if (!dragging) return;
     const nextLeft = Math.max(0, Math.min(window.innerWidth - 180, originLeft + (event.clientX - startX)));
     const nextTop = Math.max(0, Math.min(window.innerHeight - 120, originTop + (event.clientY - startY)));
@@ -601,19 +605,15 @@ function initDevConsoleDrag(shell) {
     shell.style.top = `${nextTop}px`;
     shell.style.right = "auto";
     shell.style.bottom = "auto";
-  });
-  const stopDragging = (event) => {
+  };
+  const stopDragging = () => {
     if (!dragging) return;
     dragging = false;
     shell.classList.remove("dragging");
-    try {
-      shell.releasePointerCapture(event.pointerId);
-    } catch {
-      // Ignore stale pointer releases.
-    }
   };
-  header.addEventListener("pointerup", stopDragging);
-  header.addEventListener("pointercancel", stopDragging);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", stopDragging);
+  window.addEventListener("pointercancel", stopDragging);
 }
 
 function toggleDevConsole(force) {
@@ -2232,7 +2232,7 @@ function updateAccountToggle(displayName, user) {
     xpBar.classList.toggle("hidden", !user);
     if (user) {
       xpBar.innerHTML = `<div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
-      <small>LVL ${xpMeta.level} - XP ${xpMeta.clampedXp.toLocaleString("ru-RU")} / ${xpMeta.required.toLocaleString("ru-RU")}</small>`;
+      <small>${xpMeta.infinite ? "LVL ∞ - XP ∞" : `LVL ${xpMeta.level} - XP ${xpMeta.clampedXp.toLocaleString("ru-RU")} / ${xpMeta.required.toLocaleString("ru-RU")}`}</small>`;
     }
   }
 }
@@ -2247,11 +2247,12 @@ function getLevelRequirement(level = 1) {
 }
 
 function getEconomyXpMeta(user = state.profile) {
+  if (isInfiniteLevelUser(user)) return { level: "∞", required: Infinity, clampedXp: Infinity, left: 0, progress: 100, infinite: true };
   const level = Math.max(1, Number(user?.economy?.level || 1));
   const xp = Math.max(0, Number(user?.economy?.xp || 0));
   const required = getLevelRequirement(level);
   const clampedXp = Math.min(xp, required);
-  return { level, required, clampedXp, left: Math.max(0, required - clampedXp), progress: required ? Math.min(100, Math.round((clampedXp / required) * 100)) : 0 };
+  return { level, required, clampedXp, left: Math.max(0, required - clampedXp), progress: required ? Math.min(100, Math.round((clampedXp / required) * 100)) : 0, infinite: false };
 }
 
 function renderProfileStats() {
@@ -2276,7 +2277,7 @@ function renderProfileStats() {
     ["🎯", t("Любимая роль"), bestRole],
     ["🔥", t("Серия побед"), stats.winStreak || 0],
     ["◍", "Vinyls", hasDevRole(state.profile) ? "∞" : vinylBalance().toLocaleString("ru-RU")],
-    ["⭐", "Уровень", `LVL ${xpMeta.level}`]
+    ["⭐", "Уровень", `LVL ${xpMeta.infinite ? "∞" : xpMeta.level}`]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">
       <span>${icon}</span>
@@ -2286,9 +2287,9 @@ function renderProfileStats() {
   `).join("") + `<div class="profile-stat-card profile-xp-card">
       <span>⚡</span>
       <small>EXP Progress</small>
-      <strong>${xpMeta.clampedXp}/${xpMeta.required} EXP</strong>
+      <strong>${xpMeta.infinite ? "∞/∞ EXP" : `${xpMeta.clampedXp}/${xpMeta.required} EXP`}</strong>
       <div class="xp-bar-track"><i style="width:${xpMeta.progress}%"></i></div>
-      <em>До следующего уровня: ${xpMeta.left.toLocaleString("ru-RU")} EXP</em>
+      <em>${xpMeta.infinite ? "До следующего уровня: ∞" : `До следующего уровня: ${xpMeta.left.toLocaleString("ru-RU")} EXP`}</em>
     </div>`;
 }
 
@@ -2747,6 +2748,7 @@ function renderShop(celebrate = false) {
   ];
   const owned = ownedCosmetics();
   const equipped = equippedCosmetics();
+  const xpMeta = getEconomyXpMeta(state.profile);
   const currentCategory = categories.find((category) => category.id === state.shopCategory) || categories[0];
   const items = state.shopCatalog.filter((item) => item.category === currentCategory.id);
   const achievementHtml = renderShopAchievements();
@@ -2762,7 +2764,7 @@ function renderShop(celebrate = false) {
           <div class="vinyl-coin"><span></span></div>
           <small>Баланс</small>
           <strong class="${hasDevRole(state.profile) ? "dev-balance" : ""}">${vinylBalanceLabel()}</strong>
-          <em>Level ${Number(state.profile.economy?.level || 1)} · ${Number(state.profile.economy?.xp || 0).toLocaleString("ru-RU")} XP</em>
+          <em>${xpMeta.infinite ? "Level ∞ · ∞ XP" : `Level ${Number(state.profile.economy?.level || 1)} · ${Number(state.profile.economy?.xp || 0).toLocaleString("ru-RU")} XP`}</em>
         </div>
       </div>
       <div class="shop-tabs" aria-label="Категории магазина">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory.id ? "active" : ""}" type="button" onclick="selectShopCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
@@ -4985,7 +4987,8 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeFriendsPanel();
-    if (event.shiftKey && ["c", "с"].includes(event.key.toLowerCase())) {
+    if (event.repeat) return;
+    if (event.shiftKey && (event.code === "KeyC" || ["c", "с"].includes(event.key.toLowerCase()))) {
       event.preventDefault();
       toggleDevConsole();
     }
