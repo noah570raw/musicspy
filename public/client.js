@@ -4395,6 +4395,23 @@ function initChatScrollbarFeedback() {
   }
 }
 
+function lobbyPlayerById(playerId) {
+  return state.players.find((player) => player.id === playerId) || null;
+}
+
+function lobbyPlayerProfileActionMarkup(message) {
+  const player = lobbyPlayerById(message.playerId) || {};
+  const nickname = player.name || message.playerName || "Игрок";
+  const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
+  const triggerLabel = escapeAttribute(`Профиль ${nickname}`);
+  return `
+    <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event, '${escapeAttribute(message.playerId || '')}')" aria-label="${triggerLabel}">
+      ${avatar}
+      <span class="chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</span>
+    </button>
+  `;
+}
+
 function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
@@ -4402,10 +4419,19 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
+    const playerActions = isMine ? "" : `
+      <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
+        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>
+        <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
+      </div>
+    `;
     return `
       <div class="chat-message ${isMine ? "mine" : ""}">
         <div class="chat-message-meta">
-          <strong>${nameWithDevBadge({ name: message.playerName, roles: message.roles, permissions: message.permissions })}</strong>
+          <div class="chat-player-meta-wrap">
+            ${lobbyPlayerProfileActionMarkup(message)}
+            ${playerActions}
+          </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
         <p>${escapeHtml(message.text || "")}</p>
@@ -4427,6 +4453,47 @@ function renderChat(messages = state.chatMessages) {
     scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: hadMessages ? "smooth" : "auto" });
   }
 }
+
+function closeChatPlayerActions() {
+  for (const menu of document.querySelectorAll('.chat-player-actions.open')) menu.classList.remove('open');
+}
+
+function toggleChatPlayerActions(event, playerId) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const menu = document.getElementById(`chatPlayerActions-${playerId}`);
+  if (!menu) return;
+  const shouldOpen = !menu.classList.contains('open');
+  closeChatPlayerActions();
+  if (shouldOpen) menu.classList.add('open');
+}
+
+function requestFriendFromLobbyChat(playerId) {
+  const player = lobbyPlayerById(playerId);
+  closeChatPlayerActions();
+  if (!player?.name) return setChatStatus('Не удалось определить игрока', true);
+  if (!state.profile) return setChatStatus('Войдите в аккаунт, чтобы добавлять друзей', true);
+  socket.emit('friend:request', { nickname: player.name }, (res) => {
+    if (res?.error) return setChatStatus(res.error, true);
+    requestSocialState();
+    setChatStatus(`Заявка отправлена игроку ${player.name}`);
+  });
+}
+
+function viewLobbyPlayerProfile(playerId) {
+  const player = lobbyPlayerById(playerId);
+  closeChatPlayerActions();
+  if (!player) return setChatStatus('Профиль игрока недоступен', true);
+  const friend = state.friends.find((item) => item.id === player.accountId);
+  if (friend) {
+    openDirectChat(friend.id);
+    return setChatStatus(`Открыт профиль друга ${friendDisplayName(friend)}`);
+  }
+  openSettingsSection('profile');
+  setChatStatus(`Публичный профиль ${player.name} пока недоступен, открыт ваш профиль`);
+}
+
+document.addEventListener('click', closeChatPlayerActions);
 
 function handleChatKeydown(event) {
   if (event.key !== "Enter" || event.shiftKey) return;

@@ -3250,6 +3250,63 @@ body[data-screen="game"] .language-switcher {
   white-space: pre-wrap;
 }
 
+.chat-player-meta-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.chat-player-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chat-player-trigger .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 0.68rem;
+}
+
+.chat-player-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-player-actions {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 6px);
+  left: 0;
+  display: none;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  width: 170px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(9, 8, 30, 0.97);
+}
+
+.chat-player-actions.open { display: grid; }
+
+.chat-player-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
 .chat-input-area {
   display: flex;
   flex-direction: column;
