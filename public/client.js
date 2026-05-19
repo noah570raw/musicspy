@@ -256,18 +256,22 @@ function renderFriendCard(friend) {
   const primaryLobbyAction = lobby?.canJoin ? "Присоединиться" : "Подать заявку";
   return `
     <article class="friend-card" data-friend-id="${escapeAttribute(friend.id)}">
-      <button class="friend-profile-trigger friend-avatar" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')" aria-label="Открыть профиль ${escapeAttribute(name)}">
-        ${friendAvatarMarkup(friend)}
-        <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
-      </button>
-      <div class="friend-meta">
-        <div class="friend-name-row">
-          <button class="friend-profile-trigger friend-name" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</button>
-          <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
+      <div class="friend-main">
+        <button class="friend-profile-trigger friend-avatar" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')" aria-label="Открыть профиль ${escapeAttribute(name)}">
+          ${friendAvatarMarkup(friend)}
+          <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
+        </button>
+        <div class="friend-meta">
+          <div class="friend-name-row">
+            <button class="friend-profile-trigger friend-name" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</button>
+          </div>
+          <div class="friend-activity-row">
+            <span class="friend-activity">${escapeHtml(activity)}${unread ? ` · ${unread} непрочит.` : ""}</span>
+          </div>
         </div>
-        <div class="friend-activity-row">
-          <span class="friend-activity">${escapeHtml(activity)}${unread ? ` · ${unread} непрочит.` : ""}</span>
-          ${lobbyPill}
+        <div class="friend-status-block" aria-label="Статус ${escapeAttribute(name)}">
+          <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
+          ${lobbyPill || '<span class="friend-lobby-pill friend-lobby-pill--empty">—</span>'}
         </div>
       </div>
       <div class="friend-actions" aria-label="Действия с ${escapeAttribute(name)}">
