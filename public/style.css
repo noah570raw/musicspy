@@ -715,7 +715,7 @@ body[data-screen="playRooms"] .app-shell {
 .open-lobby-live {
   flex: none;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -760,7 +760,7 @@ body[data-screen="playRooms"] .app-shell {
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.9), color-mix(in srgb, var(--accent-2) 70%, transparent));
   color: var(--on-accent);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   box-shadow: 0 7px 18px color-mix(in srgb, var(--bg) 28%, transparent);
 }
@@ -1325,7 +1325,7 @@ body[data-screen="playRooms"] .app-shell {
   display: block;
   margin-bottom: 4px;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1395,10 +1395,10 @@ body[data-screen="playRooms"] .app-shell {
   min-height: 32px;
   padding: 7px 9px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.07);
   color: var(--accent-2);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -2314,6 +2314,7 @@ select:focus-visible {
   font-weight: 900;
 }
 
+
 .oauth-button span {
   display: inline-grid;
   width: 1.65rem;
@@ -2323,6 +2324,24 @@ select:focus-visible {
   background: rgba(0, 0, 0, 0.06);
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .oauth-button.discord {
   color: #fff;
@@ -2793,7 +2812,7 @@ html[lang="ru"] .language-switcher span:first-child {
   border-radius: 999px;
   background: rgba(255, 31, 45, 0.14);
   color: #ff8d96;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2851,6 +2870,24 @@ html[lang="ru"] .language-switcher span:first-child {
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.34), rgba(255, 255, 255, 0.12));
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .account-toggle strong {
   display: inline-flex;
@@ -2953,6 +2990,24 @@ html[lang="ru"] .language-switcher span:first-child {
   font-size: 0.74rem;
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .music-source-label {
   min-width: max-content;
@@ -3297,7 +3352,7 @@ body[data-screen="game"] .language-switcher {
 .chat-player-trigger .avatar {
   width: 24px;
   height: 24px;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
 }
 
 .chat-player-name {
@@ -3320,7 +3375,7 @@ body[data-screen="game"] .language-switcher {
   width: 170px;
   padding: 8px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 999px;
   background: rgba(9, 8, 30, 0.97);
 }
 
@@ -4286,7 +4341,7 @@ body[data-screen="results"] .results-side .panel-title strong {
 
 body[data-screen="results"] .results-side .panel-title span {
   color: rgba(248, 246, 255, 0.46);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
 }
 
 body[data-screen="results"] .comment-form {
@@ -4601,7 +4656,7 @@ body[data-screen="results"] .result-score-panel:hover {
 
 .step-index {
   color: rgba(248, 246, 255, 0.46);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.16em;
 }
@@ -5536,7 +5591,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 .preview-mode-card small,
 .preview-stat-grid small {
   display: block;
-  font-size: 0.67rem;
+  font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -5683,7 +5738,7 @@ body[data-screen="createLobbySetup"] .app-shell {
 .create-settings-group .setting-control span {
   margin-bottom: 0;
   color: var(--theme-text-soft);
-  font-size: 0.67rem;
+  font-size: 0.66rem;
   letter-spacing: 0.11em;
 }
 
@@ -6218,7 +6273,7 @@ body[data-screen="lobby"] .app-shell {
 
 .lobby-hero-copy {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1rem;
   line-height: 1.45;
 }
 
@@ -6486,7 +6541,7 @@ body[data-screen="lobby"] .app-shell {
   min-height: 26px;
   padding: 5px 9px;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-style: normal;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -6531,6 +6586,24 @@ body[data-screen="lobby"] .app-shell {
   font-size: 1.5rem;
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .lobby-actions-panel {
   align-content: start;
@@ -7932,8 +8005,10 @@ html[lang="en"] .site-menu-card .language-toggle-knob {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  aspect-ratio: 1 / 1;
   min-height: 42px;
   padding: 0;
   border-color: rgba(255, 255, 255, 0.12);
@@ -8157,8 +8232,10 @@ body,
 .friends-toggle-avatar {
   position: relative;
   display: inline-grid;
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  aspect-ratio: 1 / 1;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px;
@@ -8333,6 +8410,24 @@ body,
   font-weight: 900;
 }
 
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
+
 .friends-add-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -8423,6 +8518,32 @@ body,
 .friend-request-card {
   position: relative;
   display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--accent-rgb), 0.11), transparent 42%),
+    rgba(255, 255, 255, 0.035);
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+
+.friend-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.friend-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.friend-request-card {
+  position: relative;
+  display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
@@ -8449,8 +8570,10 @@ body,
 .friend-avatar {
   position: relative;
   display: inline-grid;
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  aspect-ratio: 1 / 1;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
@@ -8459,7 +8582,7 @@ body,
   color: #fff;
   font-size: 1.05rem;
   font-weight: 900;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 0 1px rgba(var(--accent-rgb), 0.2), 0 0 18px rgba(var(--accent-rgb), 0.22);
 }
 
 .friend-status-dot {
@@ -8490,14 +8613,14 @@ body,
 .friend-meta {
   display: grid;
   min-width: 0;
-  gap: 5px;
+  flex: 1 1 auto;
+  gap: 4px;
 }
 
 .friend-name-row,
 .friend-activity-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   min-width: 0;
 }
@@ -8507,7 +8630,7 @@ body,
   align-items: center;
   margin: 0;
   overflow: hidden;
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8515,8 +8638,9 @@ body,
 
 .friend-state {
   flex: 0 0 auto;
+  text-align: center;
   color: var(--theme-text-faint);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -8528,8 +8652,9 @@ body,
 
 .friend-activity {
   overflow: hidden;
-  color: var(--muted);
-  font-size: 0.76rem;
+  color: color-mix(in oklab, var(--theme-text-faint) 78%, var(--text));
+  opacity: 0.85;
+  font-size: 0.72rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8537,19 +8662,37 @@ body,
 
 .friend-lobby-pill {
   flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  padding: 0;
+  min-width: 50px;
+  height: 26px;
+  padding: 0 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(var(--accent-rgb), 0.32);
-  border-radius: 10px;
+  border-radius: 999px;
   color: var(--text);
   background: rgba(var(--accent-rgb), 0.12);
-  font-size: 0.67rem;
+  font-size: 0.66rem;
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .friend-actions {
   grid-column: 1 / -1;
@@ -8695,6 +8838,24 @@ body,
   .friends-add-row,
   .friend-actions {
     grid-template-columns: 1fr;
+  }
+
+  .friend-main {
+    gap: 9px;
+  }
+
+  .friend-avatar {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+  }
+
+  .friend-status-block {
+    min-width: 52px;
+  }
+
+  .friend-name {
+    font-size: 0.92rem;
   }
 }
 
@@ -8853,7 +9014,7 @@ body,
 
 .skip-vote-eyebrow {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -8903,6 +9064,24 @@ body,
   font-size: 0.78rem;
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .skip-voter img {
   width: 100%;
@@ -9263,7 +9442,7 @@ body,
 }
 
 .shop-card small {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   letter-spacing: 0.04em;
 }
 
@@ -9497,7 +9676,7 @@ body,
   .shop-achievements { padding: 10px; }
   .achievement-grid { grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr)); gap: 7px; }
   .achievement-card { padding: 8px; }
-  .achievement-card small { font-size: 0.68rem; }
+  .achievement-card small { font-size: 0.64rem; }
   .achievement-progress { height: 6px; margin-top: 7px; }
 }
 
@@ -9801,7 +9980,7 @@ body[data-screen="spyGuess"] .friends-system {
   border-radius: 999px;
   background: rgba(34, 211, 238, 0.1);
   color: #a5f3fc;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 950;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -10132,7 +10311,7 @@ body[data-screen="spyGuess"] .friends-system {
   display: inline-flex;
   margin-bottom: 0.25rem;
   color: #67e8f9;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.17em;
   text-transform: uppercase;
@@ -10154,7 +10333,7 @@ body[data-screen="spyGuess"] .friends-system {
   max-width: 480px;
   margin: 0.45rem 0 0;
   color: rgba(226, 232, 240, 0.72);
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -10193,7 +10372,7 @@ body[data-screen="spyGuess"] .friends-system {
   color: #ecfeff;
   background: linear-gradient(90deg, rgba(34, 211, 238, 0.95), rgba(139, 92, 246, 0.95));
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.78);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
 }
 
 .xp-booster-stage {
@@ -10463,11 +10642,29 @@ body[data-screen="spyGuess"] .friends-system {
 .xp-metric span {
   display: block;
   color: rgba(226, 232, 240, 0.58);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.13em;
   font-weight: 900;
 }
+
+.friend-lobby-pill--empty {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--theme-text-faint);
+  pointer-events: none;
+}
+
+.friend-status-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 58px;
+}
+
 
 .xp-metric strong {
   display: block;
