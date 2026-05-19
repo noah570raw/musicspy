@@ -2282,12 +2282,6 @@ select:focus-visible {
   font-size: clamp(2.2rem, 8vw, 4rem);
 }
 
-#publicProfileTitle {
-  margin: 0 auto 14px;
-  line-height: 1.05;
-  text-align: center;
-}
-
 .auth-modal-text,
 .auth-register-hint {
   color: var(--muted);
@@ -3265,11 +3259,6 @@ body[data-screen="game"] .language-switcher {
   min-width: 0;
 }
 
-.chat-message:not(.mine) .chat-player-meta-wrap,
-.chat-message.mine .chat-player-meta-wrap {
-  margin-left: 0;
-}
-
 .chat-player-trigger {
   display: inline-flex;
   align-items: center;
@@ -3296,8 +3285,8 @@ body[data-screen="game"] .language-switcher {
 
 .chat-player-actions {
   position: absolute;
-  z-index: 70;
-  bottom: calc(100% + 6px);
+  z-index: 8;
+  top: calc(100% + 6px);
   left: 0;
   display: none;
   grid-template-columns: 1fr;
@@ -3320,11 +3309,6 @@ body[data-screen="game"] .language-switcher {
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
-}
-
-.chat-player-actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .chat-input-area {
@@ -6346,10 +6330,8 @@ body[data-screen="lobby"] .app-shell {
 .lobby-player-card {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
   min-height: 148px;
   align-content: space-between;
-  align-items: center;
   gap: 12px;
   padding: 16px;
   border: 1px solid rgba(255,255,255,0.115);
@@ -6462,7 +6444,6 @@ body[data-screen="lobby"] .app-shell {
 }
 
 .lobby-player-badges {
-  grid-column: 1 / -1;
   flex-wrap: wrap;
   gap: 7px;
 }
@@ -8414,7 +8395,7 @@ body,
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
+  align-items: center;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
@@ -8448,15 +8429,6 @@ body,
   font-size: 1.05rem;
   font-weight: 900;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-.friend-avatar.clickable,
-.friend-name.clickable {
-  cursor: pointer;
-}
-
-.friend-name.clickable:hover {
-  text-decoration: underline;
 }
 
 .friend-status-dot {
@@ -8531,21 +8503,13 @@ body,
 
 .friend-lobby-pill {
   flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  padding: 0;
+  padding: 4px 7px;
   border: 1px solid rgba(var(--accent-rgb), 0.32);
-  border-radius: 14px;
+  border-radius: 999px;
   color: var(--text);
   background: rgba(var(--accent-rgb), 0.12);
   font-size: 0.67rem;
   font-weight: 900;
-  line-height: 1;
 }
 
 .friend-actions {
