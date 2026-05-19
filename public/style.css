@@ -9442,6 +9442,62 @@ body,
 .profile-cosmetic-chip small { color: var(--rarity, #94a3b8); }
 .profile-cosmetic-empty { border-radius: 16px; }
 
+/* Cosmetic identity system */
+.player-name-stack { display: inline-flex; flex-direction: column; gap: 2px; }
+.cosmetic-name {
+  color: #e2e8f0;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+.cosmetic-name.rarity-rare,
+.cosmetic-name.rarity-epic,
+.cosmetic-name.rarity-legendary,
+.cosmetic-name.rarity-mythic {
+  background: var(--nickname-gradient);
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: premiumGradientFlow 4.5s linear infinite;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--rarity, #38bdf8) 36%, transparent);
+}
+.cosmetic-name.rarity-legendary,
+.cosmetic-name.rarity-mythic { animation-duration: 2.6s; filter: drop-shadow(0 0 12px rgba(236, 72, 153, 0.45)); }
+.player-title { font-size: 0.63rem; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.9; }
+.avatar-cosmetic-frame {
+  position: relative;
+  outline: 2px solid color-mix(in srgb, var(--rarity, #64748b) 45%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--rarity, #64748b) 42%, transparent);
+}
+.avatar-cosmetic-frame::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, color-mix(in srgb, var(--rarity, #64748b) 55%, transparent), transparent, color-mix(in srgb, var(--rarity, #64748b) 65%, transparent));
+  animation: premiumSpin 4s linear infinite;
+  z-index: -1;
+}
+.lobby-player-card[style*="--profile-banner"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--profile-banner);
+  opacity: 0.22;
+  pointer-events: none;
+}
+.chat-effect-text {
+  background: linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6, #22d3ee);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: premiumGradientFlow 3.8s linear infinite;
+  text-shadow: 0 0 14px rgba(34, 211, 238, 0.25);
+}
+@keyframes premiumGradientFlow { to { background-position: 220% 0; } }
+@keyframes premiumSpin { to { transform: rotate(360deg); } }
+
 .result-economy-rewards { margin-top: 16px; }
 .economy-result-card {
   display: grid;

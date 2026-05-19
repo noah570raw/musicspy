@@ -3052,8 +3052,11 @@ function saveProfile() {
 }
 
 function playerAvatarMarkup(player, fallback = "?") {
-  if (player?.avatar) return `<span class="avatar image-avatar"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`;
-  return `<span class="avatar">${escapeHtml(fallback)}</span>`;
+  const frame = player?.cosmetics?.active?.avatarFrame;
+  const rarity = escapeAttribute(frame?.rarity || "common");
+  const frameClass = frame ? ` avatar-cosmetic-frame rarity-${rarity}` : "";
+  if (player?.avatar) return `<span class="avatar image-avatar${frameClass}" title="${escapeAttribute(frame?.name || "")}"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`;
+  return `<span class="avatar${frameClass}" title="${escapeAttribute(frame?.name || "")}">${escapeHtml(fallback)}</span>`;
 }
 
 
@@ -3066,21 +3069,33 @@ function playerInitials(name = "?") {
     .join("") || "?";
 }
 
+function cosmeticDisplayName(player = {}, fallback = "Игрок") {
+  const rawName = player?.name || player?.displayName || player?.nickname || fallback;
+  const nicknameFx = player?.cosmetics?.active?.nicknameColor;
+  const titleFx = player?.cosmetics?.active?.playerTitle;
+  const rarity = escapeAttribute(nicknameFx?.rarity || "common");
+  const gradient = escapeAttribute(nicknameFx?.preview || "linear-gradient(90deg,#e2e8f0,#94a3b8)");
+  const title = titleFx ? `<small class="player-title rarity-${escapeAttribute(titleFx.rarity || "common")}">${escapeHtml(titleFx.name || "")}</small>` : "";
+  return `<span class="player-name-stack"><strong class="cosmetic-name rarity-${rarity}" style="--nickname-gradient:${gradient}">${nameWithDevBadge({ ...player, name: rawName }, fallback, { showBadge: true })}</strong>${title}</span>`;
+}
+
 function lobbyPlayerCardMarkup(player, index, lobby) {
   const isHost = player.id === lobby.host;
   const isMe = player.id === socket.id;
   const isReady = Boolean(player.ready);
   const statusText = isReady ? t("готов") : t("не готов");
-  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
+  const lobbyFx = player?.cosmetics?.active?.lobbyEffect;
+  const bannerFx = player?.cosmetics?.active?.profileBanner;
+  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : "", lobbyFx ? `rarity-${lobbyFx.rarity}` : ""].filter(Boolean).join(" ");
   return `
-    <article class="${cardClass}">
+    <article class="${cardClass}" style="${bannerFx ? `--profile-banner:${escapeAttribute(bannerFx.preview)};` : ""}">
       <div class="lobby-player-glow" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap">
         ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
         <span class="lobby-online-dot" aria-hidden="true"></span>
       </div>
       <div class="lobby-player-info">
-        <strong>${nameWithDevBadge(player, "Игрок", { showBadge: true })}</strong>
+        ${cosmeticDisplayName(player, "Игрок")}
         <span>${isMe ? t("это ты") : t("в комнате")}</span>
       </div>
       <div class="lobby-player-badges">
@@ -4423,7 +4438,7 @@ function lobbyPlayerProfileActionMarkup(message) {
   return `
     <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
       ${avatar}
-      <span class="chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</span>
+      <span class="chat-player-name">${cosmeticDisplayName(player.name ? player : { name: nickname, cosmetics: message.cosmetics }, "Игрок")}</span>
     </button>
   `;
 }
@@ -4443,7 +4458,7 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""}">
+      <div class="chat-message ${isMine ? "mine" : ""} ${message?.cosmetics?.active?.chatEffect ? `rarity-${escapeAttribute(message.cosmetics.active.chatEffect.rarity || "common")}` : ""}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
             ${lobbyPlayerProfileActionMarkup(message)}
@@ -4451,7 +4466,7 @@ function renderChat(messages = state.chatMessages) {
           </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
-        <p>${escapeHtml(message.text || "")}</p>
+        <p class="${message?.cosmetics?.active?.chatEffect ? "chat-effect-text" : ""}">${escapeHtml(message.text || "")}</p>
       </div>
     `;
   }).join("");
