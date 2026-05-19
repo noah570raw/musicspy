@@ -82,6 +82,7 @@ const state = {
   shopRarities: {},
   shopAchievements: [],
   shopCategory: "nicknameColor",
+  inventoryCategory: "nicknameColor",
   shopStatus: "",
   dailyReward: { canClaim: false, nextClaimAt: null, rewardAmount: 300, rewardSchedule: [300, 350, 400, 450, 500, 650, 700], cycleDay: 1, claimedDays: 0 },
   dailyRewardTimer: null,
@@ -1990,7 +1991,7 @@ function showAuthModal(mode = "choice") {
 }
 
 function openSettingsSection(section = "profile") {
-  const safeSection = ["profile", "shop", "daily", "xpbooster", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
+  const safeSection = ["profile", "shop", "inventory", "daily", "xpbooster", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
   state.settingsSection = safeSection;
   for (const panel of document.querySelectorAll("[data-settings-panel]")) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
@@ -2001,7 +2002,7 @@ function openSettingsSection(section = "profile") {
   }
   if (safeSection === "appearance") renderAppearanceControls();
   if (safeSection === "game") syncGamePreferenceToggles();
-  if (safeSection === "shop") requestShopState();
+  if (safeSection === "shop" || safeSection === "inventory") requestShopState();
   if (safeSection === "daily") requestDailyRewardState();
   if (safeSection === "xpbooster") requestXpBoosterState();
 }
@@ -2183,7 +2184,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   updateAccountToggle(displayName, user);
   renderProfileStats();
   renderProfileCosmetics();
-  if (state.settingsSection === "shop") requestShopState();
+  if (state.settingsSection === "shop" || state.settingsSection === "inventory") requestShopState();
   if (state.settingsSection === "daily") requestDailyRewardState();
   if (state.settingsSection === "xpbooster") requestXpBoosterState();
   if (user?.economy?.xpBooster) applyXpBoosterState(user.economy.xpBooster);
@@ -2658,8 +2659,10 @@ function requestShopState() {
     state.shopAchievements = Array.isArray(res.achievements) ? res.achievements : [];
     if (res.economy && state.profile) state.profile.economy = res.economy;
     state.shopCategory = state.shopCategories.some((category) => category.id === state.shopCategory) ? state.shopCategory : (state.shopCategories[0]?.id || "nicknameColor");
+    state.inventoryCategory = state.shopCategories.some((category) => category.id === state.inventoryCategory) ? state.inventoryCategory : (state.shopCategories[0]?.id || "nicknameColor");
     state.shopStatus = "";
     renderShop();
+    renderInventory();
     renderProfileStats();
     renderProfileCosmetics();
   });
@@ -2681,6 +2684,7 @@ function purchaseShopItem(itemId) {
     else if (res.economy && state.profile) state.profile.economy = res.economy;
     state.shopStatus = `Куплено: ${res.item?.name || "предмет"}. Предмет добавлен в коллекцию.`;
     renderShop(true);
+    renderInventory(true);
     renderProfileStats();
     renderProfileCosmetics();
   });
@@ -2697,6 +2701,7 @@ function equipShopItem(itemId) {
     else if (res.economy && state.profile) state.profile.economy = res.economy;
     state.shopStatus = `Экипировано: ${res.item?.name || "предмет"}. Только стиль — никаких игровых бонусов.`;
     renderShop(true);
+    renderInventory(true);
     renderProfileCosmetics();
   });
 }
@@ -2721,6 +2726,49 @@ function renderProfileCosmetics() {
       <small>${escapeHtml(rarityLabel(item.rarity))}</small>
     </div>
   `).join("");
+}
+
+
+function selectInventoryCategory(categoryId) {
+  state.inventoryCategory = categoryId;
+  renderInventory();
+}
+
+function renderInventory(celebrate = false) {
+  const root = $("inventoryPanelRoot");
+  if (!root) return;
+  if (!state.profile) {
+    root.innerHTML = `
+      <div class="shop-locked-card">
+        <div class="vinyl-coin xl"><span></span></div>
+        <h3>Инвентарь доступен после входа</h3>
+        <p>Войди в профиль, чтобы видеть купленные предметы и экипировать их.</p>
+        <button class="primary" type="button" onclick="openSettingsSection('profile')">Войти в профиль</button>
+      </div>`;
+    return;
+  }
+  const categories = state.shopCategories.length ? state.shopCategories : [];
+  const owned = ownedCosmetics();
+  const equipped = equippedCosmetics();
+  const currentCategory = categories.find((category) => category.id === state.inventoryCategory) || categories[0];
+  const items = state.shopCatalog.filter((item) => item.category === currentCategory?.id && owned.has(item.id));
+  root.innerHTML = `
+    <div class="shop-static-header">
+      <div class="shop-hero ${celebrate ? "purchase-flash" : ""}">
+        <div class="shop-hero-copy">
+          <p class="eyebrow">inventory</p>
+          <h3>Твой инвентарь</h3>
+          <p>Здесь только уже купленные предметы. Экипируй их для ника, аватара, профиля и эффектов.</p>
+        </div>
+      </div>
+      <div class="shop-tabs" aria-label="Категории инвентаря">${categories.map((category) => `<button class="shop-category ${category.id === currentCategory?.id ? "active" : ""}" type="button" onclick="selectInventoryCategory('${escapeAttribute(category.id)}')">${escapeHtml(category.label)}</button>`).join("")}</div>
+      <p class="shop-status ${state.shopStatus ? "visible" : ""}">${escapeHtml(state.shopStatus || "")}</p>
+    </div>
+    <div class="shop-items-area" data-shop-items-area>
+      <div class="shop-grid">
+        ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card shop-empty-card">В этой категории пока нет купленных предметов.</div>`}
+      </div>
+    </div>`;
 }
 
 function renderShop(celebrate = false) {
