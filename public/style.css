@@ -2283,7 +2283,9 @@ select:focus-visible {
 }
 
 #publicProfileTitle {
-  margin-top: -6px;
+  margin: 0 auto 14px;
+  line-height: 1.05;
+  text-align: center;
 }
 
 .auth-modal-text,
@@ -3264,7 +3266,11 @@ body[data-screen="game"] .language-switcher {
 }
 
 .chat-message:not(.mine) .chat-player-meta-wrap {
-  margin-left: -5px;
+  margin-left: 7px;
+}
+
+.chat-message.mine .chat-player-meta-wrap {
+  margin-left: 2px;
 }
 
 .chat-player-trigger {
@@ -3293,7 +3299,7 @@ body[data-screen="game"] .language-switcher {
 
 .chat-player-actions {
   position: absolute;
-  z-index: 8;
+  z-index: 70;
   top: calc(100% + 6px);
   left: 0;
   display: none;
@@ -6338,8 +6344,10 @@ body[data-screen="lobby"] .app-shell {
 .lobby-player-card {
   position: relative;
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   min-height: 148px;
   align-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 16px;
   border: 1px solid rgba(255,255,255,0.115);
@@ -6452,6 +6460,7 @@ body[data-screen="lobby"] .app-shell {
 }
 
 .lobby-player-badges {
+  grid-column: 1 / -1;
   flex-wrap: wrap;
   gap: 7px;
 }
@@ -8437,6 +8446,15 @@ body,
   font-size: 1.05rem;
   font-weight: 900;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.friend-avatar.clickable,
+.friend-name.clickable {
+  cursor: pointer;
+}
+
+.friend-name.clickable:hover {
+  text-decoration: underline;
 }
 
 .friend-status-dot {

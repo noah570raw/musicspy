@@ -252,17 +252,18 @@ function renderFriendCard(friend) {
   const activity = getFriendActivity(friend);
   const lobby = friend.lobby;
   const unread = Number(friend.unread || 0);
+  const profileAction = friend.accountId ? `onclick="openFriendProfile('${escapeAttribute(friend.id)}')"` : "";
   const lobbyPill = lobby ? `<button class="friend-lobby-pill" type="button" onclick="requestFriendLobby('${escapeAttribute(friend.id)}')">${Number(lobby.players || 0)}/${Number(lobby.maxPlayers || 0)}</button>` : "";
   const primaryLobbyAction = lobby?.canJoin ? "Присоединиться" : "Подать заявку";
   return `
     <article class="friend-card" data-friend-id="${escapeAttribute(friend.id)}">
-      <div class="friend-avatar" aria-hidden="true">
+      <div class="friend-avatar ${friend.accountId ? "clickable" : ""}" ${profileAction} aria-hidden="true">
         ${friendAvatarMarkup(friend)}
         <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
       </div>
       <div class="friend-meta">
         <div class="friend-name-row">
-          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
+          <strong class="friend-name ${friend.accountId ? "clickable" : ""}" ${profileAction}>${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -4486,6 +4487,15 @@ function viewLobbyPlayerProfile(playerId) {
   }
   socket.emit("profile:view", { accountId: player.accountId }, (res) => {
     if (res?.error || !res?.user) return setChatStatus(res?.error || "Профиль игрока недоступен", true);
+    showPublicProfileModal(res.user);
+  });
+}
+
+function openFriendProfile(friendId) {
+  const friend = friendById(friendId);
+  if (!friend?.accountId) return setFriendAddStatus("Публичный профиль игрока недоступен", "error");
+  socket.emit("profile:view", { accountId: friend.accountId }, (res) => {
+    if (res?.error || !res?.user) return setFriendAddStatus(res?.error || "Профиль игрока недоступен", "error");
     showPublicProfileModal(res.user);
   });
 }
