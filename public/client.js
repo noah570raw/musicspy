@@ -4382,66 +4382,49 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
 
 
 function requestGlobalChatHistory() {
-  if (!socket.connected || !state.profile) return renderGlobalChat();
-  socket.emit("globalChat:get", (res) => {
-    if (res?.error) return setGlobalChatStatus(res.error, true);
-    window.__globalOnlineCount = Number(res?.onlineCount || 0);
-    renderGlobalChat(res?.messages || []);
-  });
+  const box = $("chat-messages");
+  if (box) box.innerHTML = "";
 }
 
-function setGlobalChatStatus(message = "", isError = false) {
-  const el = $("globalChatStatus");
-  if (!el) return;
-  el.textContent = message;
-  el.classList.toggle("error", Boolean(isError));
-}
-
-function renderGlobalChat(messages = state.globalChatMessages) {
-  const root = $("globalChatSidebar");
-  const box = $("globalChatMessages");
-  if (!root || !box) return;
-  const list = Array.isArray(messages) ? messages : [];
-  state.globalChatMessages = list;
-  const onlineCount = Number(window.__globalOnlineCount || 0);
-  const onlineEl = $("globalChatOnlineCount");
-  if (onlineEl) onlineEl.textContent = `${onlineCount} онлайн`;
-  if (!list.length) { box.classList.add('empty'); box.textContent = 'Пока сообщений нет'; return; }
-  box.classList.remove('empty');
-  box.innerHTML = list.map((m)=>`<article class="global-chat-message">
-    <button class="global-chat-avatar ${m.online ? 'online' : ''}" onclick="openChatUserProfile('${escapeAttribute(m.userId)}')">${m.avatar ? `<img src="${escapeAttribute(m.avatar)}" alt="">` : escapeHtml((m.displayName||'?').slice(0,1).toUpperCase())}</button>
-    <div class="global-chat-body">
-      <div class="global-chat-meta"><button class="global-chat-user" onclick="openChatUserProfile('${escapeAttribute(m.userId)}')">${nameWithDevBadge(m, 'Игрок', { showBadge: true })}</button><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
-      <p>${escapeHtml(m.text || '')}</p>
-    </div>
-  </article>`).join('');
-  const scroll = box.parentElement;
-  scroll?.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' });
-}
-
-function openChatUserProfile(userId) {
-  if (typeof window.openUserProfileModal === 'function') return window.openUserProfileModal(userId);
-  if (typeof window.openProfileModal === 'function') return window.openProfileModal(userId);
-  if (String(userId) === String(state.profile?.id)) return openMainMenu('profile');
-  messageFriend(userId);
+function renderMessage(msg) {
+  const box = $("chat-messages");
+  if (!box || !msg) return;
+  const div = document.createElement("div");
+  div.className = "chat-msg";
+  div.innerHTML = `
+    <div class="msg-author">${escapeHtml(msg.username || "Аноним")}</div>
+    <div class="msg-text">${escapeHtml(msg.text || "")}</div>
+  `;
+  box.appendChild(div);
+  while (box.children.length > 50) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
 }
 
 function handleGlobalChatKeydown(event) {
-  if (event.key !== 'Enter' || event.shiftKey) return;
+  if (event.key !== "Enter") return;
   event.preventDefault();
   sendGlobalChatMessage();
 }
 
+function getGlobalChatUsername() {
+  if (window.currentUsername) return String(window.currentUsername);
+  const profileName = state?.profile?.displayName || state?.profile?.username;
+  if (profileName) return String(profileName);
+  const key = "musicspy_guest_username";
+  let guest = sessionStorage.getItem(key);
+  if (!guest) {
+    guest = `Гость_${Math.floor(1000 + Math.random() * 9000)}`;
+    sessionStorage.setItem(key, guest);
+  }
+  return guest;
+}
+
 function sendGlobalChatMessage() {
-  const input = $("globalChatInput");
-  const text = String(input?.value || '').trim();
-  if (!text) return setGlobalChatStatus('Напиши сообщение', true);
-  if (text.length > 250) return setGlobalChatStatus('Максимум 250 символов', true);
-  socket.emit('globalChat:send', { text }, (res) => {
-    if (res?.error) return setGlobalChatStatus(res.error, true);
-    if (input) input.value = '';
-    setGlobalChatStatus('');
-  });
+  const input = $("chat-input");
+  const text = String(input?.value || "").trim().slice(0, 200);
+  if (!text) return;
+  socket.emit("global_message", { text, username: getGlobalChatUsername() });
+  if (input) input.value = "";
 }
 
 function formatChatTime(createdAt) {
@@ -5167,9 +5150,19 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("chat:update", ({ messages }) => renderChat(messages || []));
-socket.on("globalChat:update", ({ messages, onlineCount }) => {
-  window.__globalOnlineCount = Number(onlineCount || 0);
-  renderGlobalChat(messages || []);
+socket.on("online_count", (count) => {
+  const onlineEl = $("chat-online");
+  if (onlineEl) onlineEl.textContent = `${Number(count || 0)} онлайн`;
+});
+
+socket.on("chat_history", (messages) => {
+  const box = $("chat-messages");
+  if (box) box.innerHTML = "";
+  (messages || []).forEach(renderMessage);
+});
+
+socket.on("global_message", (msg) => {
+  renderMessage(msg);
 });
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
@@ -5373,3 +5366,6 @@ socket.on("gameCancelled", ({ reason }) => {
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
+
+document.getElementById("chat-send")?.addEventListener("click", sendGlobalChatMessage);
+document.getElementById("chat-input")?.addEventListener("keydown", handleGlobalChatKeydown);

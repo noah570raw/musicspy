@@ -100,6 +100,8 @@ const lobbies = {};
 const timers = {};
 const oauthStates = new Map();
 const userSockets = new Map();
+const globalMessages = [];
+let globalOnlineCount = 0;
 
 const ALLOWED_REACTIONS = ["🔥", "❤️", "😂", "😮", "🕵️", "🤔"];
 
@@ -2440,6 +2442,9 @@ function createLobbyState(code, hostId, player, options = {}) {
 
 io.on("connection", (socket) => {
   socket.data.user = null;
+  globalOnlineCount += 1;
+  socket.emit("chat_history", globalMessages);
+  io.emit("online_count", globalOnlineCount);
 
   socket.on("auth:session", async ({ token, accessToken } = {}, cb = () => {}) => {
     try {
@@ -3409,6 +3414,8 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     const disconnectedUserId = socket.data.user?.id || null;
+    globalOnlineCount = Math.max(0, globalOnlineCount - 1);
+    io.emit("online_count", globalOnlineCount);
     unregisterAuthenticatedSocket(socket);
     for (const code of Object.keys(lobbies)) {
       const lobby = lobbies[code];
