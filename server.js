@@ -272,7 +272,8 @@ async function loadGlobalChatMessages(limit = MAX_GLOBAL_CHAT_MESSAGES) {
 }
 
 function emitGlobalChatUpdate(messages) {
-  io.emit('globalChat:update', { messages });
+  const onlineCount = userSockets.size;
+  io.emit('globalChat:update', { messages, onlineCount });
 }
 function createSession(user) {
   const session = createAuthSession(user, { save: saveUsersStore });
@@ -3157,7 +3158,7 @@ io.on("connection", (socket) => {
     if (!user) return cb({ error: "Войдите в аккаунт" });
     try {
       const messages = await loadGlobalChatMessages();
-      cb({ success: true, messages });
+      cb({ success: true, messages, onlineCount: userSockets.size });
     } catch (error) {
       console.error("[global-chat] load failed", error);
       cb({ error: "Не удалось загрузить чат" });

@@ -4385,6 +4385,7 @@ function requestGlobalChatHistory() {
   if (!socket.connected || !state.profile) return renderGlobalChat();
   socket.emit("globalChat:get", (res) => {
     if (res?.error) return setGlobalChatStatus(res.error, true);
+    window.__globalOnlineCount = Number(res?.onlineCount || 0);
     renderGlobalChat(res?.messages || []);
   });
 }
@@ -4402,9 +4403,9 @@ function renderGlobalChat(messages = state.globalChatMessages) {
   if (!root || !box) return;
   const list = Array.isArray(messages) ? messages : [];
   state.globalChatMessages = list;
-  const onlineCount = new Set(list.filter((m) => m.online).map((m) => m.userId)).size;
+  const onlineCount = Number(window.__globalOnlineCount || 0);
   const onlineEl = $("globalChatOnlineCount");
-  if (onlineEl) onlineEl.textContent = `${onlineCount} online`;
+  if (onlineEl) onlineEl.textContent = `${onlineCount} онлайн`;
   if (!list.length) { box.classList.add('empty'); box.textContent = 'Пока сообщений нет'; return; }
   box.classList.remove('empty');
   box.innerHTML = list.map((m)=>`<article class="global-chat-message">
@@ -4468,13 +4469,19 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
+    const player = state.players.find((item) => item.id === message.playerId) || {};
+    const avatarSrc = message.avatar || player.avatar || "";
+    const displayName = message.playerName || player.name || "Игрок";
     return `
       <div class="chat-message ${isMine ? "mine" : ""}">
-        <div class="chat-message-meta">
-          <strong>${nameWithDevBadge({ name: message.playerName, roles: message.roles, permissions: message.permissions })}</strong>
-          <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
+        <button class="global-chat-avatar ${message.online ? "online" : ""}" type="button" onclick="openChatUserProfile('${escapeAttribute(message.playerId || "")}')">${avatarSrc ? `<img src="${escapeAttribute(avatarSrc)}" alt="">` : escapeHtml(String(displayName).slice(0, 1).toUpperCase())}</button>
+        <div class="chat-message-body">
+          <div class="chat-message-meta">
+            <strong>${nameWithDevBadge({ name: displayName, roles: message.roles, permissions: message.permissions })}</strong>
+            <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
+          </div>
+          <p>${escapeHtml(message.text || "")}</p>
         </div>
-        <p>${escapeHtml(message.text || "")}</p>
       </div>
     `;
   }).join("");
@@ -5160,7 +5167,10 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("chat:update", ({ messages }) => renderChat(messages || []));
-socket.on("globalChat:update", ({ messages }) => renderGlobalChat(messages || []));
+socket.on("globalChat:update", ({ messages, onlineCount }) => {
+  window.__globalOnlineCount = Number(onlineCount || 0);
+  renderGlobalChat(messages || []);
+});
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
