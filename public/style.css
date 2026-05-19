@@ -86,7 +86,7 @@ body[data-screen="lobby"] .app-shell {
 
 #global-chat {
   position: fixed;
-  left: 250px;
+  left: 0;
   top: 200px;
   width: 300px;
   height: calc(100vh - 320px);
