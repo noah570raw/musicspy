@@ -256,22 +256,18 @@ function renderFriendCard(friend) {
   const primaryLobbyAction = lobby?.canJoin ? "Присоединиться" : "Подать заявку";
   return `
     <article class="friend-card" data-friend-id="${escapeAttribute(friend.id)}">
-      <div class="friend-main">
-        <button class="friend-profile-trigger friend-avatar" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')" aria-label="Открыть профиль ${escapeAttribute(name)}">
-          ${friendAvatarMarkup(friend)}
-          <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
-        </button>
-        <div class="friend-meta">
-          <div class="friend-name-row">
-            <button class="friend-profile-trigger friend-name" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</button>
-          </div>
-          <div class="friend-activity-row">
-            <span class="friend-activity">${escapeHtml(activity)}${unread ? ` · ${unread} непрочит.` : ""}</span>
-          </div>
-        </div>
-        <div class="friend-status-block" aria-label="Статус ${escapeAttribute(name)}">
+      <div class="friend-avatar" aria-hidden="true">
+        ${friendAvatarMarkup(friend)}
+        <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
+      </div>
+      <div class="friend-meta">
+        <div class="friend-name-row">
+          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
-          ${lobbyPill || '<span class="friend-lobby-pill friend-lobby-pill--empty">—</span>'}
+        </div>
+        <div class="friend-activity-row">
+          <span class="friend-activity">${escapeHtml(activity)}${unread ? ` · ${unread} непрочит.` : ""}</span>
+          ${lobbyPill}
         </div>
       </div>
       <div class="friend-actions" aria-label="Действия с ${escapeAttribute(name)}">
@@ -4413,13 +4409,6 @@ function lobbyPlayerProfileActionMarkup(message) {
   `;
 }
 
-function lobbyPlayerStatusLabel(playerId) {
-  const player = lobbyPlayerById(playerId);
-  if (player?.online === false) return "Offline";
-  if (player?.isHost) return "Host · Online";
-  return "Online";
-}
-
 function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
@@ -4427,22 +4416,10 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
-    const player = lobbyPlayerById(message.playerId) || {};
-    const nickname = player.name || message.playerName || "Игрок";
-    const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
     const playerActions = isMine ? "" : `
-      <div class="chat-player-actions" data-player-actions="${escapeAttribute(message.playerId || '')}" aria-hidden="true">
-        <div class="chat-player-actions-header">
-          <span class="chat-player-actions-avatar" aria-hidden="true">${avatar}</span>
-          <div class="chat-player-actions-copy">
-            <strong>${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</strong>
-            <small>${lobbyPlayerStatusLabel(message.playerId)}</small>
-          </div>
-        </div>
-        <div class="chat-player-actions-buttons">
-          <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
-          ${isFriendByPlayerId(message.playerId) ? '<button type="button" disabled>Уже в друзьях</button>' : `<button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>`}
-        </div>
+      <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
+        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>
+        <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
       </div>
     `;
     return `
@@ -4475,63 +4452,17 @@ function renderChat(messages = state.chatMessages) {
 }
 
 function closeChatPlayerActions() {
-  for (const menu of document.querySelectorAll('.chat-player-actions.open')) {
-    menu.classList.remove('open');
-    menu.setAttribute("aria-hidden", "true");
-  }
+  for (const menu of document.querySelectorAll('.chat-player-actions.open')) menu.classList.remove('open');
 }
 
 function toggleChatPlayerActions(event, playerId) {
   event?.preventDefault();
   event?.stopPropagation();
-  const trigger = event.currentTarget;
-  const scope = trigger?.closest?.('.chat-player-meta-wrap');
-  const menu = scope?.querySelector?.('.chat-player-actions');
-  if (!menu) {
-    if (playerId) viewLobbyPlayerProfile(playerId);
-    return;
-  }
+  const menu = document.getElementById(`chatPlayerActions-${playerId}`);
+  if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
-  if (shouldOpen) {
-    const triggerRect = trigger?.getBoundingClientRect?.();
-    const margin = 10;
-    const gap = 10;
-    menu.classList.add('open');
-    menu.setAttribute("aria-hidden", "false");
-    if (triggerRect) {
-      const estimatedHeight = menu.offsetHeight || 220;
-      const estimatedWidth = menu.offsetWidth || 260;
-      const canOpenUp = triggerRect.top - margin >= estimatedHeight + gap;
-      const openUp = canOpenUp;
-      const fallbackDownTop = Math.min(window.innerHeight - estimatedHeight - margin, triggerRect.bottom + gap);
-      const top = openUp
-        ? Math.max(margin, triggerRect.top - estimatedHeight - gap)
-        : Math.max(margin, fallbackDownTop);
-      const left = Math.min(
-        Math.max(margin, triggerRect.left + (triggerRect.width / 2) - (estimatedWidth / 2)),
-        window.innerWidth - estimatedWidth - margin
-      );
-      menu.style.top = `${Math.round(top)}px`;
-      menu.style.left = `${Math.round(left)}px`;
-      menu.dataset.placement = openUp ? "top" : "bottom";
-    }
-  }
-}
-
-
-function isFriendByPlayerId(playerId) {
-  const player = lobbyPlayerById(playerId);
-  if (!player) return false;
-  return state.friends.some((friend) => friend.id === player.accountId);
-}
-
-function viewFriendProfile(accountId, fallbackName = "Игрок") {
-  if (!accountId) return setChatStatus('Профиль игрока недоступен', true);
-  socket.emit("profile:view", { accountId }, (res) => {
-    if (res?.error || !res?.user) return setChatStatus(res?.error || `Профиль игрока ${fallbackName} недоступен`, true);
-    showPublicProfileModal(res.user);
-  });
+  if (shouldOpen) menu.classList.add('open');
 }
 
 function requestFriendFromLobbyChat(playerId) {
