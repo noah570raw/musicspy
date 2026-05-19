@@ -256,13 +256,13 @@ function renderFriendCard(friend) {
   const primaryLobbyAction = lobby?.canJoin ? "Присоединиться" : "Подать заявку";
   return `
     <article class="friend-card" data-friend-id="${escapeAttribute(friend.id)}">
-      <div class="friend-avatar" aria-hidden="true">
+      <button class="friend-profile-trigger friend-avatar" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')" aria-label="Открыть профиль ${escapeAttribute(name)}">
         ${friendAvatarMarkup(friend)}
         <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
-      </div>
+      </button>
       <div class="friend-meta">
         <div class="friend-name-row">
-          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
+          <button class="friend-profile-trigger friend-name" type="button" onclick="viewFriendProfile('${escapeAttribute(friend.id)}', '${escapeAttribute(name)}')">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</button>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -4418,8 +4418,8 @@ function renderChat(messages = state.chatMessages) {
     const isMine = message.playerId === socket.id;
     const playerActions = isMine ? "" : `
       <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
-        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
+        ${isFriendByPlayerId(message.playerId) ? '<button type="button" disabled>Уже в друзьях</button>' : `<button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>`}
       </div>
     `;
     return `
@@ -4462,7 +4462,31 @@ function toggleChatPlayerActions(event, playerId) {
   if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
-  if (shouldOpen) menu.classList.add('open');
+  if (shouldOpen) {
+    const triggerRect = event.currentTarget?.getBoundingClientRect?.();
+    menu.classList.add('open');
+    menu.classList.remove('open-up');
+    if (triggerRect) {
+      const estimatedHeight = menu.offsetHeight || 84;
+      const spaceBelow = window.innerHeight - triggerRect.bottom;
+      if (spaceBelow < estimatedHeight + 12) menu.classList.add('open-up');
+    }
+  }
+}
+
+
+function isFriendByPlayerId(playerId) {
+  const player = lobbyPlayerById(playerId);
+  if (!player) return false;
+  return state.friends.some((friend) => friend.id === player.accountId);
+}
+
+function viewFriendProfile(accountId, fallbackName = "Игрок") {
+  if (!accountId) return setChatStatus('Профиль игрока недоступен', true);
+  socket.emit("profile:view", { accountId }, (res) => {
+    if (res?.error || !res?.user) return setChatStatus(res?.error || `Профиль игрока ${fallbackName} недоступен`, true);
+    showPublicProfileModal(res.user);
+  });
 }
 
 function requestFriendFromLobbyChat(playerId) {
