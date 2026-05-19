@@ -2836,7 +2836,7 @@ function renderShopItemCard(item, owned, equipped) {
         ? `<button class="secondary" type="button" disabled>Достижение</button>`
         : `<button class="${canAfford ? "primary" : "secondary"}" type="button" onclick="purchaseShopItem('${escapeAttribute(item.id)}')" ${canAfford ? "" : "disabled"}>${Number(item.price || 0).toLocaleString("ru-RU")} Vinyls</button>`;
   return `
-    <article class="shop-card rarity-${escapeAttribute(item.rarity)} fx-tier-${escapeAttribute(item.rarity || "common")} ${isOwned ? "owned" : ""}">
+    <article class="shop-card rarity-${escapeAttribute(item.rarity)} ${isOwned ? "owned" : ""}">
       <div class="shop-preview" style="--preview:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}">
         <span class="shop-preview-disc"></span>
         ${item.limited ? `<b>limited</b>` : ""}
@@ -3052,11 +3052,8 @@ function saveProfile() {
 }
 
 function playerAvatarMarkup(player, fallback = "?") {
-  const frame = player?.cosmetics?.active?.avatarFrame;
-  const rarity = escapeAttribute(frame?.rarity || "common");
-  const frameClass = frame ? ` avatar-cosmetic-frame rarity-${rarity}` : "";
-  if (player?.avatar) return `<span class="avatar image-avatar${frameClass}" title="${escapeAttribute(frame?.name || "")}"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`;
-  return `<span class="avatar${frameClass}" title="${escapeAttribute(frame?.name || "")}">${escapeHtml(fallback)}</span>`;
+  if (player?.avatar) return `<span class="avatar image-avatar"><img src="${escapeAttribute(player.avatar)}" alt=""></span>`;
+  return `<span class="avatar">${escapeHtml(fallback)}</span>`;
 }
 
 
@@ -3069,34 +3066,21 @@ function playerInitials(name = "?") {
     .join("") || "?";
 }
 
-function cosmeticDisplayName(player = {}, fallback = "Игрок") {
-  const rawName = player?.name || player?.displayName || player?.nickname || fallback;
-  const nicknameFx = player?.cosmetics?.active?.nicknameColor;
-  const titleFx = player?.cosmetics?.active?.playerTitle;
-  const rarity = escapeAttribute(nicknameFx?.rarity || "common");
-  const gradient = escapeAttribute(nicknameFx?.preview || "linear-gradient(90deg,#e2e8f0,#94a3b8)");
-  const title = titleFx ? `<small class="player-title rarity-${escapeAttribute(titleFx.rarity || "common")}">${escapeHtml(titleFx.name || "")}</small>` : "";
-  return `<span class="player-name-stack" data-rarity="${rarity}"><strong class="cosmetic-name rarity-${rarity} fx-tier-${rarity}" style="--nickname-gradient:${gradient}">${nameWithDevBadge({ ...player, name: rawName }, fallback, { showBadge: true })}</strong>${title}</span>`;
-}
-
 function lobbyPlayerCardMarkup(player, index, lobby) {
   const isHost = player.id === lobby.host;
   const isMe = player.id === socket.id;
   const isReady = Boolean(player.ready);
   const statusText = isReady ? t("готов") : t("не готов");
-  const lobbyFx = player?.cosmetics?.active?.lobbyEffect;
-  const bannerFx = player?.cosmetics?.active?.profileBanner;
-  const fxRarity = lobbyFx?.rarity || bannerFx?.rarity || "common";
-  const cardClass = ["lobby-player-card", "fx-tier-" + fxRarity, isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : "", lobbyFx ? `rarity-${lobbyFx.rarity}` : ""].filter(Boolean).join(" ");
+  const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
   return `
-    <article class="${cardClass}" style="${bannerFx ? `--profile-banner:${escapeAttribute(bannerFx.preview)};` : ""}">
+    <article class="${cardClass}">
       <div class="lobby-player-glow" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap">
         ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
         <span class="lobby-online-dot" aria-hidden="true"></span>
       </div>
       <div class="lobby-player-info">
-        ${cosmeticDisplayName(player, "Игрок")}
+        <strong>${nameWithDevBadge(player, "Игрок", { showBadge: true })}</strong>
         <span>${isMe ? t("это ты") : t("в комнате")}</span>
       </div>
       <div class="lobby-player-badges">
@@ -4439,7 +4423,7 @@ function lobbyPlayerProfileActionMarkup(message) {
   return `
     <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
       ${avatar}
-      <span class="chat-player-name">${cosmeticDisplayName(player.name ? player : { name: nickname, cosmetics: message.cosmetics }, "Игрок")}</span>
+      <span class="chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</span>
     </button>
   `;
 }
@@ -4459,7 +4443,7 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""} ${message?.cosmetics?.active?.chatEffect ? `rarity-${escapeAttribute(message.cosmetics.active.chatEffect.rarity || "common")}` : ""} fx-tier-${escapeAttribute(message?.cosmetics?.active?.chatEffect?.rarity || "common")}">
+      <div class="chat-message ${isMine ? "mine" : ""}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
             ${lobbyPlayerProfileActionMarkup(message)}
@@ -4467,7 +4451,7 @@ function renderChat(messages = state.chatMessages) {
           </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
-        <p class="${message?.cosmetics?.active?.chatEffect ? "chat-effect-text" : ""}">${escapeHtml(message.text || "")}</p>
+        <p>${escapeHtml(message.text || "")}</p>
       </div>
     `;
   }).join("");
@@ -4501,29 +4485,24 @@ function toggleChatPlayerActions(event) {
   const trigger = event?.currentTarget;
   const container = trigger?.closest('.chat-player-meta-wrap');
   const menu = container?.querySelector('.chat-player-actions');
-  if (!menu || !trigger) return;
+  if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
   if (shouldOpen) {
-    const margin = 10;
-    menu.dataset.placement = "top";
     menu.classList.add('open');
-
-    const triggerRect = trigger.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
-    const menuHeight = Math.ceil(menuRect.height || menu.offsetHeight || 0);
-    const topSpace = Math.max(0, triggerRect.top - margin);
-    const bottomSpace = Math.max(0, window.innerHeight - triggerRect.bottom - margin);
-    const openDown = topSpace < menuHeight && bottomSpace > topSpace;
-    menu.dataset.placement = openDown ? "bottom" : "top";
-
     const rect = menu.getBoundingClientRect();
+    const margin = 10;
     const overflowLeft = margin - rect.left;
     const overflowRight = rect.right - (window.innerWidth - margin);
     let offsetX = 0;
     if (overflowLeft > 0) offsetX += overflowLeft;
     if (overflowRight > 0) offsetX -= overflowRight;
     menu.style.setProperty("--chat-player-actions-offset-x", `${Math.round(offsetX)}px`);
+
+    const topSpace = rect.top - margin;
+    const bottomSpace = window.innerHeight - rect.bottom - margin;
+    const openDown = topSpace < 0 && bottomSpace > topSpace;
+    menu.dataset.placement = openDown ? "bottom" : "top";
   }
 }
 
