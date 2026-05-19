@@ -3192,13 +3192,18 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("global_message", ({ text, username } = {}) => {
+  socket.on("global_message", ({ text, username, avatar, badges } = {}) => {
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_GLOBAL_CHAT_MESSAGE_LENGTH);
     if (!messageText) return;
+    const safeBadges = Array.isArray(badges)
+      ? badges.map((badge) => String(badge || "").trim().toUpperCase()).filter(Boolean).slice(0, 8)
+      : [];
     const messageObj = {
       username: String(username || "Аноним").trim().slice(0, 40) || "Аноним",
       text: messageText,
-      createdAt: Date.now()
+      time: Date.now(),
+      avatar: String(avatar || "").trim().slice(0, 2048),
+      badges: safeBadges
     };
     io.emit("global_message", messageObj);
   });

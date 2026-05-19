@@ -86,21 +86,26 @@ body[data-screen="lobby"] .app-shell {
 
 #global-chat {
   position: fixed;
-  left: 206px;
+  left: 0;
   top: 100px;
   width: 300px;
   height: calc(100vh - 320px);
   z-index: 50;
-  border-radius: 0 12px 12px 0;
-  display: flex;
+  border-radius: 0 16px 16px 0;
+  display: none;
   flex-direction: column;
-  background: rgba(15, 8, 40, 0.7);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-right: 1px solid rgba(120, 80, 255, 0.2);
-  border-bottom: 1px solid rgba(120, 80, 255, 0.1);
+  border-left: none;
+  border-right: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-2) 24%, transparent);
   overflow: hidden;
   font-family: inherit;
+}
+
+body[data-screen="menu"] #global-chat {
+  display: flex;
 }
 
 #chat-header {
@@ -3246,6 +3251,8 @@ body[data-screen="game"] .language-switcher {
 }
 
 .chat-message {
+  margin-left: 8px;
+  margin-right: 4px;
   display: flex;
   flex: 0 0 auto;
   align-self: flex-start;
@@ -3281,6 +3288,8 @@ body[data-screen="game"] .language-switcher {
 .chat-message-body { display: grid; gap: 3px; min-width: 0; flex: 1; }
 
 .chat-message.mine {
+  margin-left: 24px;
+  margin-right: 4px;
   align-self: flex-end;
   border-color: rgba(var(--accent-rgb), 0.48);
   background: rgba(var(--accent-rgb), 0.12);
@@ -3293,6 +3302,27 @@ body[data-screen="game"] .language-switcher {
   gap: 8px;
 }
 
+
+.chat-message-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chat-message-name .badge {
+  padding: 2px 6px;
+  font-size: 0.62rem;
+}
+
+.chat-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  flex-shrink: 0;
+}
 .chat-message-meta strong {
   min-width: 0;
   overflow: hidden;
