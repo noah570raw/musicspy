@@ -4413,6 +4413,13 @@ function lobbyPlayerProfileActionMarkup(message) {
   `;
 }
 
+function lobbyPlayerStatusLabel(playerId) {
+  const player = lobbyPlayerById(playerId);
+  if (player?.online === false) return "Offline";
+  if (player?.isHost) return "Host · Online";
+  return "Online";
+}
+
 function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
@@ -4420,10 +4427,22 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
+    const player = lobbyPlayerById(message.playerId) || {};
+    const nickname = player.name || message.playerName || "Игрок";
+    const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
     const playerActions = isMine ? "" : `
-      <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
-        <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
-        ${isFriendByPlayerId(message.playerId) ? '<button type="button" disabled>Уже в друзьях</button>' : `<button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>`}
+      <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}" aria-hidden="true">
+        <div class="chat-player-actions-header">
+          <span class="chat-player-actions-avatar" aria-hidden="true">${avatar}</span>
+          <div class="chat-player-actions-copy">
+            <strong>${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</strong>
+            <small>${lobbyPlayerStatusLabel(message.playerId)}</small>
+          </div>
+        </div>
+        <div class="chat-player-actions-buttons">
+          <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
+          ${isFriendByPlayerId(message.playerId) ? '<button type="button" disabled>Уже в друзьях</button>' : `<button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>`}
+        </div>
       </div>
     `;
     return `
@@ -4456,24 +4475,42 @@ function renderChat(messages = state.chatMessages) {
 }
 
 function closeChatPlayerActions() {
-  for (const menu of document.querySelectorAll('.chat-player-actions.open')) menu.classList.remove('open');
+  for (const menu of document.querySelectorAll('.chat-player-actions.open')) {
+    menu.classList.remove('open');
+    menu.setAttribute("aria-hidden", "true");
+  }
 }
 
 function toggleChatPlayerActions(event, playerId) {
   event?.preventDefault();
   event?.stopPropagation();
+  const trigger = event.currentTarget;
   const menu = document.getElementById(`chatPlayerActions-${playerId}`);
   if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
   if (shouldOpen) {
-    const triggerRect = event.currentTarget?.getBoundingClientRect?.();
+    const triggerRect = trigger?.getBoundingClientRect?.();
+    const margin = 10;
+    const gap = 10;
     menu.classList.add('open');
-    menu.classList.remove('open-up');
+    menu.setAttribute("aria-hidden", "false");
     if (triggerRect) {
-      const estimatedHeight = menu.offsetHeight || 84;
-      const spaceBelow = window.innerHeight - triggerRect.bottom;
-      if (spaceBelow < estimatedHeight + 12) menu.classList.add('open-up');
+      const estimatedHeight = menu.offsetHeight || 220;
+      const estimatedWidth = menu.offsetWidth || 260;
+      const canOpenUp = triggerRect.top - margin >= estimatedHeight + gap;
+      const openUp = canOpenUp;
+      const fallbackDownTop = Math.min(window.innerHeight - estimatedHeight - margin, triggerRect.bottom + gap);
+      const top = openUp
+        ? Math.max(margin, triggerRect.top - estimatedHeight - gap)
+        : Math.max(margin, fallbackDownTop);
+      const left = Math.min(
+        Math.max(margin, triggerRect.left + (triggerRect.width / 2) - (estimatedWidth / 2)),
+        window.innerWidth - estimatedWidth - margin
+      );
+      menu.style.top = `${Math.round(top)}px`;
+      menu.style.left = `${Math.round(left)}px`;
+      menu.dataset.placement = openUp ? "top" : "bottom";
     }
   }
 }
