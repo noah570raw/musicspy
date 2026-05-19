@@ -252,18 +252,17 @@ function renderFriendCard(friend) {
   const activity = getFriendActivity(friend);
   const lobby = friend.lobby;
   const unread = Number(friend.unread || 0);
-  const profileAction = friend.accountId ? `onclick="openFriendProfile('${escapeAttribute(friend.id)}')"` : "";
   const lobbyPill = lobby ? `<button class="friend-lobby-pill" type="button" onclick="requestFriendLobby('${escapeAttribute(friend.id)}')">${Number(lobby.players || 0)}/${Number(lobby.maxPlayers || 0)}</button>` : "";
   const primaryLobbyAction = lobby?.canJoin ? "Присоединиться" : "Подать заявку";
   return `
     <article class="friend-card" data-friend-id="${escapeAttribute(friend.id)}">
-      <div class="friend-avatar ${friend.accountId ? "clickable" : ""}" ${profileAction} aria-hidden="true">
+      <div class="friend-avatar" aria-hidden="true">
         ${friendAvatarMarkup(friend)}
         <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
       </div>
-      <div class="friend-meta ${friend.accountId ? 'clickable' : ''}" ${profileAction}>
+      <div class="friend-meta">
         <div class="friend-name-row">
-          <strong class="friend-name ${friend.accountId ? "clickable" : ""}" ${profileAction}>${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
+          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -4410,18 +4409,6 @@ function lobbyPlayerProfileActionMarkup(message) {
   `;
 }
 
-function isLobbyPlayerAlreadyFriend(player = {}) {
-  if (!player) return false;
-  const playerAccountId = String(player.accountId || "").trim();
-  const playerName = String(player.name || "").trim().toLowerCase();
-  return state.friends.some((friend) => {
-    const friendAccountId = String(friend.accountId || "").trim();
-    const friendName = String(friend.name || friend.nickname || "").trim().toLowerCase();
-    if (playerAccountId && friendAccountId) return playerAccountId === friendAccountId;
-    return Boolean(playerName) && playerName === friendName;
-  });
-}
-
 function renderChat(messages = state.chatMessages) {
   const boxes = [...document.querySelectorAll("[data-chat-messages]")];
   if (!boxes.length) return;
@@ -4429,12 +4416,10 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
-    const player = lobbyPlayerById(message.playerId);
-    const isAlreadyFriend = isLobbyPlayerAlreadyFriend(player);
     const playerActions = isMine ? "" : `
       <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
+        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
-        <button type="button" ${isAlreadyFriend ? "disabled" : `onclick=\"requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')\"`}>${isAlreadyFriend ? "Пользователь уже в друзьях" : "Добавить в друзья"}</button>
       </div>
     `;
     return `
@@ -4501,15 +4486,6 @@ function viewLobbyPlayerProfile(playerId) {
   }
   socket.emit("profile:view", { accountId: player.accountId }, (res) => {
     if (res?.error || !res?.user) return setChatStatus(res?.error || "Профиль игрока недоступен", true);
-    showPublicProfileModal(res.user);
-  });
-}
-
-function openFriendProfile(friendId) {
-  const friend = friendById(friendId);
-  if (!friend?.accountId) return setFriendAddStatus("Публичный профиль игрока недоступен", "error");
-  socket.emit("profile:view", { accountId: friend.accountId }, (res) => {
-    if (res?.error || !res?.user) return setFriendAddStatus(res?.error || "Профиль игрока недоступен", "error");
     showPublicProfileModal(res.user);
   });
 }
