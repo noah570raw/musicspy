@@ -33,7 +33,6 @@ const state = {
   currentTrackId: null,
   trackHistory: [],
   chatMessages: [],
-  globalChatMessages: [],
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
   audio: null,
@@ -2194,8 +2193,6 @@ function applyProfile(profileData = { user: null, guest: true }) {
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
   else requestSocialState();
-  if (state.profile) requestGlobalChatHistory();
-  else renderGlobalChat([]);
   restoreServerBackedSettings(user);
   attemptReconnectToGame();
   attemptAutoJoinFromInvite();
@@ -4380,117 +4377,6 @@ function renderTrackHistory(targetId = "trackHistory", history = state.trackHist
 }
 
 
-
-function renderGlobalChat(messages = []) {
-  const box = $("chat-messages");
-  if (!box) return;
-  box.innerHTML = "";
-  const list = Array.isArray(messages) ? messages : [];
-  if (!list.length) {
-    box.classList.add("empty");
-    box.textContent = t("Пока сообщений нет");
-    return;
-  }
-  box.classList.remove("empty");
-  list.forEach(renderMessage);
-}
-
-function requestGlobalChatHistory() {
-  const errorEl = $("chat-messages");
-  if (!errorEl) return;
-
-  try {
-    const inputEl = $("chat-input");
-    if (!inputEl) throw new Error("Элемент #chat-input не найден");
-    if (typeof io !== "function") throw new Error("socket.io клиент не загружен");
-    if (!socket || typeof socket.emit !== "function") throw new Error("Socket не инициализирован");
-
-    errorEl.classList.add("empty");
-    errorEl.textContent = t("Загрузка...");
-    socket.emit("globalChat:get", (res = {}) => {
-      if (!res.success) {
-        errorEl.textContent = escapeHtml(res.error || t("Не удалось загрузить чат"));
-        return;
-      }
-      state.globalChatMessages = Array.isArray(res.messages) ? res.messages : [];
-      const onlineEl = $("chat-online");
-      if (onlineEl) onlineEl.textContent = `${Number(res.onlineCount || 0)} онлайн`;
-      renderGlobalChat(state.globalChatMessages);
-    });
-  } catch (err) {
-    console.error("Ошибка загрузки чата:", err);
-    errorEl.classList.add("empty");
-    errorEl.textContent = "Ошибка: " + (err?.message || "Неизвестная ошибка");
-  }
-}
-
-function renderMessage(msg) {
-  const box = document.getElementById("chat-messages");
-  if (!box) return;
-  if (box.classList.contains("empty")) {
-    box.classList.remove("empty");
-    box.innerHTML = "";
-  }
-  const username = String(msg?.username || "Аноним");
-  const text = String(msg?.text || "");
-  const time = Number(msg?.time || msg?.createdAt) || Date.now();
-  const isMine = username === getGlobalChatUsername();
-  const avatarUrl = String(msg?.avatar || (isMine ? state?.profile?.avatar : "") || "").trim();
-  const badges = Array.isArray(msg?.badges) ? msg.badges : [];
-  const badgesHtml = badges.map((badge) => {
-    const value = String(badge || "").trim();
-    if (!value) return "";
-    return `<span class="badge badge-${escapeAttribute(value.toLowerCase())}">${escapeHtml(value)}</span>`;
-  }).join("");
-  const avatarHtml = avatarUrl
-    ? `<img src="${escapeAttribute(avatarUrl)}" class="chat-avatar-img" alt="">`
-    : escapeHtml(username.slice(0, 1).toUpperCase());
-  const div = document.createElement("div");
-  div.className = `chat-message ${isMine ? "mine" : ""}`;
-  div.innerHTML = `
-    <button class="global-chat-avatar" type="button">${avatarHtml}</button>
-    <div class="chat-message-body">
-      <div class="chat-message-meta">
-        <strong class="chat-message-name">${badgesHtml}<span>${escapeHtml(username)}</span></strong>
-        <span>${escapeHtml(new Date(time).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" }))}</span>
-      </div>
-      <p>${escapeHtml(text)}</p>
-    </div>
-  `;
-  box.appendChild(div);
-  const scrollArea = box.closest("[data-chat-scroll]") || box;
-  scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "smooth" });
-}
-
-function handleGlobalChatKeydown(event) {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  sendGlobalChatMessage();
-}
-
-function getGlobalChatUsername() {
-  if (window.currentUsername) return String(window.currentUsername);
-  const profileName = state?.profile?.displayName || state?.profile?.username;
-  if (profileName) return String(profileName);
-  const key = "musicspy_guest_username";
-  let guest = sessionStorage.getItem(key);
-  if (!guest) {
-    guest = `Гость_${Math.floor(1000 + Math.random() * 9000)}`;
-    sessionStorage.setItem(key, guest);
-  }
-  return guest;
-}
-
-function sendGlobalChatMessage() {
-  const input = $("chat-input");
-  const text = String(input?.value || "").trim().slice(0, 200);
-  if (!text) return;
-  socket.emit("globalChat:send", { text }, (res = {}) => {
-    if (!res.success) return;
-    if (input) input.value = "";
-  });
-}
-
 function formatChatTime(createdAt) {
   const date = new Date(Number(createdAt) || Date.now());
   return date.toLocaleTimeString(currentLanguage() === "en" ? "en-US" : "ru-RU", { hour: "2-digit", minute: "2-digit" });
@@ -4516,19 +4402,13 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
-    const player = state.players.find((item) => item.id === message.playerId) || {};
-    const avatarSrc = message.avatar || player.avatar || "";
-    const displayName = message.playerName || player.name || "Игрок";
     return `
       <div class="chat-message ${isMine ? "mine" : ""}">
-        <button class="global-chat-avatar ${message.online ? "online" : ""}" type="button" onclick="openChatUserProfile('${escapeAttribute(message.playerId || "")}')">${avatarSrc ? `<img src="${escapeAttribute(avatarSrc)}" alt="">` : escapeHtml(String(displayName).slice(0, 1).toUpperCase())}</button>
-        <div class="chat-message-body">
-          <div class="chat-message-meta">
-            <strong>${nameWithDevBadge({ name: displayName, roles: message.roles, permissions: message.permissions })}</strong>
-            <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
-          </div>
-          <p>${escapeHtml(message.text || "")}</p>
+        <div class="chat-message-meta">
+          <strong>${nameWithDevBadge({ name: message.playerName, roles: message.roles, permissions: message.permissions })}</strong>
+          <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
+        <p>${escapeHtml(message.text || "")}</p>
       </div>
     `;
   }).join("");
@@ -4554,24 +4434,16 @@ function handleChatKeydown(event) {
   sendChatMessage();
 }
 
-function isVisibleChatNode(node) {
-  return !!(node && node.offsetParent !== null && !node.disabled && node.getAttribute("aria-hidden") !== "true");
-}
-
 function activeChatElements() {
-  const activeInput = document.activeElement?.matches?.("[data-chat-input]") ? document.activeElement : null;
-  const candidates = [...document.querySelectorAll("[data-chat-input]")];
-  const input = activeInput || candidates.find(isVisibleChatNode) || candidates[0] || null;
-  const status = input
-    ? input.closest(".chat-input-area")?.querySelector("[data-chat-status]")
-    : (document.querySelector(".screen:not(.hidden)") || document).querySelector("[data-chat-status]");
-  return { input, status };
+  const root = document.querySelector(`.screen:not(.hidden)`) || document;
+  return {
+    input: root.querySelector("[data-chat-input]"),
+    status: root.querySelector("[data-chat-status]")
+  };
 }
 
 function setChatStatus(message = "", isError = false) {
-  const { status: activeStatus } = activeChatElements();
-  const targets = activeStatus ? [activeStatus] : [...document.querySelectorAll("[data-chat-status]")];
-  for (const status of targets) {
+  for (const status of document.querySelectorAll("[data-chat-status]")) {
     status.textContent = t(message);
     status.classList.toggle("error", isError);
   }
@@ -5222,17 +5094,6 @@ socket.on("gameStarted", (data) => {
 
 socket.on("gameState", renderGameState);
 socket.on("chat:update", ({ messages }) => renderChat(messages || []));
-socket.on("online_count", (count) => {
-  const onlineEl = $("chat-online");
-  if (onlineEl) onlineEl.textContent = `${Number(count || 0)} онлайн`;
-});
-
-socket.on("globalChat:update", ({ messages, onlineCount } = {}) => {
-  state.globalChatMessages = Array.isArray(messages) ? messages : [];
-  const onlineEl = $("chat-online");
-  if (onlineEl) onlineEl.textContent = `${Number(onlineCount || 0)} онлайн`;
-  renderGlobalChat(state.globalChatMessages);
-});
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
@@ -5435,4 +5296,3 @@ socket.on("gameCancelled", ({ reason }) => {
   showScreen("lobby");
   setStatus("lobbyStatus", reason, true);
 });
-
