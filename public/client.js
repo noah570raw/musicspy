@@ -4501,24 +4501,29 @@ function toggleChatPlayerActions(event) {
   const trigger = event?.currentTarget;
   const container = trigger?.closest('.chat-player-meta-wrap');
   const menu = container?.querySelector('.chat-player-actions');
-  if (!menu) return;
+  if (!menu || !trigger) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
   if (shouldOpen) {
-    menu.classList.add('open');
-    const rect = menu.getBoundingClientRect();
     const margin = 10;
+    menu.dataset.placement = "top";
+    menu.classList.add('open');
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const menuHeight = Math.ceil(menuRect.height || menu.offsetHeight || 0);
+    const topSpace = Math.max(0, triggerRect.top - margin);
+    const bottomSpace = Math.max(0, window.innerHeight - triggerRect.bottom - margin);
+    const openDown = topSpace < menuHeight && bottomSpace > topSpace;
+    menu.dataset.placement = openDown ? "bottom" : "top";
+
+    const rect = menu.getBoundingClientRect();
     const overflowLeft = margin - rect.left;
     const overflowRight = rect.right - (window.innerWidth - margin);
     let offsetX = 0;
     if (overflowLeft > 0) offsetX += overflowLeft;
     if (overflowRight > 0) offsetX -= overflowRight;
     menu.style.setProperty("--chat-player-actions-offset-x", `${Math.round(offsetX)}px`);
-
-    const topSpace = rect.top - margin;
-    const bottomSpace = window.innerHeight - rect.bottom - margin;
-    const openDown = topSpace < 0 && bottomSpace > topSpace;
-    menu.dataset.placement = openDown ? "bottom" : "top";
   }
 }
 
