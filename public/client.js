@@ -4396,6 +4396,26 @@ function lobbyPlayerById(playerId) {
   return state.players.find((player) => player.id === playerId) || null;
 }
 
+function isLobbyPlayerAlreadyFriend(player = {}) {
+  const accountId = String(player.accountId || "");
+  const playerName = String(player.name || "").trim().toLowerCase();
+  return state.friends.some((friend) => {
+    const friendId = String(friend.id || "");
+    const friendName = String(friend.nickname || friend.displayName || friend.username || "").trim().toLowerCase();
+    return (accountId && friendId && friendId === accountId) || (playerName && friendName && friendName === playerName);
+  });
+}
+
+function getChatPlayerActionsState(playerId) {
+  const player = lobbyPlayerById(playerId) || {};
+  const alreadyFriend = isLobbyPlayerAlreadyFriend(player);
+  return {
+    alreadyFriend,
+    addFriendLabel: alreadyFriend ? "Уже в друзьях" : "Добавить в друзья",
+    addFriendDisabled: alreadyFriend ? "disabled" : ""
+  };
+}
+
 function lobbyPlayerProfileActionMarkup(message) {
   const player = lobbyPlayerById(message.playerId) || {};
   const nickname = player.name || message.playerName || "Игрок";
@@ -4416,10 +4436,11 @@ function renderChat(messages = state.chatMessages) {
   state.chatMessages = list;
   const markup = list.map((message) => {
     const isMine = message.playerId === socket.id;
+    const actionState = getChatPlayerActionsState(message.playerId);
     const playerActions = isMine ? "" : `
       <div class="chat-player-actions" id="chatPlayerActions-${escapeAttribute(message.playerId || '')}">
-        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')">Добавить в друзья</button>
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
+        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
       </div>
     `;
     return `
@@ -4452,7 +4473,10 @@ function renderChat(messages = state.chatMessages) {
 }
 
 function closeChatPlayerActions() {
-  for (const menu of document.querySelectorAll('.chat-player-actions.open')) menu.classList.remove('open');
+  for (const menu of document.querySelectorAll('.chat-player-actions.open')) {
+    menu.classList.remove('open');
+    menu.style.removeProperty("--chat-player-actions-offset-x");
+  }
 }
 
 function toggleChatPlayerActions(event, playerId) {
@@ -4462,7 +4486,17 @@ function toggleChatPlayerActions(event, playerId) {
   if (!menu) return;
   const shouldOpen = !menu.classList.contains('open');
   closeChatPlayerActions();
-  if (shouldOpen) menu.classList.add('open');
+  if (shouldOpen) {
+    menu.classList.add('open');
+    const rect = menu.getBoundingClientRect();
+    const margin = 10;
+    const overflowLeft = margin - rect.left;
+    const overflowRight = rect.right - (window.innerWidth - margin);
+    let offsetX = 0;
+    if (overflowLeft > 0) offsetX += overflowLeft;
+    if (overflowRight > 0) offsetX -= overflowRight;
+    menu.style.setProperty("--chat-player-actions-offset-x", `${Math.round(offsetX)}px`);
+  }
 }
 
 function requestFriendFromLobbyChat(playerId) {
@@ -4470,6 +4504,7 @@ function requestFriendFromLobbyChat(playerId) {
   closeChatPlayerActions();
   if (!player?.name) return setChatStatus('Не удалось определить игрока', true);
   if (!state.profile) return setChatStatus('Войдите в аккаунт, чтобы добавлять друзей', true);
+  if (isLobbyPlayerAlreadyFriend(player)) return setChatStatus('Этот игрок уже у вас в друзьях');
   socket.emit('friend:request', { nickname: player.name }, (res) => {
     if (res?.error) return setChatStatus(res.error, true);
     requestSocialState();

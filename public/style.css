@@ -3284,31 +3284,75 @@ body[data-screen="game"] .language-switcher {
 }
 
 .chat-player-actions {
+  --chat-player-actions-offset-x: 0px;
   position: absolute;
-  z-index: 8;
-  top: calc(100% + 6px);
+  z-index: 42;
+  bottom: calc(100% + 10px);
   left: 0;
-  display: none;
+  display: grid;
   grid-template-columns: 1fr;
-  gap: 6px;
-  width: 170px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(9, 8, 30, 0.97);
+  gap: 8px;
+  width: min(218px, calc(100vw - 20px));
+  padding: 10px;
+  border: 1px solid rgba(192, 132, 252, 0.48);
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(36, 15, 69, 0.86), rgba(11, 12, 46, 0.78));
+  box-shadow:
+    0 24px 38px rgba(2, 6, 23, 0.56),
+    0 0 0 1px rgba(236, 72, 153, 0.2) inset,
+    0 0 30px rgba(168, 85, 247, 0.34);
+  backdrop-filter: blur(13px) saturate(140%);
+  -webkit-backdrop-filter: blur(13px) saturate(140%);
+  opacity: 0;
+  transform: translate3d(var(--chat-player-actions-offset-x), 12px, 0) scale(0.98);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,.61,.36,1);
 }
 
-.chat-player-actions.open { display: grid; }
+.chat-player-actions.open {
+  opacity: 1;
+  transform: translate3d(var(--chat-player-actions-offset-x), 0, 0) scale(1);
+  pointer-events: auto;
+}
 
 .chat-player-actions button {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  padding: 7px 8px;
-  font-size: 0.76rem;
-  font-weight: 700;
+  border: 1px solid rgba(196, 181, 253, 0.35);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.77rem;
+  font-weight: 800;
+  letter-spacing: 0.015em;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(160deg, rgba(30, 41, 59, 0.54), rgba(76, 29, 149, 0.3));
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.3), 0 0 18px rgba(217, 70, 239, 0.16) inset;
   cursor: pointer;
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease, background-color 170ms ease, opacity 170ms ease;
+}
+
+.chat-player-actions button:hover {
+  border-color: rgba(236, 72, 153, 0.58);
+  background: linear-gradient(160deg, rgba(76, 29, 149, 0.48), rgba(219, 39, 119, 0.24));
+  box-shadow:
+    0 14px 20px rgba(2, 6, 23, 0.34),
+    0 0 18px rgba(192, 132, 252, 0.35),
+    0 0 0 1px rgba(236, 72, 153, 0.22) inset;
+  transform: translateY(-1px);
+}
+
+.chat-player-actions button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  transform: none;
+  border-color: rgba(196, 181, 253, 0.28);
+  background: linear-gradient(160deg, rgba(30, 41, 59, 0.4), rgba(76, 29, 149, 0.22));
+  box-shadow: 0 8px 14px rgba(2, 6, 23, 0.22), 0 0 12px rgba(168, 85, 247, 0.14) inset;
+}
+
+@media (max-width: 600px) {
+  .chat-player-actions {
+    width: min(204px, calc(100vw - 16px));
+    left: -4px;
+  }
 }
 
 .chat-input-area {
