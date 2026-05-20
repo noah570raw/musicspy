@@ -1625,7 +1625,9 @@ app.get("/auth/discord/callback", (req, res, next) => finishPassportOAuth("disco
 function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
   if (!lobby) return;
-  io.to(code).emit("lobbyUpdate", publicLobby(lobby));
+  const payload = publicLobby(lobby);
+  io.to(code).emit("lobbyUpdate", payload);
+  io.to(code).emit("players:update", { players: payload.players });
   for (const player of lobby.players || []) {
     if (player.accountId) emitSocialForUserAndFriends(player.accountId);
   }

@@ -93,10 +93,22 @@
 /* ─── ПРЕВЬЮ В МАГАЗИНЕ ──────────────────────────────────────────────────── */
 
 .shop-preview-nickname {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   letter-spacing: 0.05em;
   white-space: nowrap;
+}
+
+.shop-preview-nickname-stage {
+  width: 100%;
+  min-height: 74px;
+  border-radius: 12px;
+  background: #0d0b1a;
+  border: 1px solid rgba(146, 122, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
 }
 
 .shop-preview-chat-bubble {
@@ -107,6 +119,40 @@
   color: #e0e0ff;
   position: relative;
   max-width: 180px;
+}
+
+.shop-chat-preview {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #0d0b1a;
+  border: 1px solid rgba(146, 122, 255, 0.22);
+}
+
+.shop-chat-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.shop-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.shop-chat-nickname {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.shop-chat-time {
+  font-size: 11px;
+  opacity: 0.72;
 }
 
 .shop-preview-lobby-card {
@@ -124,6 +170,12 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #333;
+  background: #2f2850;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #d8d2ff;
+  font-weight: 700;
+  font-size: 14px;
 }

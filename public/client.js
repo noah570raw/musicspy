@@ -2849,7 +2849,7 @@ function applyCosmeticsToShopPreviews(root) {
     const slot = String(category.equipSlot || "");
     const player = { equippedCosmetics: slot ? { [slot]: item.id } : {} };
     CosmeticsRenderer.applyAll(player, {
-      nickname: preview.querySelector(".shop-preview-nickname"),
+      nickname: preview.querySelector(".shop-preview-nickname, .shop-chat-nickname"),
       avatar: preview.querySelector(".shop-preview-avatar, .shop-preview-avatar img"),
       chatBubble: preview.querySelector(".shop-preview-chat-bubble"),
       lobbyCard: preview.querySelector(".shop-preview-lobby-card"),
@@ -2873,10 +2873,23 @@ function renderShopItemCard(item, owned, equipped) {
   const previewConfig = (() => {
     const slot = String(category.equipSlot || "");
     if (slot === "nicknameColor") {
-      return { inner: `<span class="shop-preview-nickname">Music Spy</span>` };
+      return {
+        inner: `<div class="shop-preview-nickname-stage"><span class="shop-preview-nickname">noah570</span></div>`
+      };
     }
     if (slot === "chatEffect") {
-      return { inner: `<div class="shop-preview-chat-bubble">Это превью чат-эффекта</div>` };
+      return {
+        inner: `<div class="shop-chat-preview">
+          <span class="shop-preview-avatar">N</span>
+          <div class="shop-chat-content">
+            <div class="shop-chat-head">
+              <span class="shop-chat-nickname">noah570</span>
+              <time class="shop-chat-time">12:45</time>
+            </div>
+            <p class="shop-preview-chat-bubble">Привет!</p>
+          </div>
+        </div>`
+      };
     }
     if (slot === "lobbyEffect") {
       return {
@@ -5264,6 +5277,12 @@ socket.on("lobbyUpdate", (lobby) => {
     clearPlayer();
     showScreen("lobby");
   }
+});
+
+socket.on("players:update", ({ players } = {}) => {
+  if (!Array.isArray(players)) return;
+  state.players = players;
+  applyCosmeticsForLobbyPlayers();
 });
 
 window.addEventListener("DOMContentLoaded", () => {
