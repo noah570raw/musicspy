@@ -8130,7 +8130,7 @@ body,
   position: fixed;
   right: clamp(14px, 2.2vw, 34px);
   bottom: clamp(9px, 2.1vw, 27px);
-  transform: translate(7px, 8px);
+  transform: translate(7px, 3px);
   z-index: 24;
   display: grid;
   justify-items: end;
@@ -11102,7 +11102,7 @@ body[data-screen="spyGuess"] .friends-system {
 }
 
 .now-playing-panel {
-  margin-top: 22px;
+  margin-top: 27px;
   padding: 11px 14px;
   border-radius: 16px;
   border: 1px solid rgba(var(--accent-rgb), 0.26);
