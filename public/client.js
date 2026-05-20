@@ -911,11 +911,35 @@ function getNowPlayingLabelElement() {
   return $("nowPlayingTrack");
 }
 
+function getNowPlayingTimeElement() {
+  return $("nowPlayingTime");
+}
+
+function formatClockTime(seconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const mins = Math.floor(safeSeconds / 60);
+  const secs = safeSeconds % 60;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
 function updateNowPlayingLabel() {
   const label = getNowPlayingLabelElement();
   if (!label) return;
   const track = BACKGROUND_PLAYLIST[state.backgroundTrackIndex] || BACKGROUND_PLAYLIST[0];
   label.textContent = track?.title || "—";
+}
+
+function updateNowPlayingTime() {
+  const label = getNowPlayingTimeElement();
+  if (!label) return;
+  const media = getBackgroundMusicElement();
+  if (!media) {
+    label.textContent = "0:00-0:00";
+    return;
+  }
+  const current = formatClockTime(media.currentTime);
+  const total = Number.isFinite(media.duration) ? formatClockTime(media.duration) : "0:00";
+  label.textContent = `${current}-${total}`;
 }
 
 function setBackgroundPlaylistTrack(index, { forceReload = false } = {}) {
@@ -936,9 +960,13 @@ function initBackgroundPlaylist() {
   const media = getBackgroundMusicElement();
   if (!media || !BACKGROUND_PLAYLIST.length) return;
   setBackgroundPlaylistTrack(0, { forceReload: true });
+  updateNowPlayingTime();
+  media.addEventListener("timeupdate", updateNowPlayingTime);
+  media.addEventListener("loadedmetadata", updateNowPlayingTime);
   media.loop = false;
   media.addEventListener("ended", () => {
     setBackgroundPlaylistTrack(state.backgroundTrackIndex + 1, { forceReload: true });
+    updateNowPlayingTime();
     if (shouldPlayBackgroundMusic()) {
       media.play().catch(() => {});
     }
@@ -1873,6 +1901,7 @@ function applySiteVolume() {
   for (const media of document.querySelectorAll("audio, video")) {
     if (media.id === "backgroundMusic") continue;
     media.volume = normalizedVolume;
+    media.muted = state.siteVolume === 0;
   }
   syncBackgroundAudio();
 
