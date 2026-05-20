@@ -7664,7 +7664,6 @@ body[data-effects-density="low"] .sound-toggle {
 
 .site-menu-card #settingsPanelProfile.active,
 .site-menu-card #settingsPanelShop.active,
-.site-menu-card #settingsPanelInventory.active,
 .site-menu-card #settingsPanelDaily.active {
   overflow: hidden;
 }
@@ -7690,7 +7689,6 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .site-menu-card #settingsPanelShop.active,
-.site-menu-card #settingsPanelInventory.active,
 .site-menu-card #settingsPanelDaily.active {
   display: flex;
   flex-direction: column;
@@ -7699,7 +7697,6 @@ body[data-effects-density="low"] .sound-toggle {
 }
 
 .site-menu-card #settingsPanelShop.active > .shop-panel-root,
-.site-menu-card #settingsPanelInventory.active > .shop-panel-root,
 .site-menu-card #settingsPanelDaily.active > .daily-reward-card {
   flex: 1 1 auto;
   max-height: 100%;
@@ -11365,26 +11362,3 @@ button.terminal-secondary:hover:not(:disabled) {
   padding: 8px 10px;
   font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
 }
-
-/* Cosmetic engine global visual pipeline */
-.cosmetic-name.is-cosmetic{position:relative;display:inline-block;background:var(--nick-gradient);background-size:200% 200%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:cosNameFlow 6s linear infinite;filter:drop-shadow(0 0 8px rgba(34,211,238,.35));}
-.cosmetic-name.rarity-rare{filter:drop-shadow(0 0 10px rgba(56,189,248,.45));}
-.cosmetic-name.rarity-epic{filter:drop-shadow(0 0 12px rgba(168,85,247,.5));}
-.cosmetic-name.rarity-legendary,.cosmetic-name.rarity-mythic{filter:drop-shadow(0 0 14px rgba(236,72,153,.55)) drop-shadow(0 0 20px rgba(34,211,238,.4));}
-.cosmetic-name.is-cosmetic::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.65) 48%,transparent 70%);mix-blend-mode:screen;transform:translateX(-120%);animation:cosNameSweep 3.8s ease-in-out infinite;pointer-events:none}
-@keyframes cosNameFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}
-@keyframes cosNameSweep{0%,50%,100%{transform:translateX(-120%)}75%{transform:translateX(120%)}}
-
-.cosmetic-avatar-frame{position:relative;display:inline-grid;place-items:center;border-radius:999px;isolation:isolate}
-.cosmetic-avatar-frame .frame-layer{position:absolute;inset:-4px;border-radius:999px;pointer-events:none}
-.cosmetic-avatar-frame .frame-layer-a{background:var(--frame-preview);filter:blur(.2px) saturate(1.2);animation:cosRotate 7s linear infinite}
-.cosmetic-avatar-frame .frame-layer-b{inset:-8px;background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.55),transparent);mix-blend-mode:screen;animation:cosRotate 4s linear infinite reverse}
-@keyframes cosRotate{to{transform:rotate(1turn)}}
-
-.lobby-player-card.has-cosmetic-lobby{background-image:var(--lobby-cosmetic),linear-gradient(180deg,rgba(14,19,40,.88),rgba(8,10,20,.9));background-size:220% 220%,100% 100%;animation:cosLobbyFlow 9s ease infinite;box-shadow:0 0 0 1px rgba(148,163,184,.35),0 14px 34px rgba(13,148,136,.18)}
-@keyframes cosLobbyFlow{0%,100%{background-position:0% 50%,0 0}50%{background-position:100% 50%,0 0}}
-
-.chat-message.has-chat-cosmetic{position:relative;overflow:hidden;background-image:var(--chat-cosmetic),linear-gradient(180deg,rgba(15,23,42,.82),rgba(15,23,42,.64));background-size:200% 200%;animation:cosChat 8s ease infinite;border-color:rgba(148,163,184,.55)}
-.chat-message.has-chat-cosmetic::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 0% 50%,rgba(255,255,255,.25),transparent 30%);transform:translateX(-120%);animation:cosChatSweep 4.5s ease-in-out infinite;pointer-events:none}
-@keyframes cosChat{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-@keyframes cosChatSweep{0%,55%,100%{transform:translateX(-120%)}80%{transform:translateX(120%)}}
