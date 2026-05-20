@@ -262,7 +262,7 @@ function renderFriendCard(friend) {
       </div>
       <div class="friend-meta">
         <div class="friend-name-row">
-          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
+          <strong class="friend-name">${cosmeticNicknameMarkup(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -297,7 +297,7 @@ function renderFriendRequests() {
     <article class="friend-request-card" data-request-id="${escapeAttribute(request.id)}">
       <div class="friend-avatar" aria-hidden="true">${friendAvatarMarkup(user)}</div>
       <div class="friend-meta">
-        <strong class="friend-name">${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
+        <strong class="friend-name">${cosmeticNicknameMarkup(user, "Игрок", { showBadge: true })}</strong>
         <span class="friend-activity">хочет стать другом</span>
       </div>
       <div class="friend-request-actions">
@@ -2168,7 +2168,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
-  if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName }, "Игрок", { showBadge: true });
+  if ($("profileName")) $("profileName").innerHTML = cosmeticNicknameMarkup(user || { displayName }, "Игрок", { showBadge: true });
   if ($("profileLogin")) {
     const login = `@${escapeHtml(user?.username || "")}`;
     $("profileLogin").innerHTML = user ? (hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : login) : t("гость без регистрации");
@@ -2176,9 +2176,9 @@ function applyProfile(profileData = { user: null, guest: true }) {
   if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
   if ($("profileUsername")) $("profileUsername").value = user?.username ? `@${user.username}` : "";
   if ($("profileAvatar")) {
-    $("profileAvatar").innerHTML = user?.avatar
-      ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
-      : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
+    $("profileAvatar").innerHTML = playerAvatarWithFrameMarkup(user || {}, displayName.slice(0, 1).toUpperCase() || "?");
+    const frameItem = cosmeticBySlot(user || {}, "avatarFrame");
+    $("profileAvatar").style.cssText = frameItem ? cosmeticVarStyle(frameItem) : "";
   }
   updateAccountToggle(displayName, user);
   renderProfileStats();
@@ -2219,7 +2219,7 @@ function updateAccountToggle(displayName, user) {
       : (guestLocked ? t("Гость") : t("Аккаунт и статистика"));
     toggle.setAttribute("aria-disabled", String(locked));
   }
-  if (label) label.innerHTML = user ? nameWithDevBadge(user, "Игрок", { showBadge: false }) : t("Гость");
+  if (label) label.innerHTML = user ? cosmeticNicknameMarkup(user, "Игрок", { showBadge: false }) : t("Гость");
   const levelLabel = $("accountToggleLevel");
   if (levelLabel) levelLabel.innerHTML = `<i class="account-online-dot" aria-hidden="true"></i>${t("Online")}`;
   if (avatar) {
@@ -2290,6 +2290,34 @@ function renderProfileStats() {
     </div>`;
 }
 
+
+function cosmeticVarStyle(item, fallback = "linear-gradient(135deg,#38bdf8,#8b5cf6)") {
+  const preview = escapeAttribute(item?.preview || fallback);
+  return `--cosmetic-preview:${preview};`;
+}
+
+function equippedCosmeticsForEntity(entity = {}) {
+  return entity?.economy?.equipped || entity?.equippedCosmetics || {};
+}
+
+function cosmeticBySlot(entity, slot) {
+  const itemId = String(equippedCosmeticsForEntity(entity)?.[slot] || "");
+  return itemId ? shopItem(itemId) : null;
+}
+
+function cosmeticNicknameMarkup(entity, fallback = "Игрок", options = {}) {
+  const baseName = nameWithDevBadge(entity, fallback, options);
+  const nickItem = cosmeticBySlot(entity, "nicknameColor");
+  if (!nickItem) return `<span class="cosmetic-nick">${baseName}</span>`;
+  return `<span class="cosmetic-nick has-cosmetic" style="${cosmeticVarStyle(nickItem, 'linear-gradient(90deg,#67e8f9,#a855f7,#f472b6)')}">${baseName}</span>`;
+}
+
+function playerAvatarWithFrameMarkup(entity = {}, fallback = "?") {
+  const frameItem = cosmeticBySlot(entity, "avatarFrame");
+  const avatar = playerAvatarMarkup(entity, fallback);
+  if (!frameItem) return avatar;
+  return `<span class="cosmetic-avatar-frame" style="${cosmeticVarStyle(frameItem, 'conic-gradient(#22d3ee,#8b5cf6,#ec4899,#22d3ee)')}">${avatar}</span>`;
+}
 function vinylBalance() {
   return Number(state.profile?.economy?.vinyls || 0);
 }
@@ -3069,15 +3097,16 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
   const isReady = Boolean(player.ready);
   const statusText = isReady ? t("готов") : t("не готов");
   const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
+  const lobbyEffect = cosmeticBySlot(player, "lobbyEffect");
   return `
-    <article class="${cardClass}">
+    <article class="${cardClass}" style="${cosmeticVarStyle(lobbyEffect, "linear-gradient(145deg, rgba(var(--surface-strong-rgb), 0.38), rgba(var(--surface-rgb), 0.68))")}">
       <div class="lobby-player-glow" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap">
-        ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
+        ${playerAvatarWithFrameMarkup(player, playerInitials(player.name || index + 1))}
         <span class="lobby-online-dot" aria-hidden="true"></span>
       </div>
       <div class="lobby-player-info">
-        <strong>${nameWithDevBadge(player, "Игрок", { showBadge: true })}</strong>
+        <strong>${cosmeticNicknameMarkup(player, "Игрок", { showBadge: true })}</strong>
         <span>${isMe ? t("это ты") : t("в комнате")}</span>
       </div>
       <div class="lobby-player-badges">
@@ -4415,12 +4444,12 @@ function getChatPlayerActionsState(playerId) {
 function lobbyPlayerProfileActionMarkup(message) {
   const player = lobbyPlayerById(message.playerId) || {};
   const nickname = player.name || message.playerName || "Игрок";
-  const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
+  const avatar = playerAvatarWithFrameMarkup(player, playerInitials(nickname));
   const triggerLabel = escapeAttribute(`Профиль ${nickname}`);
   return `
     <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
       ${avatar}
-      <span class="chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions })}</span>
+      <span class="chat-player-name">${cosmeticNicknameMarkup(player, "Игрок", { showBadge: true })}</span>
     </button>
   `;
 }
@@ -4440,7 +4469,7 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""}">
+      <div class="chat-message ${isMine ? "mine" : ""}" style="${cosmeticVarStyle(cosmeticBySlot(lobbyPlayerById(message.playerId) || {}, "chatEffect"), "linear-gradient(120deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))")}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
             ${lobbyPlayerProfileActionMarkup(message)}
@@ -4570,10 +4599,10 @@ function showPublicProfileModal(user = {}) {
   const displayName = user.displayName || user.username || "Игрок";
   const login = user.username ? `@${user.username}` : "без аккаунт-тега";
   content.innerHTML = `
-    <div class="profile-hero">
+    <div class="profile-hero profile-hero-cosmetic" style="${cosmeticVarStyle(cosmeticBySlot(user, 'profileBanner'), 'linear-gradient(135deg,#111827,#334155,#f97316)')}">
       <div class="profile-avatar profile-avatar-large">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар игрока">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
       <div>
-        <strong>${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
+        <strong>${cosmeticNicknameMarkup(user, "Игрок", { showBadge: true })}</strong>
         <span>${hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : escapeHtml(login)}</span>
       </div>
     </div>
