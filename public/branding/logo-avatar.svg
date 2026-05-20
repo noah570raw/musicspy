@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) rotate(90) scale(256)">
+    <stop stop-color="#15143B"/>
+    <stop offset="1" stop-color="#040311"/>
+  </radialGradient>
+  <linearGradient id="accent" x1="120" y1="104" x2="396" y2="408" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#38BDF8"/>
+    <stop offset="1" stop-color="#8B5CF6"/>
+  </linearGradient>
+</defs>
+<rect width="512" height="512" rx="110" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="182" fill="#07070E" stroke="url(#accent)" stroke-width="10"/>
+<g opacity="0.35" stroke="#8FA4FF">
+  <circle cx="256" cy="256" r="165"/><circle cx="256" cy="256" r="150"/><circle cx="256" cy="256" r="136"/><circle cx="256" cy="256" r="122"/><circle cx="256" cy="256" r="108"/><circle cx="256" cy="256" r="94"/>
+</g>
+<path d="M112 184C151 120 228 74 316 74" stroke="#38BDF8" stroke-opacity="0.35" stroke-width="16" stroke-linecap="round"/>
+<circle cx="256" cy="256" r="56" fill="#121B3D" stroke="url(#accent)" stroke-width="8"/>
+<text x="256" y="273" text-anchor="middle" fill="#99E4FF" font-size="54" font-family="Inter,Arial,sans-serif" font-weight="800">MS</text>
+</svg>

@@ -1,0 +1,8 @@
+<svg width="1500" height="500" viewBox="0 0 1500 500" xmlns="http://www.w3.org/2000/svg">
+<rect width="1500" height="500" fill="#060611"/>
+<ellipse cx="1200" cy="250" rx="210" ry="210" fill="#07070E" stroke="#8B5CF6" stroke-width="7"/>
+<circle cx="1200" cy="250" r="60" fill="#162550" stroke="#38BDF8" stroke-width="4"/>
+<text x="1200" y="267" text-anchor="middle" fill="#8BE9FF" font-family="Inter,Arial" font-size="48" font-weight="800">MS</text>
+<text x="110" y="210" fill="#A78BFA" font-family="Inter,Arial" font-size="36" letter-spacing="4">MUSIC SPY</text>
+<text x="110" y="290" fill="#7DD3FC" font-family="Inter,Arial" font-size="78" font-weight="800">FIND THE REAL IMPOSTER</text>
+</svg>
