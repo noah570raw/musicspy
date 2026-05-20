@@ -8129,7 +8129,7 @@ body,
 .friends-system {
   position: fixed;
   right: clamp(14px, 2.2vw, 34px);
-  bottom: clamp(14px, 2.1vw, 32px);
+  bottom: clamp(9px, 2.1vw, 27px);
   transform: translate(7px, 8px);
   z-index: 24;
   display: grid;
@@ -8677,7 +8677,7 @@ body,
 @media (max-width: 720px) {
   .friends-system {
     right: 12px;
-    bottom: 12px;
+    bottom: 7px;
   }
 
   .friends-toggle {

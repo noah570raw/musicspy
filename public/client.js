@@ -1001,12 +1001,13 @@ function initBackgroundPlaylist() {
     state.backgroundMediaBroken = false;
     state.backgroundTrackFallbackStartedAt = Date.now() - (Math.max(0, media.currentTime) * 1000);
     updateNowPlayingTime();
+    stopAmbientFallbackMusic();
   });
   media.addEventListener("error", () => {
     state.backgroundMediaBroken = true;
     state.backgroundTrackFallbackStartedAt = Date.now();
     updateNowPlayingTime();
-    createAudioEngine();
+    ensureAmbientFallbackMusic();
   });
   media.loop = false;
   media.addEventListener("ended", () => {
@@ -1446,6 +1447,20 @@ function scheduleAmbientMusic() {
   audio.startedAt = audio.context.currentTime;
 }
 
+function ensureAmbientFallbackMusic() {
+  const audio = createAudioEngine();
+  if (!audio || audio.musicTimer || !shouldPlayBackgroundMusic()) return;
+  syncAudioVolume();
+  scheduleAmbientMusic();
+  audio.musicTimer = window.setInterval(scheduleAmbientMusic, 6000);
+}
+
+function stopAmbientFallbackMusic() {
+  if (!state.audio?.musicTimer) return;
+  window.clearInterval(state.audio.musicTimer);
+  state.audio.musicTimer = null;
+}
+
 function startBackgroundMusic({ fadeIn = false } = {}) {
   const media = getBackgroundMusicElement();
   if (media) {
@@ -1457,7 +1472,13 @@ function startBackgroundMusic({ fadeIn = false } = {}) {
     syncBackgroundAudio({ fadeTime: fadeIn ? 1.15 : 0 });
     if (!shouldPlayBackgroundMusic()) {
       media.pause();
+      stopAmbientFallbackMusic();
       return;
+    }
+    if (state.backgroundMediaBroken) {
+      ensureAmbientFallbackMusic();
+    } else {
+      stopAmbientFallbackMusic();
     }
     media.play().catch(() => {
       // Browsers can block autoplay until the user interacts with the page.
@@ -1465,11 +1486,7 @@ function startBackgroundMusic({ fadeIn = false } = {}) {
     return;
   }
 
-  const audio = createAudioEngine();
-  if (!audio || audio.musicTimer || !shouldPlayBackgroundMusic()) return;
-  syncAudioVolume();
-  scheduleAmbientMusic();
-  audio.musicTimer = window.setInterval(scheduleAmbientMusic, 6000);
+  ensureAmbientFallbackMusic();
 }
 
 function stopBackgroundMusic() {
@@ -1478,9 +1495,7 @@ function stopBackgroundMusic() {
     media.pause();
   }
 
-  if (!state.audio?.musicTimer) return;
-  window.clearInterval(state.audio.musicTimer);
-  state.audio.musicTimer = null;
+  stopAmbientFallbackMusic();
 }
 
 function updateMusicToggle() {
