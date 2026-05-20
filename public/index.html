@@ -58,7 +58,7 @@
   </script>
 </head>
 <body data-screen="menu">
-  <audio id="backgroundMusic" src="https://www.image2url.com/r2/default/audio/1779010144930-1c23475c-00b6-44fd-8b94-4462c31ebbd0.mp3" loop preload="auto" autoplay playsinline></audio>
+  <audio id="backgroundMusic" preload="auto" autoplay playsinline></audio>
   <div class="noise"></div>
   <div class="music-equalizer-bg" aria-hidden="true">
     <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -544,6 +544,11 @@
           <button class="secondary terminal-secondary" onclick="joinLobby()">ВОЙТИ ПО КОДУ</button>
           <button class="secondary terminal-secondary" type="button" onclick="showHowToPlay()">HOW TO PLAY</button>
           <button class="ghost-button terminal-secondary" type="button" onclick="showDemoFlow()">DEMO</button>
+        </div>
+
+        <div id="nowPlayingPanel" class="now-playing-panel" aria-live="polite">
+          <span class="now-playing-eyebrow">🎵 now playing 🎵</span>
+          <strong id="nowPlayingTrack">noah570 - triumph</strong>
         </div>
       </div>
 
