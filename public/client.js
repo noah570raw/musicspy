@@ -2196,6 +2196,13 @@ function applyProfile(profileData = { user: null, guest: true }) {
       ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
       : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
   }
+  if (window.CosmeticsRenderer && user) {
+    CosmeticsRenderer.applyAll({ equippedCosmetics: user?.economy?.equipped || user?.equippedCosmetics || {} }, {
+      nickname: $("profileName"),
+      avatar: $("profileAvatar"),
+      profileBanner: document.querySelector("#accountProfileView .profile-banner")
+    });
+  }
   updateAccountToggle(displayName, user);
   renderProfileStats();
   renderProfileCosmetics();
@@ -2859,7 +2866,7 @@ function applyCosmeticsToShopPreviews(root) {
 }
 
 function shopCurrentUserName() {
-  return String(state.profile?.username || state.profile?.displayName || "noah570");
+  return String(state.profile?.displayName || state.profile?.username || "noah570");
 }
 
 function shopCurrentUserLevel() {
@@ -2936,7 +2943,7 @@ function renderShopItemCard(item, owned, equipped) {
             <span class="shop-chat-nickname" style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.8)">${username}</span>
             <span style="font-size:10px;color:rgba(255,255,255,0.3);margin-left:auto">сейчас</span>
           </div>
-          <div class="chat-bubble-preview shop-preview-chat-bubble" style="border-radius:10px;padding:8px 12px;border:1px solid transparent;font-size:13px;color:#e0e0ff;position:relative;overflow:hidden;${chatStyle}">Привет! 🎵</div>
+          <div class="chat-bubble-preview shop-preview-chat-bubble" style="border-radius:10px;padding:10px 14px;border:1px solid transparent;font-size:13px;color:#e0e0ff;position:relative;overflow:hidden;${chatStyle}">Привет! 🎵</div>
         </div>`
       };
     }
@@ -4327,7 +4334,7 @@ function applyCosmeticsForLobbyPlayers() {
     if (!card) continue;
     CosmeticsRenderer.applyAll(player, {
       nickname: card.querySelector(".player-name"),
-      avatar: card.querySelector(".avatar img"),
+      avatar: card.querySelector(".avatar img") || card.querySelector(".avatar"),
       lobbyCard: card
     });
   }
@@ -4768,7 +4775,7 @@ function showPublicProfileModal(user = {}) {
     console.log(`[CC] received equipped:${JSON.stringify(user?.equippedCosmetics || user?.economy?.equipped || {})}`);
     CosmeticsRenderer.applyAll({ equippedCosmetics: user?.economy?.equipped || user?.equippedCosmetics || {} }, {
       nickname: content.querySelector(".public-profile-name"),
-      avatar: content.querySelector(".profile-avatar img"),
+      avatar: content.querySelector(".profile-avatar img") || content.querySelector(".profile-avatar"),
       profileBanner: content.querySelector(".public-profile-banner")
     });
   }

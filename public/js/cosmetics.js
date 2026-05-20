@@ -162,6 +162,9 @@ window.CosmeticsRenderer = {
     el.style.background = cfg.background;
     el.style.borderColor = cfg.borderColor;
     el.style.boxShadow = cfg.boxShadow;
+    el.style.padding = "10px 14px";
+    el.style.width = "auto";
+    el.style.maxWidth = "none";
     el.dataset.cosmeticChat = id;
     el.classList.add("cosmetic-chat-active");
   },
