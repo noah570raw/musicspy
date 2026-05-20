@@ -1,0 +1,17 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#070712"/><stop offset="1" stop-color="#11193F"/></linearGradient>
+  <linearGradient id="txt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7DD3FC"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+</defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="920" cy="315" r="180" fill="#07070E" stroke="#8B5CF6" stroke-width="7"/>
+<g opacity="0.25" stroke="#8FA4FF">
+<circle cx="920" cy="315" r="164"/><circle cx="920" cy="315" r="147"/><circle cx="920" cy="315" r="130"/><circle cx="920" cy="315" r="113"/>
+</g>
+<circle cx="920" cy="315" r="52" fill="#121B3D" stroke="#38BDF8" stroke-width="5"/>
+<text x="920" y="330" text-anchor="middle" fill="#8BE9FF" font-size="48" font-family="Inter,Arial" font-weight="800">MS</text>
+<text x="100" y="190" fill="#7DD3FC" font-size="28" font-family="Inter,Arial" letter-spacing="3">MUSIC-TECH SOCIAL GAME</text>
+<text x="100" y="290" fill="url(#txt)" font-size="98" font-family="Inter,Arial" font-weight="800">MUSIC SPY</text>
+<text x="100" y="350" fill="#CDD6F7" font-size="44" font-family="Inter,Arial" font-weight="600">find the real imposter</text>
+<text x="100" y="430" fill="#95A4D9" font-size="30" font-family="Inter,Arial">Play tracks • read reactions • uncover the spy</text>
+</svg>
