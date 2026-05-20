@@ -2,9 +2,9 @@ const socket = io();
 
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0;
 const BACKGROUND_PLAYLIST = [
-  { src: "/audio/noah570 - triumph.mp3", title: "noah570 - triumph" },
-  { src: "/audio/noah570 - glorious.mp3", title: "noah570 - glorious" },
-  { src: "/audio/noah570 - foreign.mp3", title: "noah570 - foreign" }
+  { src: "/audio/noah570 - triumph.mp3", title: "noah570 - triumph", fallbackDuration: 180 },
+  { src: "/audio/noah570 - glorious.mp3", title: "noah570 - glorious", fallbackDuration: 180 },
+  { src: "/audio/noah570 - foreign.mp3", title: "noah570 - foreign", fallbackDuration: 180 }
 ];
 const GAMEPLAY_BACKGROUND_MUSIC_SCREENS = new Set(["game", "voting", "spyGuess"]);
 const UI_CUE_FADE_SECONDS = 0.045;
@@ -60,6 +60,9 @@ const state = {
   finalComments: [],
   backgroundFadeFrame: null,
   backgroundTrackIndex: 0,
+  backgroundTrackFallbackStartedAt: 0,
+  backgroundTicker: null,
+  backgroundMediaBroken: false,
   mobileTurnLabel: "",
   openLobbies: [],
   lobbyName: "",
@@ -933,12 +936,19 @@ function updateNowPlayingTime() {
   const label = getNowPlayingTimeElement();
   if (!label) return;
   const media = getBackgroundMusicElement();
+  const track = BACKGROUND_PLAYLIST[state.backgroundTrackIndex] || BACKGROUND_PLAYLIST[0] || {};
+  const fallbackDuration = Math.max(1, Number(track.fallbackDuration) || 180);
   if (!media) {
     label.textContent = "0:00-0:00";
     return;
   }
-  const current = formatClockTime(media.currentTime);
-  const total = Number.isFinite(media.duration) ? formatClockTime(media.duration) : "0:00";
+  const fallbackElapsed = state.backgroundTrackFallbackStartedAt
+    ? Math.max(0, (Date.now() - state.backgroundTrackFallbackStartedAt) / 1000)
+    : 0;
+  const currentSeconds = state.backgroundMediaBroken ? fallbackElapsed : media.currentTime;
+  const totalSeconds = Number.isFinite(media.duration) && media.duration > 0 ? media.duration : fallbackDuration;
+  const current = formatClockTime(currentSeconds);
+  const total = formatClockTime(totalSeconds);
   label.textContent = `${current}-${total}`;
 }
 
@@ -953,16 +963,51 @@ function setBackgroundPlaylistTrack(index, { forceReload = false } = {}) {
     media.load();
   }
   state.backgroundTrackIndex = nextIndex;
+  state.backgroundTrackFallbackStartedAt = Date.now();
   updateNowPlayingLabel();
+}
+
+function stopBackgroundTicker() {
+  if (!state.backgroundTicker) return;
+  window.clearInterval(state.backgroundTicker);
+  state.backgroundTicker = null;
+}
+
+function startBackgroundTicker() {
+  if (state.backgroundTicker) return;
+  state.backgroundTicker = window.setInterval(() => {
+    updateNowPlayingTime();
+    if (!state.backgroundMediaBroken) return;
+    const track = BACKGROUND_PLAYLIST[state.backgroundTrackIndex] || BACKGROUND_PLAYLIST[0] || {};
+    const fallbackDuration = Math.max(1, Number(track.fallbackDuration) || 180);
+    const elapsed = state.backgroundTrackFallbackStartedAt
+      ? Math.max(0, (Date.now() - state.backgroundTrackFallbackStartedAt) / 1000)
+      : 0;
+    if (elapsed < fallbackDuration) return;
+    setBackgroundPlaylistTrack(state.backgroundTrackIndex + 1, { forceReload: true });
+    if (state.musicEnabled) startBackgroundMusic({ fadeIn: true });
+  }, 250);
 }
 
 function initBackgroundPlaylist() {
   const media = getBackgroundMusicElement();
   if (!media || !BACKGROUND_PLAYLIST.length) return;
+  startBackgroundTicker();
   setBackgroundPlaylistTrack(0, { forceReload: true });
   updateNowPlayingTime();
   media.addEventListener("timeupdate", updateNowPlayingTime);
   media.addEventListener("loadedmetadata", updateNowPlayingTime);
+  media.addEventListener("playing", () => {
+    state.backgroundMediaBroken = false;
+    state.backgroundTrackFallbackStartedAt = Date.now() - (Math.max(0, media.currentTime) * 1000);
+    updateNowPlayingTime();
+  });
+  media.addEventListener("error", () => {
+    state.backgroundMediaBroken = true;
+    state.backgroundTrackFallbackStartedAt = Date.now();
+    updateNowPlayingTime();
+    createAudioEngine();
+  });
   media.loop = false;
   media.addEventListener("ended", () => {
     setBackgroundPlaylistTrack(state.backgroundTrackIndex + 1, { forceReload: true });
