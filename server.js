@@ -1055,6 +1055,11 @@ function publicPlayers(players = []) {
   return players.map(publicPlayer);
 }
 
+function logServerCosmetics(prefix, players = []) {
+  const payload = (players || []).map((player) => ({ playerId: player?.id, equippedCosmetics: player?.equippedCosmetics || {} }));
+  console.log(`[CS] player equipped:${JSON.stringify({ prefix, players: payload })}`);
+}
+
 function syncUserProfileInLobbies(user) {
   for (const lobby of Object.values(lobbies)) {
     let changed = false;
@@ -1436,6 +1441,7 @@ function schedulePlayerDeparture(lobby, socket) {
 
 function sendPrivateGameStart(lobby, socket) {
   const isSpy = lobby.spies.includes(socket.id);
+  logServerCosmetics("gameStarted", lobby.players);
   socket.emit("gameStarted", {
     code: lobby.code,
     host: lobby.host,
@@ -1626,7 +1632,9 @@ function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
   if (!lobby) return;
   const payload = publicLobby(lobby);
+  logServerCosmetics("lobbyUpdate", payload.players);
   io.to(code).emit("lobbyUpdate", payload);
+  logServerCosmetics("players:update", payload.players);
   io.to(code).emit("players:update", { players: payload.players });
   for (const player of lobby.players || []) {
     if (player.accountId) emitSocialForUserAndFriends(player.accountId);
@@ -1671,6 +1679,7 @@ function emitGameState(code) {
   const currentPlayerId = lobby.order[lobby.currentTurnIndex] || null;
   const currentPlayer = lobby.players.find((player) => player.id === currentPlayerId);
 
+  logServerCosmetics("gameState", lobby.players);
   io.to(code).emit("gameState", {
     code,
     phase: lobby.phase,
@@ -2680,6 +2689,16 @@ io.on("connection", (socket) => {
     user.economy.equipped[category.equipSlot] = item.id;
     user.updatedAt = new Date().toISOString();
     syncUserProfileInLobbies(user);
+    for (const lobby of Object.values(lobbies)) {
+      const player = lobby.players.find((entry) => entry.id === socket.id || (entry.accountId && entry.accountId === user.id));
+      if (!player) continue;
+      player.equippedCosmetics = { ...(user.economy.equipped || {}) };
+      console.log(`[CS] player equipped:${JSON.stringify(player.equippedCosmetics || {})}`);
+      io.to(lobby.code).emit("player:cosmetics:update", {
+        playerId: player.id,
+        equippedCosmetics: { ...(user.economy.equipped || {}) }
+      });
+    }
     saveUsersStore();
     cb({ success: true, item, economy: publicEconomy(user), profile: profileForSocket(socket) });
     io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
@@ -3191,6 +3210,7 @@ io.on("connection", (socket) => {
       text: messageText,
       createdAt: Date.now()
     };
+    console.log(`[CS] player equipped:${JSON.stringify(player.equippedCosmetics || {})}`);
     lobby.chatMessages = [...(lobby.chatMessages || []), message].slice(-MAX_CHAT_MESSAGES);
     io.to(lobby.code).emit("chat:update", { messages: lobby.chatMessages });
     cb({ success: true, message });

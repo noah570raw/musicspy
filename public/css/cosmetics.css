@@ -10,6 +10,17 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes bgShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes framePulse {
+  0%, 100% { box-shadow: 0 0 8px var(--fc), 0 0 16px var(--fc); }
+  50% { box-shadow: 0 0 18px var(--fc), 0 0 36px var(--fc); }
+}
+
 @keyframes frame-pulse-gold {
   0%, 100% { box-shadow: 0 0 8px #ffd700, 0 0 16px #ffd70066; }
   50% { box-shadow: 0 0 16px #ffd700, 0 0 32px #ffd70099; }

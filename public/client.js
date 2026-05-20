@@ -2849,13 +2849,50 @@ function applyCosmeticsToShopPreviews(root) {
     const slot = String(category.equipSlot || "");
     const player = { equippedCosmetics: slot ? { [slot]: item.id } : {} };
     CosmeticsRenderer.applyAll(player, {
-      nickname: preview.querySelector(".shop-preview-nickname, .shop-chat-nickname"),
-      avatar: preview.querySelector(".shop-preview-avatar, .shop-preview-avatar img"),
+      nickname: preview.querySelector(".shop-preview-nickname, .shop-chat-nickname, .shop-preview-player-name"),
+      avatar: preview.querySelector(".shop-preview-avatar, .shop-preview-avatar img, .shop-preview-player-avatar"),
       chatBubble: preview.querySelector(".shop-preview-chat-bubble"),
       lobbyCard: preview.querySelector(".shop-preview-lobby-card"),
       profileBanner: preview.querySelector(".public-profile-banner")
     });
   });
+}
+
+function shopCurrentUserName() {
+  return String(state.profile?.username || state.profile?.displayName || "noah570");
+}
+
+function shopCurrentUserLevel() {
+  return Number(state.profile?.economy?.level || 1);
+}
+
+function normalizeCosmeticKey(itemId = "") {
+  return String(itemId || "")
+    .replace(/^(nick_|chat_|lobby_|frame_|banner_)/, "")
+    .replace(/_/g, "-");
+}
+
+function previewGradientAndGlow(item = {}) {
+  const key = normalizeCosmeticKey(item.id);
+  const map = {
+    "solar-flare": { gradient: "linear-gradient(135deg,#ff6b35,#ffbe0b,#ff6b35)", glow: "#ff8c42" },
+    "glacier-hype": { gradient: "linear-gradient(135deg,#00d4ff,#7b2fff,#00fff5)", glow: "#00d4ff" },
+    "synthwave-blaze": { gradient: "linear-gradient(135deg,#ff006e,#8338ec,#ff006e)", glow: "#ff006e" },
+    "blacklight-pulse": { gradient: "linear-gradient(135deg,#9d4edd,#00d4ff,#c77dff,#9d4edd)", glow: "#9d4edd" },
+    "vinyl-prism": { gradient: "linear-gradient(135deg,#f72585,#7209b7,#3a0ca3,#f72585)", glow: "#f72585" },
+    "chrome-wave": { gradient: "linear-gradient(135deg,#e0e0e0,#a0a0a0,#ffffff,#e0e0e0)", glow: "#cccccc" },
+    "quantum-pop": { gradient: "linear-gradient(135deg,#00f5d4,#00bbf9,#9b5de5,#00f5d4)", glow: "#00f5d4" },
+    "hyperion-aura": { gradient: "linear-gradient(135deg,#ffbe0b,#fb5607,#ff006e,#ffbe0b)", glow: "#ffbe0b" }
+  };
+  if (map[key]) return map[key];
+  const gradient = String(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)");
+  const glow = /#[0-9a-fA-F]{3,8}/.exec(gradient)?.[0] || "#8b5cf6";
+  return { gradient, glow };
+}
+
+function previewSolidColor(item = {}, fallback = "#8b5cf6") {
+  const hit = /#[0-9a-fA-F]{3,8}/.exec(String(item.preview || ""));
+  return hit?.[0] || fallback;
 }
 
 function renderShopItemCard(item, owned, equipped) {
@@ -2872,35 +2909,81 @@ function renderShopItemCard(item, owned, equipped) {
         : `<button class="${canAfford ? "primary" : "secondary"}" type="button" onclick="purchaseShopItem('${escapeAttribute(item.id)}')" ${canAfford ? "" : "disabled"}>${Number(item.price || 0).toLocaleString("ru-RU")} Vinyls</button>`;
   const previewConfig = (() => {
     const slot = String(category.equipSlot || "");
+    const username = escapeHtml(shopCurrentUserName());
+    const level = shopCurrentUserLevel();
+    const { gradient, glow } = previewGradientAndGlow(item);
+    const baseColor = previewSolidColor(item, glow);
     if (slot === "nicknameColor") {
       return {
-        inner: `<div class="shop-preview-nickname-stage"><span class="shop-preview-nickname">noah570</span></div>`
+        inner: `<div class="shop-preview-nickname-stage">
+          <span class="shop-preview-nickname" style="font-size:22px;font-weight:800;letter-spacing:.04em;background:${escapeAttribute(gradient)};background-size:200% 200%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:bgShift 2s ease-in-out infinite;filter:drop-shadow(0 0 10px ${escapeAttribute(glow)})">${username}</span>
+        </div>`
       };
     }
     if (slot === "chatEffect") {
+      const chatStyles = {
+        "neon-mist": "background:linear-gradient(135deg,#0a0f2e,#0d2b4e);border-color:rgba(0,212,255,0.35);box-shadow:0 0 12px rgba(0,212,255,0.25)",
+        "emoji-rain": "background:linear-gradient(135deg,#2d1200,#4a1f00);border-color:rgba(255,140,0,0.35);box-shadow:0 0 12px rgba(255,140,0,0.25)",
+        "pixel-pop": "background:repeating-linear-gradient(0deg,#0e0027 0px,#0e0027 3px,#1a0040 3px,#1a0040 6px);border-color:rgba(204,0,255,0.35);box-shadow:0 0 12px rgba(204,0,255,0.25)",
+        "waveform-glow": "background:linear-gradient(135deg,#001a0e,#003320);border-color:rgba(0,255,136,0.35);box-shadow:0 0 12px rgba(0,255,136,0.25)"
+      };
+      const chatStyle = chatStyles[normalizeCosmeticKey(item.id)]
+        || `background:linear-gradient(135deg,${baseColor}22,#0d0b1a);border-color:${baseColor}66;box-shadow:0 0 12px ${baseColor}55`;
       return {
-        inner: `<div class="shop-chat-preview">
-          <span class="shop-preview-avatar">N</span>
-          <div class="shop-chat-content">
-            <div class="shop-chat-head">
-              <span class="shop-chat-nickname">noah570</span>
-              <time class="shop-chat-time">12:45</time>
-            </div>
-            <p class="shop-preview-chat-bubble">Привет!</p>
+        inner: `<div style="padding:10px;display:flex;flex-direction:column;gap:6px;width:100%;background:#0d0b1a;border-radius:12px">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15)"></div>
+            <span class="shop-chat-nickname" style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.8)">${username}</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);margin-left:auto">сейчас</span>
           </div>
+          <div class="chat-bubble-preview shop-preview-chat-bubble" style="border-radius:10px;padding:8px 12px;border:1px solid transparent;font-size:13px;color:#e0e0ff;position:relative;overflow:hidden;${chatStyle}">Привет! 🎵</div>
         </div>`
       };
     }
     if (slot === "lobbyEffect") {
+      const lobbyStyles = {
+        "glass-flux": "background:linear-gradient(135deg,#001428,#002240);border-color:rgba(0,212,255,0.3);box-shadow:0 0 16px rgba(0,212,255,0.2)",
+        "plasma-mesh": "background:linear-gradient(135deg,#1a0040,#2d0060);border-color:rgba(204,0,255,0.3);box-shadow:0 0 16px rgba(204,0,255,0.2)",
+        "night-radar": "background:linear-gradient(135deg,#001a0e,#003320);border-color:rgba(0,255,136,0.3);box-shadow:0 0 16px rgba(0,255,136,0.2)",
+        "firefly-lane": "background:linear-gradient(135deg,#1a0800,#3d1500);border-color:rgba(255,140,0,0.3);box-shadow:0 0 16px rgba(255,140,0,0.2)"
+      };
+      const lobbyStyle = lobbyStyles[normalizeCosmeticKey(item.id)]
+        || `background:linear-gradient(135deg,${baseColor}22,#0d0b1a);border-color:${baseColor}66;box-shadow:0 0 16px ${baseColor}44`;
       return {
-        inner: `<div class="shop-preview-lobby-card"><span class="shop-preview-avatar"></span><span class="shop-preview-nickname">Lobby Card</span></div>`
+        inner: `<div class="shop-preview-lobby-card" style="margin:8px;border-radius:10px;padding:10px 12px;border:1px solid transparent;display:flex;align-items:center;gap:8px;position:relative;overflow:hidden;${lobbyStyle}">
+          <div class="shop-preview-player-avatar" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.15)"></div>
+          <div>
+            <div class="shop-preview-player-name" style="font-size:12px;font-weight:600;color:#fff">${username}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4)">LVL ${level} · Готов</div>
+          </div>
+          <div style="width:7px;height:7px;border-radius:50%;background:#00ff88;margin-left:auto"></div>
+        </div>`
       };
     }
     if (slot === "avatarFrame") {
-      return { inner: `<span class="shop-preview-avatar"></span>` };
+      const frameColors = {
+        "neon-hex": "#00ff88",
+        "crystal-ring": "#00d4ff",
+        "orbit-shards": "#ff006e",
+        "reactor-core": "#ff8c00"
+      };
+      const frameColor = frameColors[normalizeCosmeticKey(item.id)] || baseColor;
+      return {
+        inner: `<div style="display:flex;align-items:center;justify-content:center;gap:16px;padding:16px">
+          <div style="--fc:${escapeAttribute(frameColor)};width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);outline:2px solid ${escapeAttribute(frameColor)};box-shadow:0 0 10px ${escapeAttribute(frameColor)},0 0 20px ${escapeAttribute(frameColor)}55;animation:framePulse 2s ease-in-out infinite"></div>
+        </div>`
+      };
     }
     if (slot === "profileBanner") {
-      return { inner: `<div class="profile-banner public-profile-banner"><span class="shop-preview-nickname">Profile Banner</span></div>` };
+      const bannerBg = String(item.preview || gradient);
+      const animated = bannerBg.includes("gradient") ? "animation:bgShift 5s infinite;background-size:220% 220%;" : "";
+      return {
+        inner: `<div class="profile-banner public-profile-banner" style="background:${escapeAttribute(bannerBg)};${animated}">
+          <div style="width:100%;height:100%;display:flex;align-items:flex-end;padding:10px">
+            <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.8)">${escapeHtml(item.name || "Banner")}</span>
+          </div>
+        </div>`
+      };
     }
     return { inner: `<span class="shop-preview-disc"></span>` };
   })();
@@ -4147,6 +4230,7 @@ function vote(target) {
 }
 
 function renderLobby(lobby) {
+  console.log(`[CC] received equipped:${JSON.stringify((lobby?.players || []).map((player) => ({ playerId: player?.id, equippedCosmetics: player?.equippedCosmetics || {} })))}`);
   state.lobby = lobby;
   state.players = lobby.players || [];
   state.settings = lobby.settings || state.settings;
@@ -4250,6 +4334,7 @@ function applyCosmeticsForLobbyPlayers() {
 }
 
 function renderGameState(data) {
+  console.log(`[CC] received equipped:${JSON.stringify((data?.players || []).map((player) => ({ playerId: player?.id, equippedCosmetics: player?.equippedCosmetics || {} })))}`);
   state.players = data.players || state.players;
   state.order = data.order || state.order;
   state.hostId = data.host || state.hostId;
@@ -4680,6 +4765,7 @@ function showPublicProfileModal(user = {}) {
     <div class="profile-stats-grid">${profileStatsMarkup(user)}</div>
   `;
   if (window.CosmeticsRenderer) {
+    console.log(`[CC] received equipped:${JSON.stringify(user?.equippedCosmetics || user?.economy?.equipped || {})}`);
     CosmeticsRenderer.applyAll({ equippedCosmetics: user?.economy?.equipped || user?.equippedCosmetics || {} }, {
       nickname: content.querySelector(".public-profile-name"),
       avatar: content.querySelector(".profile-avatar img"),
@@ -5281,8 +5367,25 @@ socket.on("lobbyUpdate", (lobby) => {
 
 socket.on("players:update", ({ players } = {}) => {
   if (!Array.isArray(players)) return;
+  console.log(`[CC] received equipped:${JSON.stringify(players.map((player) => ({ playerId: player?.id, equippedCosmetics: player?.equippedCosmetics || {} })))}`);
   state.players = players;
   applyCosmeticsForLobbyPlayers();
+});
+
+socket.on("player:cosmetics:update", ({ playerId, equippedCosmetics } = {}) => {
+  console.log(`[CC] received equipped:${JSON.stringify(equippedCosmetics || {})}`);
+  const card = document.querySelector(`[data-player-id="${CSS.escape(String(playerId || ""))}"]`);
+  if (!card || !window.CosmeticsRenderer) return;
+  const nameEl = card.querySelector('[class*="name"], [class*="nick"]');
+  const avatarEl = card.querySelector("img, [class*='avatar']");
+  CosmeticsRenderer.reset(nameEl);
+  CosmeticsRenderer.reset(avatarEl);
+  CosmeticsRenderer.reset(card);
+  CosmeticsRenderer.applyAll({ equippedCosmetics: equippedCosmetics || {} }, {
+    nickname: nameEl,
+    avatar: avatarEl,
+    lobbyCard: card
+  });
 });
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -5322,6 +5425,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 socket.on("gameStarted", (data) => {
+  console.log(`[CC] received equipped:${JSON.stringify((data?.players || []).map((player) => ({ playerId: player?.id, equippedCosmetics: player?.equippedCosmetics || {} })))}`);
   state.role = data.role;
   state.theme = data.theme;
   state.spyIds = data.spyIds || [];
@@ -5364,7 +5468,10 @@ socket.on("gameStarted", (data) => {
 });
 
 socket.on("gameState", renderGameState);
-socket.on("chat:update", ({ messages }) => renderChat(messages || []));
+socket.on("chat:update", ({ messages }) => {
+  console.log(`[CC] received equipped:${JSON.stringify((messages || []).map((msg) => ({ playerId: msg?.playerId, equippedCosmetics: msg?.equippedCosmetics || {} })))}`);
+  renderChat(messages || []);
+});
 socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
