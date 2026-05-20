@@ -1,6 +1,11 @@
 const socket = io();
 
 const DUCKED_BACKGROUND_MUSIC_VOLUME = 0;
+const BACKGROUND_PLAYLIST = [
+  { src: "/audio/noah570 - triumph.mp3", title: "noah570 - triumph" },
+  { src: "/audio/noah570 - glorious.mp3", title: "noah570 - glorious" },
+  { src: "/audio/noah570 - foreign.mp3", title: "noah570 - foreign" }
+];
 const GAMEPLAY_BACKGROUND_MUSIC_SCREENS = new Set(["game", "voting", "spyGuess"]);
 const UI_CUE_FADE_SECONDS = 0.045;
 const state = {
@@ -54,6 +59,7 @@ const state = {
   latestResult: null,
   finalComments: [],
   backgroundFadeFrame: null,
+  backgroundTrackIndex: 0,
   mobileTurnLabel: "",
   openLobbies: [],
   lobbyName: "",
@@ -897,6 +903,46 @@ function getBackgroundMusicVolume() {
 
 function getBackgroundMusicElement() {
   return $("backgroundMusic");
+}
+
+
+
+function getNowPlayingLabelElement() {
+  return $("nowPlayingTrack");
+}
+
+function updateNowPlayingLabel() {
+  const label = getNowPlayingLabelElement();
+  if (!label) return;
+  const track = BACKGROUND_PLAYLIST[state.backgroundTrackIndex] || BACKGROUND_PLAYLIST[0];
+  label.textContent = track?.title || "—";
+}
+
+function setBackgroundPlaylistTrack(index, { forceReload = false } = {}) {
+  const media = getBackgroundMusicElement();
+  if (!media || !BACKGROUND_PLAYLIST.length) return;
+  const nextIndex = ((index % BACKGROUND_PLAYLIST.length) + BACKGROUND_PLAYLIST.length) % BACKGROUND_PLAYLIST.length;
+  const track = BACKGROUND_PLAYLIST[nextIndex];
+  const nextSrc = new URL(track.src, window.location.origin).href;
+  if (forceReload || media.src !== nextSrc) {
+    media.src = track.src;
+    media.load();
+  }
+  state.backgroundTrackIndex = nextIndex;
+  updateNowPlayingLabel();
+}
+
+function initBackgroundPlaylist() {
+  const media = getBackgroundMusicElement();
+  if (!media || !BACKGROUND_PLAYLIST.length) return;
+  setBackgroundPlaylistTrack(0, { forceReload: true });
+  media.loop = false;
+  media.addEventListener("ended", () => {
+    setBackgroundPlaylistTrack(state.backgroundTrackIndex + 1, { forceReload: true });
+    if (shouldPlayBackgroundMusic()) {
+      media.play().catch(() => {});
+    }
+  });
 }
 
 function getBackgroundAudioVolume() {
@@ -1854,6 +1900,7 @@ function applySiteVolume() {
 }
 
 function restoreSiteVolume() {
+  initBackgroundPlaylist();
   restoreMusicPreference();
   let savedVolume = DEFAULT_SITE_VOLUME;
   try {
