@@ -8,7 +8,6 @@ const passport = require("passport");
 const DiscordStrategy = require("passport-discord").Strategy;
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
-const { DAILY_REWARD_STREAK_AMOUNTS, buildDailyRewardState, applyDailyClaim } = require("./lib/daily-reward");
 const {
   EMPTY_USERS_STORE,
   friendshipKey,
@@ -81,6 +80,10 @@ const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const DEV_USERNAMES = new Set(["noah570raw"]);
 const DEV_ROLE = "dev";
 const DEV_VINYL_BALANCE = 999_999_999;
+const DAILY_REWARD_STREAK_AMOUNTS = [300, 350, 400, 450, 500, 650, 700];
+const DAILY_REWARD_AMOUNT = DAILY_REWARD_STREAK_AMOUNTS[0];
+const DAILY_REWARD_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
 const XP_BOOSTER_DURATION_MS = 60 * 60 * 1000;
 const XP_BOOSTER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const XP_BOOSTER_MULTIPLIER = 2;
@@ -321,7 +324,6 @@ function defaultEconomy() {
     transactions: [],
     lastDailyRewardAt: null,
     dailyRewardStreak: 0,
-    dailyRewardClaimedDays: [],
     xpBoosterActiveUntil: null,
     xpBoosterCooldownUntil: null
   };
@@ -383,7 +385,6 @@ function normalizeEconomy(economy = {}) {
     transactions: Array.isArray(economy.transactions) ? economy.transactions.slice(-80) : [],
     lastDailyRewardAt: economy.lastDailyRewardAt && !Number.isNaN(Date.parse(economy.lastDailyRewardAt)) ? economy.lastDailyRewardAt : null,
     dailyRewardStreak: Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Math.floor(Number(economy.dailyRewardStreak || 0)))),
-    dailyRewardClaimedDays: Array.isArray(economy.dailyRewardClaimedDays) ? economy.dailyRewardClaimedDays.map((day) => Math.max(1, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Math.floor(Number(day || 1))))) : [],
     xpBoosterActiveUntil: economy.xpBoosterActiveUntil && !Number.isNaN(Date.parse(economy.xpBoosterActiveUntil)) ? economy.xpBoosterActiveUntil : null,
     xpBoosterCooldownUntil: economy.xpBoosterCooldownUntil && !Number.isNaN(Date.parse(economy.xpBoosterCooldownUntil)) ? economy.xpBoosterCooldownUntil : null
   };
@@ -434,7 +435,25 @@ function xpBoosterState(user, now = Date.now()) {
 
 function dailyRewardState(user, now = Date.now()) {
   const economy = ensureUserProgress(user);
-  return buildDailyRewardState(economy, new Date(now));
+  const lastClaimAt = economy?.lastDailyRewardAt || null;
+  const lastClaimTime = lastClaimAt ? Date.parse(lastClaimAt) : 0;
+  const nextClaimTime = lastClaimTime ? lastClaimTime + DAILY_REWARD_INTERVAL_MS : now;
+  const canClaim = !lastClaimTime || now >= nextClaimTime;
+  const streakBroken = Boolean(lastClaimTime && now - lastClaimTime > DAILY_REWARD_STREAK_RESET_MS);
+  const currentStreak = streakBroken ? 0 : Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Number(economy?.dailyRewardStreak || 0)));
+  const nextRewardDay = canClaim ? ((currentStreak % DAILY_REWARD_STREAK_AMOUNTS.length) + 1) : Math.max(1, currentStreak || 1);
+  const claimedDays = canClaim ? (nextRewardDay === 1 ? 0 : currentStreak) : nextRewardDay;
+  return {
+    canClaim,
+    rewardAmount: DAILY_REWARD_STREAK_AMOUNTS[nextRewardDay - 1] || DAILY_REWARD_AMOUNT,
+    rewardSchedule: DAILY_REWARD_STREAK_AMOUNTS,
+    cycleDay: nextRewardDay,
+    claimedDays,
+    streak: currentStreak,
+    lastClaimAt,
+    nextClaimAt: new Date(canClaim ? now : nextClaimTime).toISOString(),
+    remainingMs: canClaim ? 0 : nextClaimTime - now
+  };
 }
 
 function publicUser(user) {
@@ -2603,7 +2622,8 @@ io.on("connection", (socket) => {
     const currentState = dailyRewardState(user);
     if (!currentState.canClaim) return cb({ error: "Новая награда будет доступна позже", dailyReward: currentState });
     addVinylTransaction(user, currentState.rewardAmount, "daily_reward", { intervalHours: 24, cycleDay: currentState.cycleDay });
-    applyDailyClaim(user.economy, new Date());
+    user.economy.dailyRewardStreak = currentState.cycleDay;
+    user.economy.lastDailyRewardAt = new Date().toISOString();
     user.updatedAt = user.economy.lastDailyRewardAt;
     saveUsersStore();
     const nextState = dailyRewardState(user);
