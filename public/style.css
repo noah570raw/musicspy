@@ -156,6 +156,7 @@ button {
   padding: clamp(18px, 2.4vw, 28px);
   border: 1px solid var(--line);
   border-radius: 28px;
+  margin: 0;
   background: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)), var(--panel);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.08);
   backdrop-filter: blur(22px);
@@ -2273,6 +2274,7 @@ select:focus-visible {
   padding: clamp(20px, 4vw, 32px);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 28px;
+  margin: 0;
   background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03)), var(--panel-strong);
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255,255,255,0.09);
   text-align: center;
@@ -4807,6 +4809,7 @@ body[data-screen="results"] .result-score-panel:hover {
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 28px;
+  margin: 0;
   background:
     linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(255,255,255,0.045) 1px, transparent 1px),
@@ -5329,6 +5332,7 @@ body[data-screen="createLobbySetup"] .app-shell {
   padding: clamp(10px, 1.05vw, 16px);
   border-color: var(--theme-line);
   border-radius: 28px;
+  margin: 0;
   background:
     radial-gradient(circle at 18% 5%, rgba(var(--accent-rgb), 0.2), transparent 26rem),
     radial-gradient(circle at 86% 14%, rgba(var(--accent-rgb), 0.13), transparent 24rem),
@@ -6670,6 +6674,7 @@ body[data-screen="lobby"] .app-shell {
   gap: 12px;
   padding: 22px;
   border-radius: 28px;
+  margin: 0;
   text-align: center;
 }
 
@@ -7640,6 +7645,7 @@ body[data-effects-density="low"] .sound-toggle {
   padding: clamp(12px, 1.6vw, 16px);
   border: 1px solid rgba(255, 255, 255, 0.105);
   border-radius: 28px;
+  margin: 0;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.066), rgba(255, 255, 255, 0.022)),
     rgba(var(--surface-rgb), 0.36);
@@ -7989,6 +7995,7 @@ html[lang="en"] .site-menu-card .language-toggle-knob {
     height: min(820px, calc(100dvh - 32px));
     max-height: calc(100dvh - 32px);
     border-radius: 28px;
+  margin: 0;
   }
 
   .site-menu-header {
@@ -8258,6 +8265,7 @@ body,
   padding: 18px;
   border: 1px solid rgba(var(--accent-rgb), 0.24);
   border-radius: 28px;
+  margin: 0;
   background:
     radial-gradient(circle at 85% 0%, rgba(var(--accent-rgb), 0.18), transparent 34%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
@@ -9037,6 +9045,7 @@ body,
   overflow: hidden;
   border: 1px solid rgba(125, 211, 252, 0.24);
   border-radius: 28px;
+  margin: 0;
   background:
     radial-gradient(circle at 20% 0%, rgba(56, 189, 248, 0.22), transparent 32%),
     radial-gradient(circle at 82% 18%, rgba(236, 72, 153, 0.2), transparent 30%),
@@ -9881,6 +9890,7 @@ body[data-screen="spyGuess"] .friends-system {
   min-height: 240px;
   padding: clamp(18px, 4vw, 32px);
   border-radius: 28px;
+  margin: 0;
   border-color: rgba(139, 92, 246, 0.42);
   background:
     radial-gradient(circle at 25% 50%, rgba(250, 204, 21, 0.16), transparent 32%),
@@ -9944,7 +9954,7 @@ body[data-screen="spyGuess"] .friends-system {
 .daily-claim-button:not(:disabled):active { transform: translateY(1px) scale(0.985); }
 .daily-claim-button:disabled { cursor: not-allowed; filter: grayscale(0.3) brightness(0.72); opacity: 0.72; }
 
-.daily-success-popup { justify-self: center; opacity: 0; transform: translateY(10px) scale(0.92); padding: 8px 13px; border: 1px solid rgba(250, 204, 21, 0.46); border-radius: 999px; color: #fef9c3; background: rgba(113, 63, 18, 0.35); box-shadow: 0 0 28px rgba(250, 204, 21, 0.22); font-weight: 950; pointer-events: none; }
+.daily-success-popup { justify-self: center; margin-top: 8px; opacity: 0; transform: translateY(10px) scale(0.92); padding: 8px 13px; border: 1px solid rgba(250, 204, 21, 0.46); border-radius: 999px; color: #fef9c3; background: rgba(113, 63, 18, 0.35); box-shadow: 0 0 28px rgba(250, 204, 21, 0.22); font-weight: 950; pointer-events: none; }
 .reward-claimed .daily-success-popup { animation: dailySuccessPop 1.65s cubic-bezier(.2,.9,.2,1); }
 .reward-claimed .daily-main-reward::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(250,204,21,0.34), transparent 55%); animation: dailyClaimFlash 0.85s ease-out; }
 .reward-claimed .daily-vinyl-orbit::before { content: "◍  ◍  ◍  ◍  ◍"; position: absolute; color: #fef3c7; letter-spacing: 0.8em; text-shadow: 0 0 16px rgba(250,204,21,0.9); animation: dailyFlyingVinyls 1.4s ease-out; }
@@ -10048,6 +10058,7 @@ body[data-screen="spyGuess"] .friends-system {
   padding: clamp(0.85rem, 1.6vw, 1.2rem);
   border: 1px solid rgba(139, 92, 246, 0.46);
   border-radius: 28px;
+  margin: 0;
   background:
     radial-gradient(circle at 12% 12%, rgba(56, 189, 248, 0.3), transparent 28%),
     radial-gradient(circle at 86% 18%, rgba(168, 85, 247, 0.32), transparent 30%),
@@ -10601,6 +10612,9 @@ body[data-screen="spyGuess"] .friends-system {
   min-height: 240px;
   padding: 0;
   overflow: hidden;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  gap: 0;
   border-color: rgba(34, 211, 238, 0.32);
   background:
     radial-gradient(circle at 50% 8%, rgba(34, 211, 238, 0.18), transparent 38%),
@@ -10611,10 +10625,12 @@ body[data-screen="spyGuess"] .friends-system {
   place-items: center;
   align-content: center;
   gap: 0;
+  width: 100%;
   min-height: 100%;
   height: 100%;
-  padding: clamp(24px, 4vw, 42px) 18px;
+  padding: 0;
   border-radius: 28px;
+  margin: 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
   isolation: isolate;
 }
