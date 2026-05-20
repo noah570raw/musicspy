@@ -4622,7 +4622,7 @@ function renderChat(messages = state.chatMessages) {
           </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
-        <p class="chat-bubble">${escapeHtml(message.text || "")}</p>
+        <p class="chat-bubble" data-player-id="${escapeAttribute(message.playerId || "")}">${escapeHtml(message.text || "")}</p>
       </div>
     `;
   }).join("");
