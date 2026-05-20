@@ -11048,27 +11048,6 @@ body[data-screen="spyGuess"] .friends-system {
   box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.52), inset 0 0 14px rgba(255, 255, 255, 0.24);
 }
 
-.vinyl-reflection {
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.reflection-one {
-  inset: 8% 15% 51% 24%;
-  background: linear-gradient(132deg, rgba(255, 255, 255, 0.32), transparent 60%);
-  filter: blur(5px);
-  opacity: 0.42;
-}
-
-.reflection-two {
-  inset: 54% 20% 12% 55%;
-  background: linear-gradient(132deg, rgba(var(--accent-rgb), 0.18), transparent 62%);
-  filter: blur(8px);
-  opacity: 0.6;
-}
-
 .vinyl-label {
   position: relative;
   z-index: 2;
@@ -11085,74 +11064,9 @@ body[data-screen="spyGuess"] .friends-system {
 }
 
 .vinyl-label b {
-  font-size: clamp(0.95rem, 3vw, 1.55rem);
+  font-size: clamp(1.09rem, 3.45vw, 1.78rem);
   letter-spacing: -0.08em;
-}
-
-.vinyl-label small {
-  margin-top: -12%;
-  font-size: 0.42rem;
-  letter-spacing: 0.18em;
-  opacity: 0.7;
-}
-
-.tonearm {
-  position: absolute;
-  top: 8%;
-  right: 2%;
-  width: 44%;
-  height: 33%;
-  z-index: 4;
-  transform-origin: 82% 16%;
-  animation: tonearmHover 4.8s ease-in-out infinite;
-}
-
-.tonearm-base {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 27%;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(226, 232, 240, 0.9), rgba(var(--surface-strong-rgb), 0.88) 55%, rgba(2, 6, 23, 0.95));
-  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.42);
-}
-
-.tonearm-beam {
-  position: absolute;
-  top: 20%;
-  right: 19%;
-  width: 76%;
-  height: 7px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 78%, var(--accent)), rgba(226, 232, 240, 0.9) 38%, rgba(var(--accent-rgb), 0.82));
-  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.34), 0 0 24px color-mix(in srgb, var(--accent-2) 22%, transparent);
-  transform: rotate(34deg);
-  transform-origin: 100% 50%;
-}
-
-.tonearm-head {
-  position: absolute;
-  left: 0;
-  bottom: 10%;
-  width: 18%;
-  height: 16%;
-  border-radius: 8px 8px 14px 14px;
-  background: linear-gradient(135deg, rgba(var(--surface-strong-rgb), 0.96), color-mix(in srgb, var(--accent) 34%, rgba(var(--surface-rgb), 0.9)));
-  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.56), 0 0 28px color-mix(in srgb, var(--accent-2) 32%, transparent);
-  transform: rotate(26deg);
-}
-
-.tonearm-head::after {
-  content: "";
-  position: absolute;
-  left: 38%;
-  bottom: -42%;
-  width: 24%;
-  height: 60%;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-2) 82%, var(--accent));
-  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.82), 0 0 28px color-mix(in srgb, var(--accent-2) 58%, transparent);
+  line-height: 1;
 }
 
 .terminal-controls {
@@ -11225,11 +11139,6 @@ button.terminal-secondary:hover:not(:disabled) {
 @keyframes terminalPulse {
   0%, 100% { opacity: 0.56; transform: scale(0.992); }
   50% { opacity: 0.9; transform: scale(1.02); }
-}
-
-@keyframes tonearmHover {
-  0%, 100% { transform: rotate(-1.2deg) translateY(0); }
-  50% { transform: rotate(1.4deg) translateY(4px); }
 }
 
 @keyframes terminalLightSweep {
@@ -11315,8 +11224,7 @@ button.terminal-secondary:hover:not(:disabled) {
   .vinyl-terminal-particles i,
   .vinyl-terminal-scan,
   .vinyl-glow-orbit,
-  .vinyl-record,
-  .tonearm {
+  .vinyl-record {
     animation: none;
   }
 }
