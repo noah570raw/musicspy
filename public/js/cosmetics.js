@@ -140,7 +140,8 @@ const AVATAR_FRAMES = {
 window.CosmeticsRenderer = {
   applyNickname(el, id) {
     if (!el || !id) return;
-    const cfg = NICKNAME_COLORS[id];
+    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
+    const cfg = NICKNAME_COLORS[normalizedId] || NICKNAME_COLORS[id];
     if (!cfg) return;
     el.style.background = cfg.gradient;
     el.style.backgroundSize = cfg.bgSize || "100% 100%";
@@ -155,7 +156,8 @@ window.CosmeticsRenderer = {
 
   applyChatBubble(el, id) {
     if (!el || !id) return;
-    const cfg = CHAT_EFFECTS[id];
+    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
+    const cfg = CHAT_EFFECTS[normalizedId] || CHAT_EFFECTS[id];
     if (!cfg) return;
     el.style.background = cfg.background;
     el.style.borderColor = cfg.borderColor;
@@ -166,7 +168,8 @@ window.CosmeticsRenderer = {
 
   applyLobbyCard(el, id) {
     if (!el || !id) return;
-    const cfg = LOBBY_EFFECTS[id];
+    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
+    const cfg = LOBBY_EFFECTS[normalizedId] || LOBBY_EFFECTS[id];
     if (!cfg) return;
     el.style.background = cfg.background;
     el.style.borderColor = cfg.borderColor || "";
@@ -180,7 +183,8 @@ window.CosmeticsRenderer = {
 
   applyProfileBanner(el, id) {
     if (!el || !id) return;
-    const cfg = PROFILE_BANNERS[id];
+    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
+    const cfg = PROFILE_BANNERS[normalizedId] || PROFILE_BANNERS[id];
     if (!cfg) return;
     el.style.background = cfg.background;
     if (cfg.animationBg) {
@@ -192,7 +196,8 @@ window.CosmeticsRenderer = {
 
   applyAvatarFrame(el, id) {
     if (!el || !id) return;
-    const cfg = AVATAR_FRAMES[id];
+    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
+    const cfg = AVATAR_FRAMES[normalizedId] || AVATAR_FRAMES[id];
     if (!cfg) return;
     el.style.outline = cfg.outline;
     el.style.boxShadow = cfg.boxShadow;
