@@ -1,240 +1,224 @@
 /**
  * cosmetics.js — Music Spy Cosmetics Renderer
- * Подключи в HTML: <script src="/js/cosmetics.js"></script>
- * 
- * Использование:
- *   CosmeticsRenderer.applyAll(playerData, elements);
- *   CosmeticsRenderer.applyNickname(el, 'blacklight-pulse');
+ * Все ID берутся прямо из каталога server.js и нормализуются автоматически.
  */
 
-// ─── ДАННЫЕ ПРЕДМЕТОВ ──────────────────────────────────────────────────────
+// ─── НОРМАЛИЗАЦИЯ ID ───────────────────────────────────────────────────────
+// nick_solar_flare → solar-flare
+// frame_orbit_shards → orbit-shards
+function normId(id) {
+  if (!id) return '';
+  return id
+    .replace(/^(nick|frame|banner|chat|lobby|dev_nick|dev_frame|dev_banner|dev_chat|dev_lobby)_/, '')
+    .replace(/_/g, '-');
+}
 
+// ─── NICKNAME COLORS ──────────────────────────────────────────────────────
 const NICKNAME_COLORS = {
-  "solar-flare": {
-    gradient: "linear-gradient(135deg, #ff6b35 0%, #ffbe0b 50%, #ff6b35 100%)",
-    glow: "#ff8c42",
-    animationBg: "cosmetic-bg-shift 3s ease-in-out infinite",
-    filter: "drop-shadow(0 0 8px #ff8c42aa)",
-    bgSize: "200% 200%"
-  },
-  "glacier-hype": {
-    gradient: "linear-gradient(135deg, #00d4ff 0%, #7b2fff 50%, #00fff5 100%)",
-    glow: "#00d4ff",
-    animationBg: "cosmetic-bg-shift 2.5s ease-in-out infinite",
-    filter: "drop-shadow(0 0 10px #00d4ffaa)",
-    bgSize: "200% 200%"
-  },
-  "synthwave-blaze": {
-    gradient: "linear-gradient(135deg, #ff006e 0%, #8338ec 50%, #ff006e 100%)",
-    glow: "#ff006e",
-    animationBg: "cosmetic-bg-shift 2s ease-in-out infinite",
-    filter: "drop-shadow(0 0 10px #ff006eaa)",
-    bgSize: "200% 200%"
-  },
-  "blacklight-pulse": {
-    gradient: "linear-gradient(135deg, #9d4edd 0%, #00d4ff 40%, #c77dff 70%, #9d4edd 100%)",
-    glow: "#9d4edd",
-    animationBg: "cosmetic-bg-shift 1.8s ease-in-out infinite",
-    filter: "drop-shadow(0 0 12px #9d4eddcc) drop-shadow(0 0 4px #00d4ffaa)",
-    bgSize: "300% 300%"
-  }
+  'solar-flare':     { g: 'linear-gradient(135deg,#fde047,#fb7185,#f97316)', glow: '#f97316', sz: '200% 200%' },
+  'glacier-hype':    { g: 'linear-gradient(135deg,#67e8f9,#60a5fa,#818cf8)', glow: '#67e8f9', sz: '200% 200%' },
+  'synthwave-blaze': { g: 'linear-gradient(135deg,#fb7185,#a855f7,#22d3ee)', glow: '#fb7185', sz: '200% 200%' },
+  'blacklight-pulse':{ g: 'linear-gradient(135deg,#7c3aed,#22d3ee,#c77dff)', glow: '#7c3aed', sz: '300% 300%' },
+  'vinyl-prism':     { g: 'linear-gradient(135deg,#f59e0b,#f43f5e,#8b5cf6,#06b6d4)', glow: '#f43f5e', sz: '300% 300%' },
+  'chrome-wave':     { g: 'linear-gradient(135deg,#f8fafc,#94a3b8,#e2e8f0,#94a3b8)', glow: '#94a3b8', sz: '200% 200%' },
+  'quantum-pop':     { g: 'linear-gradient(135deg,#22d3ee,#ec4899,#fde047,#22d3ee)', glow: '#22d3ee', sz: '300% 300%' },
+  'hyperion-aura':   { g: 'linear-gradient(135deg,#38bdf8,#a78bfa,#f472b6,#fde68a)', glow: '#a78bfa', sz: '300% 300%' },
+  // DEV
+  'emerald-sovereign':{ g: 'linear-gradient(135deg,#34d399,#10b981,#6ee7b7,#34d399)', glow: '#34d399', sz: '200% 200%' },
+  'jade-flux':       { g: 'linear-gradient(135deg,#22c55e,#86efac,#15803d)', glow: '#22c55e', sz: '200% 200%' },
+  'mint-quantum':    { g: 'linear-gradient(135deg,#99f6e4,#14b8a6,#34d399)', glow: '#14b8a6', sz: '200% 200%' },
+  'viridian-crown':  { g: 'linear-gradient(135deg,#16a34a,#22c55e,#4ade80)', glow: '#22c55e', sz: '200% 200%' },
 };
 
-const CHAT_EFFECTS = {
-  "neon-mist": {
-    background: "linear-gradient(135deg, #0a0f2e 0%, #0d2b4e 100%)",
-    borderColor: "#00d4ff55",
-    boxShadow: "0 0 12px #00d4ff33, inset 0 0 20px #00d4ff11"
-  },
-  "emoji-rain": {
-    background: "linear-gradient(135deg, #2d1200 0%, #4a1f00 100%)",
-    borderColor: "#ff8c0055",
-    boxShadow: "0 0 12px #ff8c0033, inset 0 0 20px #ff8c0011",
-    pseudo: true
-  },
-  "pixel-pop": {
-    background: `repeating-linear-gradient(
-      0deg,
-      #0e0027 0px, #0e0027 3px,
-      #1a0040 3px, #1a0040 6px
-    ), linear-gradient(135deg, #1a0040, #2d0060)`,
-    borderColor: "#cc00ff55",
-    boxShadow: "0 0 12px #cc00ff33, inset 0 0 20px #cc00ff11"
-  },
-  "waveform-glow": {
-    background: "linear-gradient(135deg, #001a0e 0%, #003320 100%)",
-    borderColor: "#00ff8855",
-    boxShadow: "0 0 12px #00ff8833, inset 0 0 20px #00ff8811"
-  }
-};
-
-const LOBBY_EFFECTS = {
-  "solar-burst": {
-    background: "linear-gradient(135deg, #1a0a00 0%, #2d1800 50%, #1a0a00 100%)",
-    borderColor: "#ff8c0055",
-    boxShadow: "0 0 20px #ff8c0033",
-    animationBg: "cosmetic-bg-shift 4s ease-in-out infinite",
-    bgSize: "200% 200%"
-  },
-  "arctic-aura": {
-    background: "linear-gradient(135deg, #001428 0%, #002240 100%)",
-    borderColor: "#00d4ff55",
-    boxShadow: "0 0 20px #00d4ff33",
-    animationBg: "cosmetic-bg-shift 3s ease-in-out infinite",
-    bgSize: "200% 200%"
-  },
-  "neon-grid": {
-    background: `
-      repeating-linear-gradient(0deg, transparent, transparent 24px, #cc00ff18 24px, #cc00ff18 25px),
-      repeating-linear-gradient(90deg, transparent, transparent 24px, #cc00ff18 24px, #cc00ff18 25px),
-      linear-gradient(135deg, #0e0022, #1a0040)
-    `,
-    borderColor: "#cc00ff55",
-    boxShadow: "0 0 20px #cc00ff33"
-  },
-  "emerald-haze": {
-    background: "linear-gradient(135deg, #001a0e 0%, #003320 100%)",
-    borderColor: "#00ff8855",
-    boxShadow: "0 0 20px #00ff8833"
-  }
-};
-
-const PROFILE_BANNERS = {
-  "aurora-wave": {
-    background: "linear-gradient(135deg, #0a0a2e, #1a0040, #002240, #0a0a2e)",
-    animationBg: "cosmetic-bg-shift 5s ease-in-out infinite",
-    bgSize: "300% 300%"
-  },
-  "lava-flow": {
-    background: "linear-gradient(135deg, #1a0500, #3d0f00, #ff4400, #1a0500)",
-    animationBg: "cosmetic-bg-shift 4s ease-in-out infinite",
-    bgSize: "300% 300%"
-  },
-  "galaxy-drift": {
-    background: "linear-gradient(135deg, #050010, #0a0028, #1a0040, #050010)",
-    animationBg: "cosmetic-bg-shift 6s ease-in-out infinite",
-    bgSize: "300% 300%"
-  }
-};
-
+// ─── AVATAR FRAMES ────────────────────────────────────────────────────────
 const AVATAR_FRAMES = {
-  "golden-halo": {
-    outline: "2px solid #ffd700",
-    boxShadow: "0 0 8px #ffd700, 0 0 16px #ffd70066, inset 0 0 8px #ffd70033",
-    animation: "frame-pulse-gold 2s ease-in-out infinite"
-  },
-  "neon-circuit": {
-    outline: "2px solid #00ff88",
-    boxShadow: "0 0 8px #00ff88, 0 0 16px #00ff8866",
-    animation: "frame-flicker 1.5s linear infinite"
-  },
-  "shadow-void": {
-    outline: "2px solid #9d4edd",
-    boxShadow: "0 0 10px #9d4edd, 0 0 20px #9d4edd44, 0 0 40px #9d4edd22",
-    animation: "frame-pulse-purple 3s ease-in-out infinite"
-  }
+  'neon-hex':      { color: '#22d3ee', anim: 'frame-pulse 2s ease-in-out infinite' },
+  'crystal-ring':  { color: '#67e8f9', anim: 'frame-pulse 2.5s ease-in-out infinite' },
+  'orbit-shards':  { color: '#a855f7', anim: 'frame-pulse 2s ease-in-out infinite' },
+  'reactor-core':  { color: '#f97316', anim: 'frame-pulse 1.8s ease-in-out infinite' },
+  'aurora-circuit':{ color: '#14b8a6', anim: 'frame-pulse 2.2s ease-in-out infinite' },
+  'velvet-void':   { color: '#8b5cf6', anim: 'frame-pulse 3s ease-in-out infinite' },
+  'solaris-crown': { color: '#f59e0b', anim: 'frame-pulse 2s ease-in-out infinite' },
+  'infinity-halo': { color: '#22d3ee', anim: 'frame-rainbow 3s linear infinite', rainbow: true },
+  // DEV
+  'emerald-matrix':{ color: '#34d399', anim: 'frame-pulse 2s ease-in-out infinite' },
+  'jade-reactor':  { color: '#22c55e', anim: 'frame-pulse 2s ease-in-out infinite' },
+  'mint-halo':     { color: '#99f6e4', anim: 'frame-pulse 2s ease-in-out infinite' },
+  'viridian-pulse':{ color: '#4ade80', anim: 'frame-pulse 1.8s ease-in-out infinite' },
 };
 
-// ─── RENDERER ──────────────────────────────────────────────────────────────
+// ─── PROFILE BANNERS ─────────────────────────────────────────────────────
+const PROFILE_BANNERS = {
+  'city-afterglow':    { bg: 'linear-gradient(135deg,#111827,#334155,#f97316)', sz: '200% 200%' },
+  'cosmic-studio':     { bg: 'linear-gradient(135deg,#0f172a,#7c3aed,#22d3ee)', sz: '200% 200%' },
+  'aurora-drift':      { bg: 'linear-gradient(135deg,#14b8a6,#8b5cf6,#f0abfc)', sz: '200% 200%' },
+  'luxe-signal':       { bg: 'linear-gradient(135deg,#f59e0b,#ec4899,#7c3aed)', sz: '200% 200%' },
+  'quantum-lounge':    { bg: 'radial-gradient(circle at 15% 20%,#67e8f9,transparent 34%),linear-gradient(135deg,#111827,#1d4ed8)', sz: '200% 200%' },
+  'ultraviolet-core':  { bg: 'linear-gradient(135deg,#020617,#7c3aed,#f43f5e)', sz: '200% 200%' },
+  'golden-stage':      { bg: 'linear-gradient(135deg,#fef3c7,#f59e0b,#b45309)', sz: '200% 200%' },
+  'hologram-royale':   { bg: 'linear-gradient(135deg,#22d3ee,#a78bfa,#f472b6,#fde68a)', sz: '300% 300%' },
+  // DEV
+  'emerald-throne':    { bg: 'linear-gradient(135deg,#052e16,#10b981,#34d399)', sz: '200% 200%' },
+  'jade-nebula':       { bg: 'linear-gradient(135deg,#14532d,#22c55e,#6ee7b7)', sz: '200% 200%' },
+  'mint-core':         { bg: 'radial-gradient(circle,#99f6e4,#34d399,#064e3b)', sz: '200% 200%' },
+  'viridian-infinite': { bg: 'linear-gradient(135deg,#16a34a,#15803d,#34d399,#86efac)', sz: '300% 300%' },
+};
 
+// ─── CHAT EFFECTS ─────────────────────────────────────────────────────────
+const CHAT_EFFECTS = {
+  'neon-mist':      { bg: 'linear-gradient(135deg,#0a0f2e,#0d2b4e)', border: 'rgba(0,212,255,0.35)', shadow: '0 0 14px rgba(0,212,255,0.3),inset 0 0 20px rgba(0,212,255,0.08)' },
+  'emoji-rain':     { bg: 'linear-gradient(135deg,#2d1200,#4a1f00)', border: 'rgba(255,140,0,0.35)', shadow: '0 0 14px rgba(255,140,0,0.3),inset 0 0 20px rgba(255,140,0,0.08)' },
+  'pixel-pop':      { bg: 'repeating-linear-gradient(0deg,#0e0027 0,#0e0027 3px,#1a0040 3px,#1a0040 6px)', border: 'rgba(204,0,255,0.35)', shadow: '0 0 14px rgba(204,0,255,0.3)' },
+  'waveform-glow':  { bg: 'linear-gradient(135deg,#001a0e,#003320)', border: 'rgba(0,255,136,0.35)', shadow: '0 0 14px rgba(0,255,136,0.3),inset 0 0 20px rgba(0,255,136,0.08)' },
+  'starlight-box':  { bg: 'radial-gradient(circle at 30% 40%,#312e81,#020617)', border: 'rgba(99,102,241,0.4)', shadow: '0 0 16px rgba(99,102,241,0.35)' },
+  'laser-tape':     { bg: 'linear-gradient(135deg,#1a0010,#001a1a)', border: 'rgba(244,63,94,0.4)', shadow: '0 0 14px rgba(244,63,94,0.3),0 0 14px rgba(34,211,238,0.2)' },
+  'midnight-frost': { bg: 'linear-gradient(135deg,#0f172a,#0c2340)', border: 'rgba(14,165,233,0.35)', shadow: '0 0 14px rgba(14,165,233,0.25)' },
+  'hypernova':      { bg: 'linear-gradient(135deg,#0d0020,#200040)', border: 'rgba(236,72,153,0.4)', shadow: '0 0 16px rgba(34,211,238,0.25),0 0 16px rgba(236,72,153,0.25)' },
+  // DEV
+  'emerald-mist':   { bg: 'linear-gradient(135deg,#052e16,#064e3b)', border: 'rgba(52,211,153,0.4)', shadow: '0 0 14px rgba(52,211,153,0.3)' },
+  'jade-symbols':   { bg: 'repeating-linear-gradient(90deg,#052e16 0,#052e16 10px,#064e3b 10px,#064e3b 20px)', border: 'rgba(34,197,94,0.4)', shadow: '0 0 14px rgba(34,197,94,0.3)' },
+};
+
+// ─── LOBBY EFFECTS ────────────────────────────────────────────────────────
+const LOBBY_EFFECTS = {
+  'glass-flux':      { bg: 'linear-gradient(135deg,#001428,#002240)', border: 'rgba(56,189,248,0.3)', shadow: '0 0 20px rgba(56,189,248,0.2)', sz: '200% 200%' },
+  'plasma-mesh':     { bg: 'linear-gradient(135deg,#070025,#0d003a)', border: 'rgba(168,85,247,0.3)', shadow: '0 0 20px rgba(6,182,212,0.2)', sz: '200% 200%' },
+  'night-radar':     { bg: 'radial-gradient(circle at 50% 50%,rgba(34,211,238,0.12),transparent 70%),linear-gradient(135deg,#020617,#0a0a20)', border: 'rgba(34,211,238,0.25)', shadow: '0 0 20px rgba(34,211,238,0.15)' },
+  'firefly-lane':    { bg: 'linear-gradient(135deg,#1a0800,#2d1000)', border: 'rgba(245,158,11,0.3)', shadow: '0 0 20px rgba(245,158,11,0.2)', sz: '200% 200%' },
+  'quantum-glow':    { bg: 'linear-gradient(135deg,#010d1a,#001a2e)', border: 'rgba(34,211,238,0.3)', shadow: '0 0 24px rgba(34,211,238,0.2)', sz: '200% 200%' },
+  'royal-chamber':   { bg: 'linear-gradient(135deg,#0d0020,#200040)', border: 'rgba(124,58,237,0.35)', shadow: '0 0 20px rgba(236,72,153,0.15)', sz: '200% 200%' },
+  'sunrise-core':    { bg: 'linear-gradient(135deg,#1a0a00,#2a1500)', border: 'rgba(253,230,138,0.3)', shadow: '0 0 20px rgba(251,113,133,0.2)', sz: '300% 300%' },
+  'horizon-mirage':  { bg: 'linear-gradient(135deg,#001020,#002030)', border: 'rgba(167,139,250,0.3)', shadow: '0 0 24px rgba(34,211,238,0.15)', sz: '300% 300%' },
+};
+
+// ─── CSS-АНИМАЦИИ (инжектируем один раз) ─────────────────────────────────
+(function injectCosmeticsCSS() {
+  if (document.getElementById('cosmetics-keyframes')) return;
+  const style = document.createElement('style');
+  style.id = 'cosmetics-keyframes';
+  style.textContent = `
+    @keyframes cosmetic-nick-shift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes frame-pulse {
+      0%,100% { box-shadow: 0 0 6px var(--fc,#22d3ee), 0 0 14px var(--fc,#22d3ee); }
+      50%      { box-shadow: 0 0 14px var(--fc,#22d3ee), 0 0 28px var(--fc,#22d3ee); }
+    }
+    @keyframes frame-rainbow {
+      0%   { outline-color: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
+      25%  { outline-color: #a855f7; box-shadow: 0 0 10px #a855f7; }
+      50%  { outline-color: #ec4899; box-shadow: 0 0 10px #ec4899; }
+      75%  { outline-color: #fde047; box-shadow: 0 0 10px #fde047; }
+      100% { outline-color: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
+    }
+    @keyframes lobby-bg-shift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes banner-shift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+// ─── RENDERER ─────────────────────────────────────────────────────────────
 window.CosmeticsRenderer = {
+
+  _norm(id) { return normId(id); },
+
   applyNickname(el, id) {
     if (!el || !id) return;
-    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
-    const cfg = NICKNAME_COLORS[normalizedId] || NICKNAME_COLORS[id];
+    const cfg = NICKNAME_COLORS[normId(id)];
     if (!cfg) return;
-    el.style.background = cfg.gradient;
-    el.style.backgroundSize = cfg.bgSize || "100% 100%";
-    el.style.webkitBackgroundClip = "text";
-    el.style.backgroundClip = "text";
-    el.style.webkitTextFillColor = "transparent";
-    el.style.color = "transparent";
-    el.style.filter = cfg.filter;
-    if (cfg.animationBg) el.style.animation = cfg.animationBg;
+    el.style.background = cfg.g;
+    el.style.backgroundSize = cfg.sz || '200% 200%';
+    el.style.webkitBackgroundClip = 'text';
+    el.style.backgroundClip = 'text';
+    el.style.webkitTextFillColor = 'transparent';
+    el.style.color = 'transparent';
+    el.style.filter = `drop-shadow(0 0 8px ${cfg.glow}99)`;
+    el.style.animation = `cosmetic-nick-shift 2.5s ease-in-out infinite`;
     el.dataset.cosmeticNick = id;
+  },
+
+  applyAvatarFrame(el, id) {
+    if (!el || !id) return;
+    const cfg = AVATAR_FRAMES[normId(id)];
+    if (!cfg) return;
+    el.style.setProperty('--fc', cfg.color);
+    el.style.outline = `2.5px solid ${cfg.color}`;
+    el.style.outlineOffset = '2px';
+    el.style.borderRadius = '50%';
+    if (cfg.rainbow) {
+      el.style.animation = cfg.anim;
+    } else {
+      el.style.boxShadow = `0 0 8px ${cfg.color}, 0 0 18px ${cfg.color}66`;
+      el.style.animation = cfg.anim;
+    }
+    el.dataset.cosmeticFrame = id;
   },
 
   applyChatBubble(el, id) {
     if (!el || !id) return;
-    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
-    const cfg = CHAT_EFFECTS[normalizedId] || CHAT_EFFECTS[id];
+    const cfg = CHAT_EFFECTS[normId(id)];
     if (!cfg) return;
-    el.style.background = cfg.background;
-    el.style.borderColor = cfg.borderColor;
-    el.style.boxShadow = cfg.boxShadow;
-    el.style.padding = "10px 14px";
-    el.style.width = "auto";
-    el.style.maxWidth = "none";
+    el.style.background = cfg.bg;
+    el.style.border = `1px solid ${cfg.border}`;
+    el.style.boxShadow = cfg.shadow;
+    el.style.borderRadius = '10px';
+    el.style.padding = '10px 14px';
     el.dataset.cosmeticChat = id;
-    el.classList.add("cosmetic-chat-active");
   },
 
   applyLobbyCard(el, id) {
     if (!el || !id) return;
-    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
-    const cfg = LOBBY_EFFECTS[normalizedId] || LOBBY_EFFECTS[id];
+    const cfg = LOBBY_EFFECTS[normId(id)];
     if (!cfg) return;
-    el.style.background = cfg.background;
-    el.style.borderColor = cfg.borderColor || "";
-    el.style.boxShadow = cfg.boxShadow || "";
-    if (cfg.animationBg) {
-      el.style.backgroundSize = cfg.bgSize;
-      el.style.animation = cfg.animationBg;
+    el.style.background = cfg.bg;
+    el.style.borderColor = cfg.border;
+    el.style.boxShadow = cfg.shadow;
+    if (cfg.sz) {
+      el.style.backgroundSize = cfg.sz;
+      el.style.animation = 'lobby-bg-shift 4s ease-in-out infinite';
     }
     el.dataset.cosmeticLobby = id;
   },
 
   applyProfileBanner(el, id) {
     if (!el || !id) return;
-    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
-    const cfg = PROFILE_BANNERS[normalizedId] || PROFILE_BANNERS[id];
+    const cfg = PROFILE_BANNERS[normId(id)];
     if (!cfg) return;
-    el.style.background = cfg.background;
-    if (cfg.animationBg) {
-      el.style.backgroundSize = cfg.bgSize;
-      el.style.animation = cfg.animationBg;
-    }
+    el.style.background = cfg.bg;
+    el.style.backgroundSize = cfg.sz || '200% 200%';
+    el.style.animation = 'banner-shift 5s ease-in-out infinite';
     el.dataset.cosmeticBanner = id;
-  },
-
-  applyAvatarFrame(el, id) {
-    if (!el || !id) return;
-    const normalizedId = id.replace(/^(nick|frame|banner|chat|lobby)_/, '').replace(/_/g, '-');
-    const cfg = AVATAR_FRAMES[normalizedId] || AVATAR_FRAMES[id];
-    if (!cfg) return;
-    el.style.outline = cfg.outline;
-    el.style.boxShadow = cfg.boxShadow;
-    if (cfg.animation) el.style.animation = cfg.animation;
-    el.dataset.cosmeticFrame = id;
   },
 
   applyAll(player, elements = {}) {
     const c = player?.equippedCosmetics || {};
-    if (elements.nickname && c.nicknameColor) this.applyNickname(elements.nickname, c.nicknameColor);
-    if (elements.avatar && c.avatarFrame) this.applyAvatarFrame(elements.avatar, c.avatarFrame);
-    if (elements.chatBubble && c.chatEffect) this.applyChatBubble(elements.chatBubble, c.chatEffect);
-    if (elements.lobbyCard && c.lobbyEffect) this.applyLobbyCard(elements.lobbyCard, c.lobbyEffect);
+    if (elements.nickname  && c.nicknameColor) this.applyNickname(elements.nickname, c.nicknameColor);
+    if (elements.avatar    && c.avatarFrame)   this.applyAvatarFrame(elements.avatar, c.avatarFrame);
+    if (elements.chatBubble && c.chatEffect)   this.applyChatBubble(elements.chatBubble, c.chatEffect);
+    if (elements.lobbyCard && c.lobbyEffect)   this.applyLobbyCard(elements.lobbyCard, c.lobbyEffect);
     if (elements.profileBanner && c.profileBanner) this.applyProfileBanner(elements.profileBanner, c.profileBanner);
   },
 
   reset(el) {
     if (!el) return;
-    el.style.removeProperty("background");
-    el.style.removeProperty("background-size");
-    el.style.removeProperty("-webkit-background-clip");
-    el.style.removeProperty("background-clip");
-    el.style.removeProperty("-webkit-text-fill-color");
-    el.style.removeProperty("color");
-    el.style.removeProperty("filter");
-    el.style.removeProperty("animation");
-    el.style.removeProperty("box-shadow");
-    el.style.removeProperty("outline");
-    el.style.removeProperty("border-color");
+    const props = ['background','background-size','-webkit-background-clip','background-clip',
+      '-webkit-text-fill-color','color','filter','animation','box-shadow','outline',
+      'outline-offset','border-color','border'];
+    props.forEach(p => el.style.removeProperty(p));
     delete el.dataset.cosmeticNick;
     delete el.dataset.cosmeticChat;
     delete el.dataset.cosmeticLobby;
     delete el.dataset.cosmeticBanner;
     delete el.dataset.cosmeticFrame;
-    el.classList.remove("cosmetic-chat-active");
   }
 };
