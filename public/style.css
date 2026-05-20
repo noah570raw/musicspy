@@ -9347,6 +9347,7 @@ body,
 .rarity-epic { --rarity: #a78bfa; }
 .rarity-legendary { --rarity: #f59e0b; }
 .rarity-mythic { --rarity: #f0abfc; }
+.rarity-developer { --rarity: #34d399; }
 .shop-card[class*="rarity-"] { box-shadow: 0 18px 50px color-mix(in srgb, var(--rarity, #64748b) 16%, transparent); }
 .shop-card[class*="rarity-"] .rarity-pill { color: var(--rarity, #e2e8f0); border: 1px solid color-mix(in srgb, var(--rarity, #64748b) 42%, transparent); }
 

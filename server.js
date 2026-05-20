@@ -106,7 +106,8 @@ const COSMETIC_RARITIES = {
   rare: { label: "Rare", glow: 2 },
   epic: { label: "Epic", glow: 3 },
   legendary: { label: "Legendary", glow: 4 },
-  mythic: { label: "Mythic", glow: 5 }
+  mythic: { label: "Mythic", glow: 5 },
+  developer: { label: "Developer", glow: 6 }
 };
 
 const SHOP_CATEGORIES = [
@@ -163,30 +164,30 @@ const SHOP_CATALOG = [
   { id: "lobby_sunrise_core", category: "lobbyEffect", name: "Sunrise Core", rarity: "legendary", price: 2980, preview: "linear-gradient(135deg,#fde68a,#fb7185,#7c3aed)" },
   { id: "lobby_horizon_mirage", category: "lobbyEffect", name: "Horizon Mirage", rarity: "mythic", price: 3900, preview: "linear-gradient(135deg,#22d3ee,#a78bfa,#f472b6,#fde68a)" },
 
-  { id: "dev_nick_emerald_sovereign", category: "nicknameColor", name: "DEV Emerald Sovereign", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(90deg,#34d399,#10b981,#6ee7b7,#34d399)" },
-  { id: "dev_nick_jade_flux", category: "nicknameColor", name: "DEV Jade Flux", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(90deg,#22c55e,#86efac,#15803d)" },
-  { id: "dev_nick_mint_quantum", category: "nicknameColor", name: "DEV Mint Quantum", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(90deg,#99f6e4,#14b8a6,#34d399)" },
-  { id: "dev_nick_viridian_crown", category: "nicknameColor", name: "DEV Viridian Crown", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(90deg,#16a34a,#22c55e,#4ade80)" },
+  { id: "dev_nick_emerald_sovereign", category: "nicknameColor", name: "DEV Emerald Sovereign", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#34d399,#10b981,#6ee7b7,#34d399)" },
+  { id: "dev_nick_jade_flux", category: "nicknameColor", name: "DEV Jade Flux", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#22c55e,#86efac,#15803d)" },
+  { id: "dev_nick_mint_quantum", category: "nicknameColor", name: "DEV Mint Quantum", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#99f6e4,#14b8a6,#34d399)" },
+  { id: "dev_nick_viridian_crown", category: "nicknameColor", name: "DEV Viridian Crown", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#16a34a,#22c55e,#4ade80)" },
 
-  { id: "dev_frame_emerald_matrix", category: "avatarFrame", name: "DEV Emerald Matrix", rarity: "mythic", price: 5000, limited: true, preview: "conic-gradient(#34d399,#10b981,#6ee7b7,#34d399)" },
-  { id: "dev_frame_jade_reactor", category: "avatarFrame", name: "DEV Jade Reactor", rarity: "mythic", price: 5000, limited: true, preview: "radial-gradient(circle,#bbf7d0,#22c55e,#14532d)" },
-  { id: "dev_frame_mint_halo", category: "avatarFrame", name: "DEV Mint Halo", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(135deg,#99f6e4,#34d399,#065f46)" },
-  { id: "dev_frame_viridian_pulse", category: "avatarFrame", name: "DEV Viridian Pulse", rarity: "mythic", price: 5000, limited: true, preview: "conic-gradient(#22c55e,#15803d,#4ade80,#22c55e)" },
+  { id: "dev_frame_emerald_matrix", category: "avatarFrame", name: "DEV Emerald Matrix", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#34d399,#10b981,#6ee7b7,#34d399)" },
+  { id: "dev_frame_jade_reactor", category: "avatarFrame", name: "DEV Jade Reactor", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#bbf7d0,#22c55e,#14532d)" },
+  { id: "dev_frame_mint_halo", category: "avatarFrame", name: "DEV Mint Halo", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#99f6e4,#34d399,#065f46)" },
+  { id: "dev_frame_viridian_pulse", category: "avatarFrame", name: "DEV Viridian Pulse", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#22c55e,#15803d,#4ade80,#22c55e)" },
 
-  { id: "dev_banner_emerald_throne", category: "profileBanner", name: "DEV Emerald Throne", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(135deg,#052e16,#10b981,#34d399)" },
-  { id: "dev_banner_jade_nebula", category: "profileBanner", name: "DEV Jade Nebula", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(135deg,#14532d,#22c55e,#6ee7b7)" },
-  { id: "dev_banner_mint_core", category: "profileBanner", name: "DEV Mint Core", rarity: "mythic", price: 5000, limited: true, preview: "radial-gradient(circle,#99f6e4,#34d399,#064e3b)" },
-  { id: "dev_banner_viridian_infinite", category: "profileBanner", name: "DEV Viridian Infinite", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(135deg,#16a34a,#15803d,#34d399,#86efac)" },
+  { id: "dev_banner_emerald_throne", category: "profileBanner", name: "DEV Emerald Throne", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#052e16,#10b981,#34d399)" },
+  { id: "dev_banner_jade_nebula", category: "profileBanner", name: "DEV Jade Nebula", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#14532d,#22c55e,#6ee7b7)" },
+  { id: "dev_banner_mint_core", category: "profileBanner", name: "DEV Mint Core", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#99f6e4,#34d399,#064e3b)" },
+  { id: "dev_banner_viridian_infinite", category: "profileBanner", name: "DEV Viridian Infinite", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#16a34a,#15803d,#34d399,#86efac)" },
 
-  { id: "dev_chat_emerald_mist", category: "chatEffect", name: "DEV Emerald Mist", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(90deg,#34d399,#10b981,#064e3b)" },
-  { id: "dev_chat_jade_symbols", category: "chatEffect", name: "DEV Jade Symbols", rarity: "mythic", price: 5000, limited: true, preview: "repeating-linear-gradient(90deg,#22c55e 0 10px,#15803d 10px 20px,#4ade80 20px 30px)" },
-  { id: "dev_chat_mint_echo", category: "chatEffect", name: "DEV Mint Echo", rarity: "mythic", price: 5000, limited: true, preview: "radial-gradient(circle,#bbf7d0,#34d399,#065f46)" },
-  { id: "dev_chat_viridian_lux", category: "chatEffect", name: "DEV Viridian Lux", rarity: "mythic", price: 5000, limited: true, preview: "conic-gradient(#22c55e,#86efac,#10b981,#22c55e)" },
+  { id: "dev_chat_emerald_mist", category: "chatEffect", name: "DEV Emerald Mist", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#34d399,#10b981,#064e3b)" },
+  { id: "dev_chat_jade_symbols", category: "chatEffect", name: "DEV Jade Symbols", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "repeating-linear-gradient(90deg,#22c55e 0 10px,#15803d 10px 20px,#4ade80 20px 30px)" },
+  { id: "dev_chat_mint_echo", category: "chatEffect", name: "DEV Mint Echo", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#bbf7d0,#34d399,#065f46)" },
+  { id: "dev_chat_viridian_lux", category: "chatEffect", name: "DEV Viridian Lux", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#22c55e,#86efac,#10b981,#22c55e)" },
 
-  { id: "dev_lobby_emerald_grid", category: "lobbyEffect", name: "DEV Emerald Grid", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(135deg,#052e16,#10b981,#6ee7b7)" },
-  { id: "dev_lobby_jade_hall", category: "lobbyEffect", name: "DEV Jade Hall", rarity: "mythic", price: 5000, limited: true, preview: "linear-gradient(135deg,#14532d,#22c55e,#bbf7d0)" },
-  { id: "dev_lobby_mint_realm", category: "lobbyEffect", name: "DEV Mint Realm", rarity: "mythic", price: 5000, limited: true, preview: "radial-gradient(circle,#99f6e4,#34d399,#064e3b)" },
-  { id: "dev_lobby_viridian_prestige", category: "lobbyEffect", name: "DEV Viridian Prestige", rarity: "mythic", price: 5000, limited: true, preview: "conic-gradient(#16a34a,#22c55e,#86efac,#16a34a)" },
+  { id: "dev_lobby_emerald_grid", category: "lobbyEffect", name: "DEV Emerald Grid", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#052e16,#10b981,#6ee7b7)" },
+  { id: "dev_lobby_jade_hall", category: "lobbyEffect", name: "DEV Jade Hall", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#14532d,#22c55e,#bbf7d0)" },
+  { id: "dev_lobby_mint_realm", category: "lobbyEffect", name: "DEV Mint Realm", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#99f6e4,#34d399,#064e3b)" },
+  { id: "dev_lobby_viridian_prestige", category: "lobbyEffect", name: "DEV Viridian Prestige", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#16a34a,#22c55e,#86efac,#16a34a)" },
   { id: "title_perfect_manipulator", category: "playerTitle", name: "Perfect Manipulator", rarity: "mythic", price: 0, achievementOnly: true, hidden: true, preview: "linear-gradient(90deg,#facc15,#ef4444,#020617)" },
 ];
 
@@ -327,6 +328,11 @@ function defaultEconomy() {
     xpBoosterActiveUntil: null,
     xpBoosterCooldownUntil: null
   };
+}
+
+function isDevShopItem(item = {}) {
+  const itemId = String(item?.id || "").toLowerCase();
+  return item.devOnly === true || itemId.startsWith("dev_");
 }
 
 function catalogItemById(itemId) {
@@ -2586,7 +2592,9 @@ io.on("connection", (socket) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть магазин" });
     ensureUserProgress(user);
-    cb({ success: true, catalog: SHOP_CATALOG, categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
+    const isDev = hasRole(user, DEV_ROLE);
+    const catalog = SHOP_CATALOG.filter((item) => isDev || !isDevShopItem(item));
+    cb({ success: true, catalog, categories: SHOP_CATEGORIES, rarities: COSMETIC_RARITIES, economy: publicEconomy(user), achievements: ACHIEVEMENTS });
   });
 
   socket.on("xpBooster:get", (cb = () => {}) => {
@@ -2638,6 +2646,7 @@ io.on("connection", (socket) => {
     const item = catalogItemById(String(itemId || ""));
     if (!item) return cb({ error: "Предмет не найден" });
     if (item.achievementOnly) return cb({ error: "Этот предмет открывается достижением" });
+    if (isDevShopItem(item)) return cb({ error: "DEV-предметы не продаются" });
     if (user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Уже в коллекции" });
     const isDev = hasRole(user, DEV_ROLE);
     if (!isDev && user.economy.vinyls < item.price) return cb({ error: "Недостаточно Vinyls" });
