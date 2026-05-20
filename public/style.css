@@ -11044,7 +11044,7 @@ body[data-screen="spyGuess"] .friends-system {
   position: absolute;
   inset: 43%;
   border-radius: 999px;
-  background: radial-gradient(circle, var(--text) 0 9%, color-mix(in srgb, var(--accent-2) 78%, var(--accent)) 10% 18%, color-mix(in srgb, var(--accent) 28%, #111827) 20% 58%, #020617 60% 100%);
+  background: radial-gradient(circle, #020617 0 12%, color-mix(in srgb, var(--accent) 32%, #111827) 13% 44%, #020617 45% 100%);
   box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.52), inset 0 0 14px rgba(255, 255, 255, 0.24);
 }
 
@@ -11065,7 +11065,7 @@ body[data-screen="spyGuess"] .friends-system {
 
 .vinyl-label b {
   font-size: clamp(1.09rem, 3.45vw, 1.78rem);
-  letter-spacing: -0.08em;
+  letter-spacing: calc(-0.08em + 1px);
   line-height: 1;
 }
 
