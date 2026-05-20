@@ -108,7 +108,7 @@ function isInfiniteLevelUser(entity) {
 
 function devBadgeMarkup(label = "", options = {}) {
   const { showBadge = true } = options;
-  const name = label ? `<span class="dev-name-glow">${label}</span>` : "";
+  const name = label ? `<span class="player-name-text">${label}</span>` : "";
   return `${showBadge ? `<span class="dev-badge" title="Official developer account">DEV</span>` : ""}${name}`;
 }
 
