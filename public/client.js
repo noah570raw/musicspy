@@ -244,6 +244,22 @@ function renderFriendsList() {
     return;
   }
   list.innerHTML = state.friends.map(renderFriendCard).join("");
+  applyCosmeticsForFriends();
+}
+
+function applyCosmeticsForFriends() {
+  if (!window.CosmeticsRenderer) return;
+  for (const friend of state.friends || []) {
+    const friendId = String(friend.id || "");
+    if (!friendId) continue;
+    const card = document.querySelector(`.friend-card[data-friend-id="${CSS.escape(friendId)}"]`);
+    if (!card) continue;
+    CosmeticsRenderer.applyAll({ equippedCosmetics: friend.equippedCosmetics || {} }, {
+      nickname: card.querySelector(".friend-name"),
+      avatar: card.querySelector(".friend-avatar img"),
+      lobbyCard: card
+    });
+  }
 }
 
 function renderFriendCard(friend) {
@@ -2765,6 +2781,7 @@ function renderInventory(celebrate = false) {
         ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card shop-empty-card">В этой категории пока нет купленных предметов.</div>`}
       </div>
     </div>`;
+  applyCosmeticsToShopPreviews(root);
 }
 
 function renderShop(celebrate = false) {
@@ -2818,6 +2835,27 @@ function renderShop(celebrate = false) {
     </div>
     ${achievementHtml ? `<div class="shop-achievements-section">${achievementHtml}</div>` : ""}
   `;
+  applyCosmeticsToShopPreviews(root);
+}
+
+function applyCosmeticsToShopPreviews(root) {
+  if (!window.CosmeticsRenderer || !root) return;
+  root.querySelectorAll("[data-cosmetic-preview]").forEach((preview) => {
+    const itemId = String(preview.getAttribute("data-cosmetic-preview") || "");
+    if (!itemId) return;
+    const item = shopItem(itemId);
+    if (!item) return;
+    const category = state.shopCategories.find((entry) => entry.id === item.category) || {};
+    const slot = String(category.equipSlot || "");
+    const player = { equippedCosmetics: slot ? { [slot]: item.id } : {} };
+    CosmeticsRenderer.applyAll(player, {
+      nickname: preview.querySelector(".shop-preview-nickname"),
+      avatar: preview.querySelector(".shop-preview-avatar, .shop-preview-avatar img"),
+      chatBubble: preview.querySelector(".shop-preview-chat-bubble"),
+      lobbyCard: preview.querySelector(".shop-preview-lobby-card"),
+      profileBanner: preview.querySelector(".public-profile-banner")
+    });
+  });
 }
 
 function renderShopItemCard(item, owned, equipped) {
@@ -2832,10 +2870,31 @@ function renderShopItemCard(item, owned, equipped) {
       : item.achievementOnly
         ? `<button class="secondary" type="button" disabled>Достижение</button>`
         : `<button class="${canAfford ? "primary" : "secondary"}" type="button" onclick="purchaseShopItem('${escapeAttribute(item.id)}')" ${canAfford ? "" : "disabled"}>${Number(item.price || 0).toLocaleString("ru-RU")} Vinyls</button>`;
+  const previewConfig = (() => {
+    const slot = String(category.equipSlot || "");
+    if (slot === "nicknameColor") {
+      return { inner: `<span class="shop-preview-nickname">Music Spy</span>` };
+    }
+    if (slot === "chatEffect") {
+      return { inner: `<div class="shop-preview-chat-bubble">Это превью чат-эффекта</div>` };
+    }
+    if (slot === "lobbyEffect") {
+      return {
+        inner: `<div class="shop-preview-lobby-card"><span class="shop-preview-avatar"></span><span class="shop-preview-nickname">Lobby Card</span></div>`
+      };
+    }
+    if (slot === "avatarFrame") {
+      return { inner: `<span class="shop-preview-avatar"></span>` };
+    }
+    if (slot === "profileBanner") {
+      return { inner: `<div class="profile-banner public-profile-banner"><span class="shop-preview-nickname">Profile Banner</span></div>` };
+    }
+    return { inner: `<span class="shop-preview-disc"></span>` };
+  })();
   return `
     <article class="shop-card rarity-${escapeAttribute(item.rarity)} ${isOwned ? "owned" : ""}">
       <div class="shop-preview" style="--preview:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}">
-        <span class="shop-preview-disc"></span>
+        <div class="shop-live-preview" data-cosmetic-preview="${escapeAttribute(item.id)}">${previewConfig.inner}</div>
         ${item.limited ? `<b>limited</b>` : ""}
       </div>
       <div class="shop-card-body">
@@ -3069,15 +3128,16 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
   const isReady = Boolean(player.ready);
   const statusText = isReady ? t("готов") : t("не готов");
   const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
+  const playerId = escapeAttribute(player.id || "");
   return `
-    <article class="${cardClass}">
+    <article class="${cardClass}" data-player-id="${playerId}">
       <div class="lobby-player-glow" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap">
         ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
         <span class="lobby-online-dot" aria-hidden="true"></span>
       </div>
       <div class="lobby-player-info">
-        <strong>${nameWithDevBadge(player, "Игрок", { showBadge: true })}</strong>
+        <strong class="player-name">${nameWithDevBadge(player, "Игрок", { showBadge: true })}</strong>
         <span>${isMe ? t("это ты") : t("в комнате")}</span>
       </div>
       <div class="lobby-player-badges">
@@ -4155,9 +4215,25 @@ function renderLobby(lobby) {
   const playerCards = state.players.map((player, index) => lobbyPlayerCardMarkup(player, index, lobby));
   const seatCards = Array.from({ length: emptySeats }, (_, index) => lobbyEmptySeatMarkup(index));
   $("players").innerHTML = [...playerCards, ...seatCards].join("");
+  applyCosmeticsForLobbyPlayers();
   renderChat();
 
   if (state.phase === "game") renderHostControls();
+}
+
+function applyCosmeticsForLobbyPlayers() {
+  if (!window.CosmeticsRenderer) return;
+  for (const player of state.players || []) {
+    const playerId = String(player.id || "");
+    if (!playerId) continue;
+    const card = document.querySelector(`.lobby-player-card[data-player-id="${CSS.escape(playerId)}"]`);
+    if (!card) continue;
+    CosmeticsRenderer.applyAll(player, {
+      nickname: card.querySelector(".player-name"),
+      avatar: card.querySelector(".avatar img"),
+      lobbyCard: card
+    });
+  }
 }
 
 function renderGameState(data) {
@@ -4440,7 +4516,7 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
     return `
-      <div class="chat-message ${isMine ? "mine" : ""}">
+      <div class="chat-message ${isMine ? "mine" : ""}" data-player-id="${escapeAttribute(message.playerId || "")}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
             ${lobbyPlayerProfileActionMarkup(message)}
@@ -4448,7 +4524,7 @@ function renderChat(messages = state.chatMessages) {
           </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
         </div>
-        <p>${escapeHtml(message.text || "")}</p>
+        <p class="chat-bubble">${escapeHtml(message.text || "")}</p>
       </div>
     `;
   }).join("");
@@ -4464,6 +4540,16 @@ function renderChat(messages = state.chatMessages) {
     const hadMessages = box.children.length > 0;
     box.classList.remove("empty");
     box.innerHTML = markup;
+    if (window.CosmeticsRenderer) {
+      const rows = Array.from(box.querySelectorAll(".chat-message"));
+      rows.forEach((row, index) => {
+        const message = list[index] || {};
+        CosmeticsRenderer.applyAll({ equippedCosmetics: message.equippedCosmetics || {} }, {
+          nickname: row.querySelector(".chat-player-name"),
+          chatBubble: row.querySelector(".chat-bubble")
+        });
+      });
+    }
     scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: hadMessages ? "smooth" : "auto" });
   }
 }
@@ -4570,15 +4656,23 @@ function showPublicProfileModal(user = {}) {
   const displayName = user.displayName || user.username || "Игрок";
   const login = user.username ? `@${user.username}` : "без аккаунт-тега";
   content.innerHTML = `
+    <div class="profile-banner public-profile-banner"></div>
     <div class="profile-hero">
       <div class="profile-avatar profile-avatar-large">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар игрока">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
       <div>
-        <strong>${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
+        <strong class="public-profile-name">${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
         <span>${hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : escapeHtml(login)}</span>
       </div>
     </div>
     <div class="profile-stats-grid">${profileStatsMarkup(user)}</div>
   `;
+  if (window.CosmeticsRenderer) {
+    CosmeticsRenderer.applyAll({ equippedCosmetics: user?.economy?.equipped || user?.equippedCosmetics || {} }, {
+      nickname: content.querySelector(".public-profile-name"),
+      avatar: content.querySelector(".profile-avatar img"),
+      profileBanner: content.querySelector(".public-profile-banner")
+    });
+  }
   modal.classList.remove("hidden");
 }
 

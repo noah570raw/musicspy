@@ -586,6 +586,7 @@ function publicSocialUser(user, viewerId = "") {
     activity: status.activity,
     lobby: status.lobby,
     unread: getUnreadDirectCount(viewerId, user.id),
+    equippedCosmetics: { ...(user?.economy?.equipped || {}) },
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) }
   };
@@ -1025,12 +1026,16 @@ function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
   const user = socket.data.user;
   const baseName = user ? (user.displayName || user.username) : (rawName || "Гость");
   const name = lobby ? makeUniqueName(lobby, baseName) : normalizeName(baseName);
+  const equippedCosmetics = user?.economy?.equipped && typeof user.economy.equipped === "object"
+    ? { ...user.economy.equipped }
+    : {};
   return {
     id: socket.id,
     accountId: user?.id || null,
     guest: !user,
     name,
     avatar: user?.avatar || "",
+    equippedCosmetics,
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) },
     ready: false,
@@ -1058,6 +1063,9 @@ function syncUserProfileInLobbies(user) {
         const nextName = makeUniqueName(lobby, user.displayName || user.username, player.id);
         if (player.name !== nextName) player.name = nextName;
         if (player.avatar !== (user.avatar || "")) player.avatar = user.avatar || "";
+        player.equippedCosmetics = {
+          ...(user?.economy?.equipped && typeof user.economy.equipped === "object" ? user.economy.equipped : {})
+        };
         changed = true;
       }
     }
@@ -2669,6 +2677,7 @@ io.on("connection", (socket) => {
     if (!category) return cb({ error: "Категория недоступна" });
     user.economy.equipped[category.equipSlot] = item.id;
     user.updatedAt = new Date().toISOString();
+    syncUserProfileInLobbies(user);
     saveUsersStore();
     cb({ success: true, item, economy: publicEconomy(user), profile: profileForSocket(socket) });
     io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
@@ -3176,6 +3185,7 @@ io.on("connection", (socket) => {
       playerName: player.name,
       roles: player.roles || [],
       permissions: player.permissions || {},
+      equippedCosmetics: { ...(player.equippedCosmetics || {}) },
       text: messageText,
       createdAt: Date.now()
     };
