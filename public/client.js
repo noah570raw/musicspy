@@ -4804,7 +4804,7 @@ function renderChat(messages = state.chatMessages) {
         const message = list[index] || {};
         CosmeticsRenderer.applyAll({ equippedCosmetics: message.equippedCosmetics || {} }, {
           nickname: row.querySelector(".chat-player-name"),
-          chatBubble: row.querySelector(".chat-bubble")
+          chatBubble: row
         });
       });
     }
