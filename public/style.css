@@ -9527,14 +9527,14 @@ body,
   border-radius: 999px;
   background:
     linear-gradient(110deg, rgba(5, 46, 22, 0.95), rgba(34, 197, 94, 0.34), rgba(20, 83, 45, 0.95));
-  color: #dcfce7;
+  color: #ffffff;
   overflow: hidden;
   box-shadow: inset 0 0 7px rgba(187, 247, 208, 0.16);
   font-size: 0.72em;
   font-weight: 900;
   letter-spacing: 0.08em;
   line-height: 1.2;
-  text-shadow: 0 0 1px rgba(220, 252, 231, 0.35);
+  text-shadow: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
   vertical-align: middle;
