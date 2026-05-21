@@ -10602,6 +10602,8 @@ body[data-screen="spyGuess"] .friends-system {
 /* Daily Reward + XP Booster cinematic polish pass */
 .daily-main-copy small:empty { display: none; }
 .daily-claim-panel {
+  display: flex;
+  flex-direction: column;
   min-height: 240px;
   padding: 0;
   overflow: hidden;
@@ -10612,11 +10614,12 @@ body[data-screen="spyGuess"] .friends-system {
 }
 .daily-claim-button {
   display: grid;
+  flex: 1 1 auto;
   place-items: center;
   align-content: center;
   gap: 0;
-  min-height: 100%;
-  height: 100%;
+  min-height: 0;
+  height: auto;
   padding: clamp(24px, 4vw, 42px) 18px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.14);
