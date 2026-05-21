@@ -1023,6 +1023,23 @@ function getBackgroundAudioVolume() {
   return (state.siteVolume / 100) * getBackgroundMusicVolume();
 }
 
+function tryAutoplayBackgroundAfterDelay(delayMs = 1000) {
+  const media = getBackgroundMusicElement();
+  if (!media) return;
+
+  window.setTimeout(() => {
+    if (!shouldPlayBackgroundMusic()) return;
+    media.muted = true;
+    media.play()
+      .then(() => {
+        syncBackgroundAudio({ fadeTime: 0.8 });
+      })
+      .catch(() => {
+        // Browser still requires explicit user interaction for autoplay.
+      });
+  }, Math.max(0, Number(delayMs) || 0));
+}
+
 function cancelBackgroundFade() {
   if (!state.backgroundFadeFrame) return;
   window.cancelAnimationFrame(state.backgroundFadeFrame);
@@ -5537,6 +5554,7 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreGamePreferences();
   restoreSiteVolume();
   startBackgroundMusic({ fadeIn: true });
+  tryAutoplayBackgroundAfterDelay(1000);
   renderReactions();
   initChatScrollbarFeedback();
   initCustomSelects();
