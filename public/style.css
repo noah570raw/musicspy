@@ -1122,7 +1122,7 @@ body[data-screen="playRooms"] .app-shell {
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 999px;
   background: rgba(var(--accent-rgb), 0.22);
   color: #fff;
   font-weight: 800;
@@ -2446,7 +2446,7 @@ select:focus-visible {
 .profile-avatar {
   width: 3.4rem;
   height: 3.4rem;
-  border-radius: 1rem;
+  border-radius: 999px;
   font-weight: 800;
   font-size: 1.35rem;
 }
@@ -3036,7 +3036,7 @@ html[lang="ru"] .language-switcher span:first-child {
 .profile-avatar-large {
   width: 4.5rem;
   height: 4.5rem;
-  border-radius: 1.35rem;
+  border-radius: 999px;
   font-size: 1.8rem;
 }
 
@@ -6438,7 +6438,7 @@ body[data-screen="lobby"] .app-shell {
 .lobby-player-card .avatar {
   width: 58px;
   height: 58px;
-  border-radius: 20px;
+  border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.18);
   background: linear-gradient(135deg, rgba(var(--accent-rgb),0.72), rgba(var(--accent-rgb),0.34));
   box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.24);
