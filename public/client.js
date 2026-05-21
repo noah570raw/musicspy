@@ -4487,7 +4487,7 @@ function applyCosmeticsForLobbyPlayers() {
     if (!card) continue;
     CosmeticsRenderer.applyAll(player, {
       nickname: card.querySelector(".player-name"),
-      avatar: card.querySelector(".avatar img") || card.querySelector(".avatar"),
+      avatar: card.querySelector(".avatar"),
       lobbyCard: card
     });
   }
@@ -4804,6 +4804,7 @@ function renderChat(messages = state.chatMessages) {
         const message = list[index] || {};
         CosmeticsRenderer.applyAll({ equippedCosmetics: message.equippedCosmetics || {} }, {
           nickname: row.querySelector(".chat-player-name"),
+          avatar: row.querySelector(".avatar"),
           chatBubble: row
         });
       });
@@ -5537,7 +5538,7 @@ socket.on("player:cosmetics:update", ({ playerId, equippedCosmetics } = {}) => {
   const card = document.querySelector(`[data-player-id="${CSS.escape(String(playerId || ""))}"]`);
   if (!card || !window.CosmeticsRenderer) return;
   const nameEl = card.querySelector('[class*="name"], [class*="nick"]');
-  const avatarEl = card.querySelector("img, [class*='avatar']");
+  const avatarEl = card.querySelector(".avatar");
   CosmeticsRenderer.reset(nameEl);
   CosmeticsRenderer.reset(avatarEl);
   CosmeticsRenderer.reset(card);
