@@ -228,6 +228,14 @@
               </div>
               <div id="profileStatsGrid" class="profile-stats-grid"></div>
               <div id="profileCosmeticShowcase" class="profile-cosmetic-showcase"></div>
+              <div id="promoCodeCard" class="promo-code-card">
+                <strong>🎁 Промокод</strong>
+                <div class="promo-code-row">
+                  <input id="promoCodeInput" maxlength="120" placeholder="Введите промокод..." autocomplete="off" spellcheck="false">
+                  <button id="promoCodeButton" class="secondary" type="button" onclick="redeemPromoCode()">Активировать</button>
+                </div>
+                <p id="promoCodeStatus" class="status promo-code-status" aria-live="polite"></p>
+              </div>
               <div class="profile-editor-panel">
                 <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
                 <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
