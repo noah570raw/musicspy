@@ -10601,40 +10601,26 @@ body[data-screen="spyGuess"] .friends-system {
 
 /* Daily Reward + XP Booster cinematic polish pass */
 .daily-main-copy small:empty { display: none; }
-.daily-reward-stage {
-  grid-template-columns: 1fr;
-}
 .daily-claim-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  min-height: 240px;
   padding: 0;
   overflow: hidden;
-  border-color: rgba(56, 189, 248, 0.42);
-  border-width: 1px;
+  border-color: rgba(34, 211, 238, 0.32);
   background:
-    radial-gradient(circle at 76% 18%, rgba(255, 255, 255, 0.1), transparent 42%),
-    linear-gradient(160deg, rgba(28, 45, 128, 0.76), rgba(32, 44, 108, 0.44));
+    radial-gradient(circle at 50% 8%, rgba(34, 211, 238, 0.18), transparent 38%),
+    linear-gradient(145deg, rgba(15, 23, 42, 0.72), rgba(67, 56, 202, 0.18));
 }
 .daily-claim-button {
   display: grid;
-  flex: 1 1 auto;
   place-items: center;
   align-content: center;
   gap: 0;
-  min-height: 0;
-  height: auto;
-  padding: clamp(14px, 2.2vw, 24px) 14px;
-  border-radius: 24px;
-  border: 1px solid rgba(147, 197, 253, 0.35);
+  min-height: 100%;
+  height: 100%;
+  padding: clamp(24px, 4vw, 42px) 18px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   isolation: isolate;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.16),
-    0 0 0 1px rgba(59, 130, 246, 0.08),
-    0 12px 34px rgba(88, 28, 135, 0.36);
-}
-.daily-claim-panel .daily-claim-button {
-  min-height: clamp(94px, 11vw, 132px);
 }
 .daily-claim-button::before,
 .daily-claim-button::after {
@@ -10645,22 +10631,20 @@ body[data-screen="spyGuess"] .friends-system {
   pointer-events: none;
 }
 .daily-claim-button::before {
-  border: 1px solid rgba(224, 242, 254, 0.22);
-  box-shadow: inset 0 0 24px rgba(255,255,255,0.1), 0 0 20px rgba(34,211,238,0.18);
+  border: 1px solid rgba(224, 242, 254, 0.32);
+  box-shadow: inset 0 0 32px rgba(255,255,255,0.12), 0 0 34px rgba(34,211,238,0.26);
 }
 .daily-claim-button::after {
-  inset: 22px;
-  background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.14), transparent 64%);
+  inset: 26px;
+  background: radial-gradient(circle, rgba(255,255,255,0.16), transparent 62%);
   mix-blend-mode: screen;
 }
 .daily-claim-button span {
-  font-size: clamp(1.1rem, 2.3vw, 1.8rem);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-size: clamp(1.85rem, 4.5vw, 3.25rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
   text-align: center;
   text-transform: uppercase;
-  text-wrap: balance;
-  text-shadow: 0 0 14px rgba(255,255,255,0.36), 0 0 24px rgba(139,92,246,0.3);
 }
 .daily-claim-button small {
   position: relative;
