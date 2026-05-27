@@ -2813,9 +2813,10 @@ html[lang="ru"] .language-switcher span:first-child {
 .account-corner {
   width: auto;
   max-width: min(420px, calc(100vw - 36px));
-  display: grid;
-  gap: 10px;
-  padding: 10px 12px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--accent) 58%, rgba(95, 124, 196, 0.55));
   border-radius: 24px;
   background:
@@ -2827,9 +2828,11 @@ html[lang="ru"] .language-switcher span:first-child {
 
 .account-toggle {
   gap: 0.72rem;
-  width: 100%;
+  width: auto;
+  flex: 1 1 auto;
   max-width: 100%;
-  padding: 2px 0 6px;
+  min-width: 0;
+  padding: 2px 0;
   justify-content: flex-start;
   border: 0;
   border-radius: 0;
@@ -2862,14 +2865,31 @@ html[lang="ru"] .language-switcher span:first-child {
 .account-toggle-check { display: none; }
 .account-xp-bar {
   margin-top: 0;
-  padding: 8px 8px 0;
-  border-top: 1px solid rgba(112, 134, 198, 0.28);
+  padding: 0;
+  min-width: 150px;
+  width: clamp(150px, 36vw, 210px);
   border-radius: 0;
   background: transparent;
 }
 .xp-bar-track { position: relative; margin-top: 0; height: 12px; border-radius: 999px; overflow: hidden; background: rgba(15, 31, 74, 0.88); border: 1px solid rgba(86, 122, 212, 0.35); box-shadow: inset 0 0 18px rgba(4, 10, 26, 0.75); }
 .xp-bar-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4a72ff 0%, #3ecbff 50%, #27e47f 100%); box-shadow: 0 0 18px rgba(55, 191, 255, 0.5); }
 .account-xp-bar small { display: block; margin-top: 8px; color: #d3ddf5; font-size: 0.73rem; font-weight: 800; letter-spacing: 0.01em; }
+
+@media (max-width: 820px) {
+  .account-corner {
+    display: grid;
+    gap: 8px;
+  }
+
+  .account-toggle {
+    width: 100%;
+  }
+
+  .account-xp-bar {
+    width: 100%;
+    min-width: 0;
+  }
+}
 
 .account-toggle strong .player-name-text,
 .account-toggle strong .dev-name-glow {
@@ -7265,7 +7285,7 @@ body[data-role="spy"] {
   position: static;
   inset: auto;
   width: auto;
-  max-width: min(280px, calc(100vw - 36px));
+  max-width: min(430px, calc(100vw - 36px));
 }
 
 .volume-control .sound-toggle {
