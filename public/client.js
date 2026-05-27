@@ -102,7 +102,8 @@ const state = {
   xpBoosterHolding: false,
   xpBoosterHoldStart: 0,
   devConsoleOpen: false,
-  devConsoleLines: []
+  devConsoleLines: [],
+  promoRedeeming: false
 };
 
 function hasDevRole(entity) {
@@ -1805,6 +1806,41 @@ function setStatus(id, message = "", isError = false) {
   }
 }
 
+function normalizePromoInput(value = "") {
+  return String(value || "").trim().toUpperCase();
+}
+
+function refreshPromoCodeUi() {
+  const input = $("promoCodeInput");
+  const button = $("promoCodeButton");
+  if (!input || !button) return;
+  const normalized = normalizePromoInput(input.value);
+  if (input.value !== normalized) input.value = normalized;
+  button.disabled = state.promoRedeeming || !normalized || !state.profile || !socket.connected;
+}
+
+function redeemPromoCode() {
+  if (!state.profile || !socket.connected) return setStatus("promoCodeStatus", "Войди в аккаунт, чтобы активировать промокод", true);
+  const input = $("promoCodeInput");
+  if (!input) return;
+  const code = normalizePromoInput(input.value);
+  input.value = code;
+  if (!code) return setStatus("promoCodeStatus", "Промокод не найден", true);
+  state.promoRedeeming = true;
+  refreshPromoCodeUi();
+  socket.emit("promo:redeem", { code }, (res) => {
+    state.promoRedeeming = false;
+    if (res?.error) setStatus("promoCodeStatus", res.error, true);
+    else {
+      if (res.profile) applyProfile(res.profile);
+      else if (res.economy && state.profile) state.profile.economy = res.economy;
+      setStatus("promoCodeStatus", res.message || "Промокод активирован: +500 Vinyls");
+      input.value = "";
+    }
+    refreshPromoCodeUi();
+  });
+}
+
 function clearCinematicTimers() {
   if (state.cinematicTimer) {
     window.clearTimeout(state.cinematicTimer);
@@ -2368,6 +2404,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
   else requestSocialState();
+  refreshPromoCodeUi();
   restoreServerBackedSettings(user);
   attemptReconnectToGame();
   attemptAutoJoinFromInvite();
@@ -5560,6 +5597,15 @@ window.addEventListener("DOMContentLoaded", () => {
   initChatScrollbarFeedback();
   initCustomSelects();
   initFriendsSystem();
+  if ($("promoCodeInput")) {
+    $("promoCodeInput").addEventListener("input", refreshPromoCodeUi);
+    $("promoCodeInput").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      redeemPromoCode();
+    });
+    refreshPromoCodeUi();
+  }
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".custom-select") && !event.target.closest(".custom-select-menu")) closeCustomSelects();
     handleFriendsDocumentClick(event);
