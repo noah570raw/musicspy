@@ -1627,7 +1627,15 @@ app.get("/auth/google", (req, res, next) => startPassportOAuth("google", req, re
 app.get("/auth/google/callback", (req, res, next) => finishPassportOAuth("google", req, res, next));
 app.get("/auth/discord", (req, res, next) => startPassportOAuth("discord", req, res, next));
 app.get("/auth/discord/callback", (req, res, next) => finishPassportOAuth("discord", req, res, next));
-
+// Internal bot API — генерация кода комнаты
+app.post('/api/bot/create-room', (req, res) => {
+  const secret = req.headers['x-bot-secret'];
+  if (secret !== process.env.BOT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  res.json({ code, url: `https://musicspy.online/?room=${code}` });
+});
 function emitLobbyUpdate(code) {
   const lobby = lobbies[code];
   if (!lobby) return;
