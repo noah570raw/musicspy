@@ -102,7 +102,8 @@ const state = {
   xpBoosterHolding: false,
   xpBoosterHoldStart: 0,
   devConsoleOpen: false,
-  devConsoleLines: []
+  devConsoleLines: [],
+  promoRedeeming: false
 };
 
 function hasDevRole(entity) {
@@ -1023,6 +1024,23 @@ function getBackgroundAudioVolume() {
   return (state.siteVolume / 100) * getBackgroundMusicVolume();
 }
 
+function tryAutoplayBackgroundAfterDelay(delayMs = 1000) {
+  const media = getBackgroundMusicElement();
+  if (!media) return;
+
+  window.setTimeout(() => {
+    if (!shouldPlayBackgroundMusic()) return;
+    media.muted = true;
+    media.play()
+      .then(() => {
+        syncBackgroundAudio({ fadeTime: 0.8 });
+      })
+      .catch(() => {
+        // Browser still requires explicit user interaction for autoplay.
+      });
+  }, Math.max(0, Number(delayMs) || 0));
+}
+
 function cancelBackgroundFade() {
   if (!state.backgroundFadeFrame) return;
   window.cancelAnimationFrame(state.backgroundFadeFrame);
@@ -1788,6 +1806,41 @@ function setStatus(id, message = "", isError = false) {
   }
 }
 
+function normalizePromoInput(value = "") {
+  return String(value || "").trim().toUpperCase();
+}
+
+function refreshPromoCodeUi() {
+  const input = $("promoCodeInput");
+  const button = $("promoCodeButton");
+  if (!input || !button) return;
+  const normalized = normalizePromoInput(input.value);
+  if (input.value !== normalized) input.value = normalized;
+  button.disabled = state.promoRedeeming || !normalized || !state.profile || !socket.connected;
+}
+
+function redeemPromoCode() {
+  if (!state.profile || !socket.connected) return setStatus("promoCodeStatus", "Войди в аккаунт, чтобы активировать промокод", true);
+  const input = $("promoCodeInput");
+  if (!input) return;
+  const code = normalizePromoInput(input.value);
+  input.value = code;
+  if (!code) return setStatus("promoCodeStatus", "Промокод не найден", true);
+  state.promoRedeeming = true;
+  refreshPromoCodeUi();
+  socket.emit("promo:redeem", { code }, (res) => {
+    state.promoRedeeming = false;
+    if (res?.error) setStatus("promoCodeStatus", res.error, true);
+    else {
+      if (res.profile) applyProfile(res.profile);
+      else if (res.economy && state.profile) state.profile.economy = res.economy;
+      setStatus("promoCodeStatus", res.message || "Промокод активирован: +500 Vinyls");
+      input.value = "";
+    }
+    refreshPromoCodeUi();
+  });
+}
+
 function clearCinematicTimers() {
   if (state.cinematicTimer) {
     window.clearTimeout(state.cinematicTimer);
@@ -2351,6 +2404,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
   else requestSocialState();
+  refreshPromoCodeUi();
   restoreServerBackedSettings(user);
   attemptReconnectToGame();
   attemptAutoJoinFromInvite();
@@ -4470,7 +4524,7 @@ function applyCosmeticsForLobbyPlayers() {
     if (!card) continue;
     CosmeticsRenderer.applyAll(player, {
       nickname: card.querySelector(".player-name"),
-      avatar: card.querySelector(".avatar img") || card.querySelector(".avatar"),
+      avatar: card.querySelector(".avatar"),
       lobbyCard: card
     });
   }
@@ -4787,7 +4841,8 @@ function renderChat(messages = state.chatMessages) {
         const message = list[index] || {};
         CosmeticsRenderer.applyAll({ equippedCosmetics: message.equippedCosmetics || {} }, {
           nickname: row.querySelector(".chat-player-name"),
-          chatBubble: row.querySelector(".chat-bubble")
+          avatar: row.querySelector(".avatar"),
+          chatBubble: row
         });
       });
     }
@@ -5520,7 +5575,7 @@ socket.on("player:cosmetics:update", ({ playerId, equippedCosmetics } = {}) => {
   const card = document.querySelector(`[data-player-id="${CSS.escape(String(playerId || ""))}"]`);
   if (!card || !window.CosmeticsRenderer) return;
   const nameEl = card.querySelector('[class*="name"], [class*="nick"]');
-  const avatarEl = card.querySelector("img, [class*='avatar']");
+  const avatarEl = card.querySelector(".avatar");
   CosmeticsRenderer.reset(nameEl);
   CosmeticsRenderer.reset(avatarEl);
   CosmeticsRenderer.reset(card);
@@ -5537,10 +5592,20 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreGamePreferences();
   restoreSiteVolume();
   startBackgroundMusic({ fadeIn: true });
+  tryAutoplayBackgroundAfterDelay(1000);
   renderReactions();
   initChatScrollbarFeedback();
   initCustomSelects();
   initFriendsSystem();
+  if ($("promoCodeInput")) {
+    $("promoCodeInput").addEventListener("input", refreshPromoCodeUi);
+    $("promoCodeInput").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      redeemPromoCode();
+    });
+    refreshPromoCodeUi();
+  }
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".custom-select") && !event.target.closest(".custom-select-menu")) closeCustomSelects();
     handleFriendsDocumentClick(event);

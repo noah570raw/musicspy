@@ -541,7 +541,39 @@ function parseDevCommandInput(raw) {
   if (match) return { type: "giveShopItem", username: match[1], itemName: match[2] };
   match = input.match(/^-rainbow\s+@?([a-z0-9_-]{3,24})$/i);
   if (match) return { type: "rainbowNicknameColor", username: match[1] };
+  match = input.match(/^-create\s+promocode\s+"([^"]+)"\s+reward:([a-z]+):([a-z0-9_]+)\s+limit:(\d+)\s+enddate:(\d{2}\.\d{2}\.\d{2})$/i);
+  if (match) return { type: "createPromoCode", code: match[1], rewardType: match[2], rewardValue: match[3], limit: Number(match[4]), endDate: match[5] };
+  if (input.toLowerCase().startsWith("-create promocode")) return { error: "Missing required arguments" };
   return { error: "Неизвестная команда. Напиши -help." };
+}
+
+function parsePromoDate(value) {
+  const match = String(value || "").trim().match(/^(\d{2})\.(\d{2})\.(\d{2})$/);
+  if (!match) return null;
+  const [, dd, mm, yy] = match;
+  const date = new Date(Date.UTC(2000 + Number(yy), Number(mm) - 1, Number(dd), 23, 59, 59, 999));
+  if (date.getUTCDate() !== Number(dd) || date.getUTCMonth() !== Number(mm) - 1 || date.getUTCFullYear() !== 2000 + Number(yy)) return null;
+  return date.toISOString();
+}
+
+function grantPromoReward(user, promo) {
+  if (promo.reward_type === "vinyls") {
+    addVinylTransaction(user, Math.max(1, Number(promo.reward_value)), "promo_code", { code: promo.code });
+    return `+${Number(promo.reward_value)} Vinyls`;
+  }
+  if (promo.reward_type === "xp") {
+    const delta = Math.max(1, Number(promo.reward_value));
+    user.economy.xp = Math.max(0, user.economy.xp + delta);
+    user.economy.level = Math.max(1, Math.floor(user.economy.xp / 1000) + 1);
+    return `+${delta} XP`;
+  }
+  if (promo.reward_type === "item") {
+    const item = catalogItemById(String(promo.reward_value || ""));
+    if (!item) throw new Error("INVALID_PROMO_ITEM");
+    grantShopItemToUser(user, item);
+    return item.name;
+  }
+  throw new Error("INVALID_REWARD_TYPE");
 }
 
 function normalizeShopItemName(value) {
@@ -2736,8 +2768,33 @@ io.on("connection", (socket) => {
           "-list profile banners",
           "-list all shop items",
           "-rainbow @username"
+          ,"-create promocode \"WELCOME\" reward:vinyls:500 limit:100 enddate:25.06.26"
         ]
       });
+    }
+    if (parsed.type === "createPromoCode") {
+      const promoCode = String(parsed.code || "").trim().toUpperCase();
+      if (!promoCode) return cb({ error: "Missing required arguments" });
+      if (!["vinyls", "xp", "item"].includes(String(parsed.rewardType || "").toLowerCase())) return cb({ error: "Invalid reward format" });
+      const rewardType = String(parsed.rewardType).toLowerCase();
+      const rewardValue = String(parsed.rewardValue || "").trim();
+      if ((rewardType === "vinyls" || rewardType === "xp") && !/^\d+$/.test(rewardValue)) return cb({ error: "Invalid reward format" });
+      if (rewardType === "item" && !catalogItemById(rewardValue)) return cb({ error: "Invalid reward format" });
+      const expiresAt = parsePromoDate(parsed.endDate);
+      if (!expiresAt) return cb({ error: "Invalid date format" });
+      if (!parsed.limit || parsed.limit < 1) return cb({ error: "Missing required arguments" });
+      pool.query(
+        `INSERT INTO promo_codes (code, reward_type, reward_value, usage_limit, expires_at, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (code) DO NOTHING
+         RETURNING *`,
+        [promoCode, rewardType, rewardValue, Math.floor(parsed.limit), expiresAt, Number(actor.id)]
+      ).then(({ rows }) => {
+        if (!rows[0]) return cb({ error: "Promo code already exists" });
+        const row = rows[0];
+        cb({ success: true, output: ["✔ Promo created", "", `Code: ${row.code}`, `Reward: ${rewardType === "item" ? rewardValue : `+${rewardValue} ${rewardType === "xp" ? "XP" : "Vinyls"}`}`, `Limit: ${row.usage_limit}`, `Expires: ${parsed.endDate}`] });
+      }).catch(() => cb({ error: "Promo create failed" }));
+      return;
     }
     if (["listNicknameColors", "listAvatarFrames", "listProfileBanners", "listAllShopItems"].includes(parsed.type)) {
       const byCategory = {
@@ -2834,6 +2891,36 @@ io.on("connection", (socket) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть друзей" });
     cb({ success: true, ...getSocialState(user.id) });
+  });
+
+  socket.on("promo:redeem", async ({ code } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Войди в аккаунт, чтобы активировать промокод" });
+    const normalizedCode = String(code || "").trim().toUpperCase();
+    if (!normalizedCode) return cb({ error: "Промокод не найден" });
+    ensureUserProgress(user);
+    try {
+      const { rows } = await pool.query("SELECT * FROM promo_codes WHERE code = $1 LIMIT 1", [normalizedCode]);
+      const promo = rows[0];
+      if (!promo || !promo.active) return cb({ error: "Промокод не найден" });
+      const now = Date.now();
+      if (Date.parse(promo.expires_at) < now) return cb({ error: "Промокод истёк" });
+      if (Number(promo.used_count || 0) >= Number(promo.usage_limit || 0)) return cb({ error: "Лимит использований исчерпан" });
+      const already = await pool.query("SELECT id FROM promo_redemptions WHERE user_id = $1 AND promo_id = $2 LIMIT 1", [Number(user.id), Number(promo.id)]);
+      if (already.rows[0]) return cb({ error: "Промокод уже использован" });
+      const rewardLabel = grantPromoReward(user, promo);
+      await pool.query("BEGIN");
+      await pool.query("INSERT INTO promo_redemptions (user_id, promo_id) VALUES ($1, $2)", [Number(user.id), Number(promo.id)]);
+      await pool.query("UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1", [Number(promo.id)]);
+      await pool.query("COMMIT");
+      user.updatedAt = new Date().toISOString();
+      saveUsersStore();
+      io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
+      cb({ success: true, message: `Промокод активирован: ${rewardLabel}`, economy: publicEconomy(user), profile: profileForSocket(socket) });
+    } catch (error) {
+      await pool.query("ROLLBACK").catch(() => {});
+      cb({ error: error?.message === "INVALID_PROMO_ITEM" ? "Промокод не найден" : "Промокод не найден" });
+    }
   });
 
   socket.on("profile:view", async ({ accountId } = {}, cb = () => {}) => {

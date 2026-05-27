@@ -1122,7 +1122,7 @@ body[data-screen="playRooms"] .app-shell {
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 999px;
   background: rgba(var(--accent-rgb), 0.22);
   color: #fff;
   font-weight: 800;
@@ -2446,7 +2446,7 @@ select:focus-visible {
 .profile-avatar {
   width: 3.4rem;
   height: 3.4rem;
-  border-radius: 1rem;
+  border-radius: 999px;
   font-weight: 800;
   font-size: 1.35rem;
 }
@@ -3036,7 +3036,7 @@ html[lang="ru"] .language-switcher span:first-child {
 .profile-avatar-large {
   width: 4.5rem;
   height: 4.5rem;
-  border-radius: 1.35rem;
+  border-radius: 999px;
   font-size: 1.8rem;
 }
 
@@ -3080,6 +3080,20 @@ html[lang="ru"] .language-switcher span:first-child {
   grid-template-columns: 1fr auto;
   gap: 10px;
 }
+
+.promo-code-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(34, 211, 238, 0.26);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.72), rgba(30, 41, 59, 0.48));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 34px rgba(2, 6, 23, 0.24), 0 0 24px rgba(139, 92, 246, 0.14);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.promo-code-card:hover { transform: translateY(-2px); border-color: rgba(34, 211, 238, 0.48); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 18px 40px rgba(2, 6, 23, 0.34), 0 0 34px rgba(34, 211, 238, 0.2); }
+.promo-code-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.promo-code-status { min-height: 20px; margin: 0; }
 
 @media (max-width: 620px) {
   .profile-stats-grid {
@@ -6438,7 +6452,7 @@ body[data-screen="lobby"] .app-shell {
 .lobby-player-card .avatar {
   width: 58px;
   height: 58px;
-  border-radius: 20px;
+  border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.18);
   background: linear-gradient(135deg, rgba(var(--accent-rgb),0.72), rgba(var(--accent-rgb),0.34));
   box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.24);
@@ -9527,14 +9541,17 @@ body,
   border-radius: 999px;
   background:
     linear-gradient(110deg, rgba(5, 46, 22, 0.95), rgba(34, 197, 94, 0.34), rgba(20, 83, 45, 0.95));
-  color: #dcfce7;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
   overflow: hidden;
   box-shadow: inset 0 0 7px rgba(187, 247, 208, 0.16);
-  font-size: 0.68em;
-  font-weight: 950;
-  letter-spacing: 0.13em;
-  line-height: 1.25;
-  text-shadow: 0 0 5px rgba(220, 252, 231, 0.5);
+  font-size: 0.72em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
   vertical-align: middle;
   animation: devBadgePulse 1.9s ease-in-out infinite;
 }
