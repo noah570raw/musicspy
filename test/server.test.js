@@ -510,6 +510,20 @@ test("auth sessions persist refresh tokens and access lookup uses hashed tokens"
   assert.equal(refreshSession([user], tokens.refreshToken), null);
 });
 
+test("auth logout can revoke the current access token", () => {
+  const { createSession, findUserByToken, revokeSessionToken } = require("../lib/auth");
+  const user = { id: "u1", sessions: [] };
+  let saved = 0;
+  const tokens = createSession(user);
+
+  assert.equal(findUserByToken([user], tokens.accessToken), user);
+  assert.equal(revokeSessionToken(user, tokens.accessToken, { save: () => { saved += 1; } }), true);
+  assert.equal(saved, 1);
+  assert.equal(user.sessions.length, 0);
+  assert.equal(findUserByToken([user], tokens.accessToken), null);
+  assert.equal(findUserByToken([user], tokens.refreshToken), null);
+});
+
 test("getSkipVoteState excludes track owner and disconnected listeners", () => {
   const { getSkipVoteState, shouldCompleteSkip } = require("../server");
   const lobby = {
