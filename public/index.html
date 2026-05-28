@@ -1151,16 +1151,22 @@
       </div>
     </section>
 
-    <section id="results" class="screen card hidden">
+    <section id="results" class="screen card hidden results-overview">
       <div class="results-hero">
-        <p class="eyebrow">результаты</p>
+        <div class="result-orb" aria-hidden="true"><span>MS</span></div>
+        <p class="eyebrow">финальный отчёт</p>
         <h2 id="resultTitle">Игра окончена</h2>
         <p id="resultText" class="lead small"></p>
-        <div class="share-actions">
-          <button id="showResultBtn" class="primary" type="button" onclick="showResultShotModal()">Показать итог игры</button>
-          <button id="showTrackHistoryBtn" class="secondary" type="button" onclick="showTrackHistoryModal()">Показать историю треков</button>
+        <div class="result-meta-strip" aria-label="Ключевые итоги">
+          <span id="resultWinnerBadge">—</span>
+          <span id="resultSpyBadge">—</span>
+          <span id="resultThemeBadge">—</span>
         </div>
-        <button id="restartBtn" class="primary hidden" onclick="restartLobby()">Вернуться в лобби</button>
+        <div class="share-actions">
+          <button id="showResultBtn" class="primary" type="button" onclick="showResultShotModal()">Открыть постер</button>
+          <button id="showTrackHistoryBtn" class="secondary" type="button" onclick="showTrackHistoryModal()">История треков</button>
+          <button id="restartBtn" class="secondary host-return hidden" type="button" onclick="restartLobby()">Выйти в лобби</button>
+        </div>
       </div>
       <div class="results-main">
         <canvas id="shareCanvas" width="1200" height="1600" class="hidden" aria-hidden="true"></canvas>
@@ -1169,6 +1175,20 @@
         <div id="resultBreakdown" class="result-breakdown"></div>
       </div>
       <aside class="results-side" aria-label="Послеигровой разбор">
+        <div class="result-score-panel result-vote-details-panel">
+          <div class="panel-title">
+            <strong>Кто за кого голосовал</strong>
+            <span>финальный разбор</span>
+          </div>
+          <div id="resultVoteDetails" class="vote-list"></div>
+        </div>
+        <div class="result-score-panel result-vote-total-panel">
+          <div class="panel-title">
+            <strong>Итоги голосования</strong>
+            <span>сводка по игрокам</span>
+          </div>
+          <div id="resultVotes" class="vote-list"></div>
+        </div>
         <div class="postgame-panel final-comment-panel">
           <div class="panel-title">
             <strong>Послеигровой комментарий</strong>
@@ -1179,20 +1199,6 @@
             <button class="secondary" type="button" onclick="sendFinalComment()">Добавить</button>
           </div>
           <div id="finalComments" class="final-comments empty">Комментариев пока нет</div>
-        </div>
-        <div class="track-history-panel result-history result-vote-details-panel">
-          <div class="panel-title">
-            <strong>Кто за кого голосовал</strong>
-            <span>финальный разбор</span>
-          </div>
-          <div id="resultVoteDetails" class="vote-list"></div>
-        </div>
-        <div class="result-score-panel">
-          <div class="panel-title">
-            <strong>Итоги голосования</strong>
-            <span>сводка по игрокам</span>
-          </div>
-          <div id="resultVotes" class="vote-list"></div>
         </div>
       </aside>
     </section>

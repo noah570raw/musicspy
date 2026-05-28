@@ -5659,6 +5659,8 @@ async function shareResultCard() {
 
 function renderResults(data) {
   state.latestResult = data;
+  if (Array.isArray(data.players) && data.players.length) state.players = data.players;
+  state.hostId = data.host || state.hostId || state.lobby?.host || "";
   state.finalComments = data.finalComments || [];
   renderSharePreview(data);
   renderFinalComments(state.finalComments);
@@ -5667,12 +5669,19 @@ function renderResults(data) {
   const guessText = data.spyGuess?.skipped
     ? t("шпион не называл тему")
     : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(translateTheme(data.spyGuess?.text || "—"))}»`;
-  $("resultTitle").textContent = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
+  const winnerLabel = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
+  $("resultTitle").textContent = winnerLabel;
   const reward = myMatchReward(data);
   const expReward = myExpReward(data);
   const rewardText = reward ? ` · +${reward.total} Vinyls` : "";
   const expText = expReward ? ` · +${Number(expReward.total || 0).toLocaleString("ru-RU")} EXP` : "";
   $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`) + rewardText + expText;
+  const winnerBadge = $("resultWinnerBadge");
+  if (winnerBadge) winnerBadge.textContent = winnerLabel;
+  const spyBadge = $("resultSpyBadge");
+  if (spyBadge) spyBadge.textContent = `${t("Шпион")}: ${spyNames || t("неизвестно")}`;
+  const themeBadge = $("resultThemeBadge");
+  if (themeBadge) themeBadge.textContent = `${t("Тема")}: ${translateTheme(data.theme || "—")}`;
   if (state.profile && expReward?.accountId === state.profile.id) {
     state.profile = {
       ...state.profile,
@@ -5690,15 +5699,17 @@ function renderResults(data) {
   renderEconomyRewardSummary(reward);
   renderVoteDetails(data.breakdown?.voteDetails || []);
 
-  $("resultVotes").innerHTML = state.players.map((player) => `
-    <div class="vote-row static">
+  const resultPlayers = state.players?.length ? state.players : (data.players || []);
+  $("resultVotes").innerHTML = resultPlayers.length ? resultPlayers.map((player) => `
+    <div class="vote-row static ${data.spies?.includes(player.id) ? "hit-spy" : ""}">
       <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })}</span>
-      <strong>${data.votes[player.id] || 0}</strong>
+      <strong>${data.votes?.[player.id] || 0}</strong>
     </div>
-  `).join("");
+  `).join("") : `<div class="vote-row static"><span>${t("Игроки не найдены")}</span><strong>—</strong></div>`;
   state.trackHistory = data.trackHistory || state.trackHistory;
   renderTrackHistory("resultTrackHistory", state.trackHistory);
-  $("restartBtn").classList.toggle("hidden", state.lobby?.host !== socket.id);
+  const isHost = (data.host || state.hostId || state.lobby?.host) === socket.id;
+  $("restartBtn").classList.toggle("hidden", !isHost);
 }
 
 function renderEconomyRewardSummary(reward) {
