@@ -11746,3 +11746,259 @@ button.terminal-secondary:hover:not(:disabled) {
     width: 88px;
   }
 }
+
+/* Premium settings arenas for core menu tabs */
+.site-menu-card .premium-settings-panel.active {
+  position: relative;
+  isolation: isolate;
+  align-content: start;
+  padding: clamp(12px, 1.8vw, 18px);
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(var(--accent-rgb), 0.28), transparent 32%),
+    radial-gradient(circle at 88% 2%, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent 34%),
+    linear-gradient(135deg, rgba(var(--surface-rgb), 0.86), color-mix(in srgb, var(--bg) 72%, transparent));
+  box-shadow:
+    0 24px 74px rgba(2, 6, 23, 0.44),
+    0 0 44px var(--theme-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -26px 58px rgba(2, 6, 23, 0.28);
+}
+
+.site-menu-card .premium-settings-panel.active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, var(--accent), rgba(255,255,255,0.18), var(--accent-2), var(--accent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.settings-panel-ambient,
+.settings-panel-particles {
+  position: absolute;
+  pointer-events: none;
+}
+
+.settings-panel-ambient {
+  z-index: -1;
+  width: clamp(130px, 20vw, 230px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter: blur(24px);
+  opacity: 0.58;
+  mix-blend-mode: screen;
+  animation: xpFloat 10s ease-in-out infinite;
+}
+
+.settings-panel-ambient-a {
+  top: -82px;
+  right: 8%;
+  background: rgba(var(--accent-rgb), 0.48);
+}
+
+.settings-panel-ambient-b {
+  left: -94px;
+  bottom: 8%;
+  background: color-mix(in srgb, var(--accent-2) 42%, transparent);
+  animation-direction: reverse;
+  animation-duration: 12s;
+}
+
+.settings-panel-particles {
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.settings-panel-particles i {
+  position: absolute;
+  width: var(--size, 5px);
+  height: var(--size, 5px);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 78%, white);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.88), 0 0 28px color-mix(in srgb, var(--accent-2) 62%, transparent);
+  opacity: 0.58;
+  left: calc(12% + (var(--i, 1) * 13%));
+  top: calc(18% + (var(--i, 1) * 9%));
+  animation: promoParticleDrift 7s ease-in-out infinite;
+  animation-delay: calc(var(--i, 1) * -0.6s);
+}
+
+.settings-panel-particles i:nth-child(1) { --i: 1; --size: 4px; }
+.settings-panel-particles i:nth-child(2) { --i: 2; --size: 7px; }
+.settings-panel-particles i:nth-child(3) { --i: 3; --size: 5px; }
+.settings-panel-particles i:nth-child(4) { --i: 4; --size: 6px; }
+.settings-panel-particles i:nth-child(5) { --i: 5; --size: 4px; }
+.settings-panel-particles i:nth-child(6) { --i: 6; --size: 8px; }
+
+.settings-panel-hero,
+.settings-module-card,
+.premium-settings-panel .about-site-card,
+.premium-settings-panel .about-site-grid article,
+.premium-settings-panel .auth-choice-grid,
+.premium-settings-panel .auth-form-view,
+.premium-settings-panel .account-profile-view {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-panel-hero {
+  display: grid;
+  gap: 7px;
+  padding: clamp(16px, 2vw, 22px);
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.32);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035)),
+    radial-gradient(circle at 90% 20%, color-mix(in srgb, var(--accent-2) 24%, transparent), transparent 36%),
+    rgba(var(--surface-rgb), 0.42);
+  box-shadow: 0 18px 54px rgba(2, 6, 23, 0.34), 0 0 28px var(--theme-glow), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.settings-panel-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -58% 44%;
+  height: 150%;
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.18), transparent 64%);
+  transform: rotate(10deg);
+  animation: shopShine 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.settings-panel-kicker {
+  color: color-mix(in srgb, var(--accent) 82%, white);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.settings-panel-hero h3 {
+  margin: 0;
+  font-size: clamp(1.65rem, 3.4vw, 2.55rem);
+  letter-spacing: -0.055em;
+}
+
+.settings-panel-hero p {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--theme-text-soft);
+  line-height: 1.55;
+}
+
+.settings-module-card,
+.premium-settings-panel .about-site-card,
+.premium-settings-panel .about-site-grid article {
+  border-color: rgba(var(--accent-rgb), 0.26);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(var(--accent-rgb), 0.2), transparent 42%),
+    linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03)),
+    rgba(var(--surface-rgb), 0.48);
+  box-shadow: 0 18px 50px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.settings-module-card:hover,
+.premium-settings-panel .about-site-grid article:hover {
+  transform: translateY(-2px);
+  border-color: rgba(var(--accent-rgb), 0.48);
+  box-shadow: 0 24px 70px var(--theme-glow), inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.profile-settings-arena .auth-choice-grid,
+.profile-settings-arena .auth-form-view {
+  padding: clamp(14px, 1.8vw, 18px);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--accent-rgb), 0.22), transparent 48%),
+    rgba(var(--surface-rgb), 0.46);
+  box-shadow: 0 18px 54px rgba(2, 6, 23, 0.34), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.profile-settings-arena .oauth-button,
+.profile-settings-arena .ghost-button,
+.profile-settings-arena .profile-editor-panel .secondary,
+.profile-settings-arena .profile-editor-panel .ghost-button {
+  box-shadow: 0 16px 44px rgba(var(--accent-rgb), 0.22), inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.profile-settings-arena .profile-hero,
+.profile-settings-arena .profile-stat-card,
+.profile-settings-arena .profile-editor {
+  border-color: rgba(var(--accent-rgb), 0.28);
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.32), 0 0 28px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(255,255,255,0.13);
+}
+
+.game-settings-arena .effects-density-grid {
+  gap: 14px;
+}
+
+.game-settings-arena .effects-density-option {
+  min-height: 132px;
+  border-color: rgba(var(--accent-rgb), 0.28);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(var(--accent-rgb), 0.26), transparent 48%),
+    linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035)),
+    rgba(var(--surface-rgb), 0.5);
+  box-shadow: 0 16px 44px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.game-settings-arena .effects-density-option.selected,
+.game-settings-arena .effects-density-option:hover,
+.game-settings-arena .effects-density-option:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(var(--accent-rgb), 0.68);
+  box-shadow: 0 24px 64px var(--theme-glow), inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.appearance-settings-arena .choice-pill,
+.appearance-settings-arena .accent-swatch {
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.24), 0 0 22px rgba(var(--accent-rgb), 0.1);
+}
+
+.about-settings-arena .about-site-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.about-settings-arena .about-site-icon {
+  background:
+    radial-gradient(circle at 35% 24%, #fff, color-mix(in srgb, var(--accent) 60%, white) 42%, var(--accent-2));
+  box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.54), inset 0 1px 0 rgba(255,255,255,0.42);
+}
+
+.about-settings-arena .about-site-grid article strong {
+  color: color-mix(in srgb, var(--accent) 82%, white);
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .site-menu-card .premium-settings-panel.active {
+    padding: 10px;
+  }
+
+  .settings-panel-hero {
+    padding: 15px;
+  }
+
+  .about-settings-arena .about-site-card,
+  .about-site-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.site-menu-card #settingsPanelProfile.premium-settings-panel.active {
+  overflow: hidden auto;
+}
