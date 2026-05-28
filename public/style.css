@@ -13725,3 +13725,295 @@ body[data-screen="results"] .vote-row.hit-spy {
     grid-template-columns: 1fr;
   }
 }
+
+/* Requested final pass: taller track player, in-game style vote timer, and rebuilt results window. */
+@media (min-width: 921px) {
+  body[data-screen="game"] .player-card {
+    grid-template-rows: auto minmax(286px, clamp(286px, 40.3vh, 442px)) auto auto minmax(0, auto);
+    align-content: start;
+    overflow: auto;
+  }
+
+  body[data-screen="game"] .player-stage {
+    min-height: clamp(286px, 40.3vh, 442px);
+    max-height: clamp(286px, 40.3vh, 442px);
+  }
+}
+
+@media (min-width: 921px) and (max-height: 820px) {
+  body[data-screen="game"] .player-card {
+    grid-template-rows: auto minmax(260px, clamp(260px, 35.1vh, 377px)) auto auto minmax(0, auto);
+  }
+
+  body[data-screen="game"] .player-stage {
+    min-height: clamp(260px, 35.1vh, 377px);
+    max-height: clamp(260px, 35.1vh, 377px);
+  }
+}
+
+body[data-screen="voting"] .vote-timer-orbit {
+  grid-template-columns: minmax(76px, max-content) auto;
+  justify-items: end;
+}
+
+body[data-screen="voting"] .vote-countdown.timer-ring {
+  width: clamp(104px, 11vw, 128px);
+  height: clamp(104px, 11vw, 128px);
+  margin: 0;
+  filter: drop-shadow(0 0 22px rgba(var(--accent-rgb), 0.28));
+}
+
+body[data-screen="voting"] .vote-countdown.timer-ring.hidden {
+  display: none;
+}
+
+body[data-screen="voting"] .vote-countdown .track {
+  stroke: rgba(255,255,255,0.1);
+}
+
+body[data-screen="voting"] .vote-countdown .progress {
+  stroke: color-mix(in srgb, var(--accent-2) 82%, white);
+}
+
+body[data-screen="voting"] .vote-countdown .progress.danger {
+  stroke: var(--danger);
+}
+
+body[data-screen="voting"] .vote-countdown strong {
+  font-size: clamp(2rem, 4vh, 2.55rem);
+}
+
+body[data-screen="voting"] .vote-countdown span {
+  color: rgba(248, 246, 255, 0.72);
+}
+
+body[data-screen="results"] .app-shell {
+  width: min(1440px, calc(100% - 36px));
+  padding: clamp(14px, 2vh, 28px) 0;
+}
+
+body[data-screen="results"] #results.results-overview {
+  --result-radius: 30px;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.74fr) minmax(520px, 1.45fr) minmax(320px, 0.86fr);
+  gap: clamp(16px, 1.7vw, 26px);
+  min-height: min(78dvh, 780px);
+  max-height: min(90dvh, 860px);
+  padding: clamp(18px, 1.9vw, 30px);
+  overflow: auto;
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 8% 9%, rgba(var(--accent-rgb), 0.34), transparent 26rem),
+    radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent 34rem),
+    linear-gradient(115deg, rgba(255,255,255,0.13), rgba(255,255,255,0.026) 42%, rgba(0,0,0,0.42)),
+    rgba(3, 5, 12, 0.97);
+  box-shadow: 0 44px 140px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+body[data-screen="results"] #results.results-overview::before {
+  opacity: 0.72;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, transparent, rgba(0,0,0,0.34));
+  background-size: 46px 46px, 46px 46px, auto;
+}
+
+body[data-screen="results"] #results.results-overview::after {
+  inset: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 30px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.22), transparent) top / 100% 1px no-repeat;
+}
+
+body[data-screen="results"] .results-hero {
+  position: relative;
+  top: auto;
+  align-content: space-between;
+  min-height: 100%;
+  padding: clamp(22px, 2.3vw, 34px);
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: var(--result-radius);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(var(--accent-rgb), 0.42), transparent 16rem),
+    linear-gradient(165deg, rgba(255,255,255,0.16), rgba(255,255,255,0.036) 66%),
+    rgba(9, 12, 24, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 24px 70px rgba(0,0,0,0.38);
+}
+
+body[data-screen="results"] .results-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+body[data-screen="results"] .results-kicker span {
+  color: rgba(248,246,255,0.58);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+body[data-screen="results"] .result-orb {
+  width: clamp(86px, 8.6vw, 124px);
+  box-shadow: 0 0 54px rgba(var(--accent-rgb), 0.34), inset 0 0 36px rgba(0,0,0,0.42);
+}
+
+body[data-screen="results"] #resultTitle {
+  max-width: 8.5ch;
+  margin: clamp(16px, 4vh, 42px) 0 0;
+  font-size: clamp(3.35rem, 5.7vw, 7.3rem);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+  background: linear-gradient(115deg, #fff 8%, color-mix(in srgb, var(--accent-2) 64%, #fff), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+body[data-screen="results"] #resultText {
+  max-width: 34rem;
+  margin: 10px 0 0;
+  color: rgba(248,246,255,0.76);
+  font-size: 0.98rem;
+}
+
+body[data-screen="results"] .result-meta-strip {
+  margin-top: clamp(14px, 2vh, 24px);
+}
+
+body[data-screen="results"] .result-meta-strip span {
+  padding: 12px 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.072), rgba(255,255,255,0.032));
+}
+
+body[data-screen="results"] .results-verdict-board {
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  padding: clamp(18px, 2vw, 28px);
+  border: 1px solid rgba(var(--accent-rgb), 0.32);
+  border-radius: var(--result-radius);
+  background:
+    radial-gradient(circle at 88% 18%, rgba(var(--accent-rgb), 0.34), transparent 18rem),
+    radial-gradient(circle at 12% 92%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 20rem),
+    linear-gradient(145deg, rgba(255,255,255,0.11), rgba(255,255,255,0.026)),
+    rgba(8, 12, 22, 0.76);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 64px rgba(0,0,0,0.32);
+}
+
+body[data-screen="results"] .verdict-pulse {
+  position: absolute;
+  right: -58px;
+  bottom: -70px;
+  width: 230px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  background: conic-gradient(from 200deg, var(--accent), color-mix(in srgb, var(--accent-2) 80%, white), transparent 64%);
+  opacity: 0.42;
+  filter: blur(0.2px);
+}
+
+body[data-screen="results"] .share-card-mini {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body[data-screen="results"] .share-card-mini::after {
+  content: none;
+}
+
+body[data-screen="results"] .share-card-mini span,
+body[data-screen="results"] .share-card-mini small,
+body[data-screen="results"] .share-card-mini em {
+  color: rgba(248,246,255,0.7);
+}
+
+body[data-screen="results"] .share-card-mini strong {
+  display: block;
+  margin: 12px 0;
+  font-size: clamp(2.15rem, 4vw, 4.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+}
+
+body[data-screen="results"] .results-main,
+body[data-screen="results"] .results-side {
+  gap: clamp(12px, 1.4vw, 18px);
+}
+
+body[data-screen="results"] .result-breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body[data-screen="results"] .breakdown-card,
+body[data-screen="results"] .result-score-panel,
+body[data-screen="results"] .postgame-panel,
+body[data-screen="results"] .economy-result-card {
+  border: 1px solid rgba(255,255,255,0.105);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--accent-rgb), 0.13), transparent 13rem),
+    linear-gradient(145deg, rgba(255,255,255,0.085), rgba(255,255,255,0.022)),
+    rgba(9, 12, 21, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 16px 48px rgba(0,0,0,0.26);
+}
+
+body[data-screen="results"] .breakdown-card {
+  min-height: 142px;
+  padding: 18px;
+}
+
+body[data-screen="results"] .breakdown-card:first-child {
+  grid-column: 1 / -1;
+  min-height: 156px;
+  border-color: rgba(var(--accent-rgb), 0.42);
+}
+
+body[data-screen="results"] .breakdown-card strong {
+  font-size: clamp(1.15rem, 1.6vw, 1.55rem);
+  line-height: 1.05;
+}
+
+body[data-screen="results"] .results-side {
+  align-content: stretch;
+}
+
+body[data-screen="results"] .results-side .result-score-panel,
+body[data-screen="results"] .results-side .postgame-panel {
+  padding: 18px;
+}
+
+@media (max-width: 1180px) {
+  body[data-screen="results"] #results.results-overview {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  body[data-screen="results"] .results-hero {
+    min-height: auto;
+  }
+
+  body[data-screen="results"] #resultTitle {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  body[data-screen="voting"] .vote-timer-orbit {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  body[data-screen="results"] #results.results-overview,
+  body[data-screen="results"] .result-breakdown {
+    grid-template-columns: 1fr;
+  }
+}

@@ -30,6 +30,7 @@ const state = {
   voteCandidates: [],
   voteCounts: {},
   anonymousVoting: false,
+  voteTimerTotal: 0,
   spyGuessActive: false,
   pendingSpyGuess: null,
   reactionCounts: {},
@@ -5267,11 +5268,25 @@ function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_
   renderSkipVote();
 }
 
-function updateVoteTimer(timeLeft) {
+function updateVoteTimer(timeLeft, total = state.voteTimerTotal) {
   const el = $("voteTimer");
+  const ring = $("voteTimerRing");
+  const circle = $("voteTimerCircle");
   if (!el) return;
-  el.classList.toggle("hidden", timeLeft === null || timeLeft === undefined);
-  el.textContent = timeLeft;
+  const waiting = timeLeft === null || timeLeft === undefined;
+  if (!waiting && (!state.voteTimerTotal || Number(total) > state.voteTimerTotal)) {
+    state.voteTimerTotal = Number(total) || Number(timeLeft) || 0;
+  }
+  ring?.classList.toggle("hidden", waiting);
+  el.textContent = waiting ? "∞" : timeLeft;
+  if (circle) {
+    const circumference = 2 * Math.PI * 54;
+    const maxTime = Math.max(1, Number(state.voteTimerTotal || total || timeLeft || 1));
+    circle.style.strokeDasharray = circumference;
+    circle.style.strokeDashoffset = waiting ? circumference : circumference * (1 - Math.max(0, Number(timeLeft) || 0) / maxTime);
+    circle.classList.toggle("danger", !waiting && timeLeft <= 10);
+  }
+  ring?.classList.toggle("timer-critical", !waiting && timeLeft <= 5);
 }
 
 function muteTrackFrame(frame) {
@@ -6008,7 +6023,8 @@ socket.on("votingStarted", ({ players, votes, anonymous, voteRound, candidates, 
   showScreen("voting");
   renderVoteList(votes);
   renderTrackHistory("voteTrackHistory", state.trackHistory);
-  updateVoteTimer(votingTime > 0 ? votingTime : null);
+  state.voteTimerTotal = votingTime > 0 ? votingTime : 0;
+  updateVoteTimer(votingTime > 0 ? votingTime : null, votingTime);
   $("voteDescription").textContent = voteRound > 1
     ? t("Ничья! Голосуем во втором туре только между кандидатами.")
     : anonymous
