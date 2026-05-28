@@ -1426,6 +1426,55 @@ function buildFinalBreakdown(lobby, suspected = [], finalVotes = {}) {
   };
 }
 
+function remapVoteTotals(votes = {}, replace) {
+  const nextVotes = {};
+  for (const [playerId, count] of Object.entries(votes || {})) {
+    nextVotes[replace(playerId)] = count;
+  }
+  return nextVotes;
+}
+
+function remapVoteChoices(votes = {}, replace) {
+  const nextVotes = {};
+  for (const [voter, target] of Object.entries(votes || {})) {
+    nextVotes[replace(voter)] = replace(target);
+  }
+  return nextVotes;
+}
+
+function remapFinalResultPlayerId(finalResult, oldId, newId) {
+  if (!finalResult || oldId === newId) return finalResult;
+  const replace = (value) => value === oldId ? newId : value;
+
+  finalResult.host = replace(finalResult.host);
+  finalResult.spy = replace(finalResult.spy);
+  finalResult.spies = (finalResult.spies || []).map(replace);
+  finalResult.suspected = (finalResult.suspected || []).map(replace);
+  finalResult.votes = remapVoteTotals(finalResult.votes || {}, replace);
+  finalResult.players = (finalResult.players || []).map((player) => (player?.id === oldId ? { ...player, id: newId } : player));
+  finalResult.trackHistory = (finalResult.trackHistory || []).map((track) => (track?.playerId === oldId ? { ...track, playerId: newId } : track));
+  finalResult.finalComments = (finalResult.finalComments || []).map((comment) => (comment?.playerId === oldId ? { ...comment, playerId: newId } : comment));
+
+  if (finalResult.spyGuess?.playerId === oldId) finalResult.spyGuess = { ...finalResult.spyGuess, playerId: newId };
+  if (finalResult.breakdown?.voteDetails) {
+    finalResult.breakdown = {
+      ...finalResult.breakdown,
+      voteDetails: finalResult.breakdown.voteDetails.map((detail) => ({
+        ...detail,
+        voterId: replace(detail.voterId),
+        targetId: replace(detail.targetId)
+      }))
+    };
+  }
+  if (Array.isArray(finalResult.economyRewards)) {
+    finalResult.economyRewards = finalResult.economyRewards.map((reward) => (reward?.playerId === oldId ? { ...reward, playerId: newId } : reward));
+  }
+  if (Array.isArray(finalResult.expRewards)) {
+    finalResult.expRewards = finalResult.expRewards.map((reward) => (reward?.playerId === oldId ? { ...reward, playerId: newId } : reward));
+  }
+  return finalResult;
+}
+
 function replacePlayerId(lobby, oldId, newId) {
   const replace = (value) => value === oldId ? newId : value;
   lobby.host = replace(lobby.host);
@@ -1437,11 +1486,8 @@ function replacePlayerId(lobby, oldId, newId) {
   lobby.suspected = (lobby.suspected || []).map(replace);
   lobby.spyGuessTargetId = replace(lobby.spyGuessTargetId);
 
-  const nextVotes = {};
-  for (const [voter, target] of Object.entries(lobby.votes || {})) {
-    nextVotes[replace(voter)] = replace(target);
-  }
-  lobby.votes = nextVotes;
+  lobby.votes = remapVoteChoices(lobby.votes || {}, replace);
+  if (lobby.finalVotes) lobby.finalVotes = remapVoteTotals(lobby.finalVotes, replace);
 
   const nextReactions = {};
   for (const [playerId, reaction] of Object.entries(lobby.currentTrackReactions || {})) {
@@ -1459,8 +1505,12 @@ function replacePlayerId(lobby, oldId, newId) {
   for (const track of lobby.trackHistory || []) {
     if (track.playerId === oldId) track.playerId = newId;
   }
+  for (const comment of lobby.finalComments || []) {
+    if (comment.playerId === oldId) comment.playerId = newId;
+  }
   if (lobby.pendingSpyGuess?.playerId === oldId) lobby.pendingSpyGuess.playerId = newId;
   if (lobby.spyGuess?.playerId === oldId) lobby.spyGuess.playerId = newId;
+  remapFinalResultPlayerId(lobby.finalResult, oldId, newId);
 }
 
 function clearPlayerReconnectTimer(player) {
@@ -1515,7 +1565,8 @@ function sendPrivateGameStart(lobby, socket) {
 
 function reconnectPlayerToGame(socket, { code, reconnectToken } = {}) {
   const lobby = lobbies[normalizeCode(code)];
-  if (!lobby || !hasActiveGameSession(lobby)) return { error: "Активная игра не найдена" };
+  const canRestoreEndedResult = lobby?.phase === "ended" && lobby.finalResult;
+  if (!lobby || (!hasActiveGameSession(lobby) && !canRestoreEndedResult)) return { error: "Активная игра не найдена" };
   const normalizedToken = normalizeReconnectToken(reconnectToken);
   const player = lobby.players.find((item) => item.reconnectToken === normalizedToken);
   if (!player) return { error: "Не удалось восстановить игрока" };
@@ -3670,6 +3721,7 @@ module.exports = {
   GAME_MODES,
   THEMES,
   buildFinalBreakdown,
+  remapFinalResultPlayerId,
   buildThemeGuessOptions,
   normalizeGuess,
   normalizeSettings,

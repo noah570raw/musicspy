@@ -5701,27 +5701,53 @@ function buildFallbackBreakdown(data, players) {
   };
 }
 
+function previousFinalResultFor(raw = {}) {
+  if (!state.latestResult) return null;
+  const rawCode = raw.code || state.currentCode || "";
+  const previousCode = state.latestResult.code || "";
+  return !rawCode || !previousCode || rawCode === previousCode ? state.latestResult : null;
+}
+
+function firstNonEmptyArray(...values) {
+  return values.find((value) => Array.isArray(value) && value.length) || [];
+}
+
+function firstObject(...values) {
+  return values.find((value) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length) || {};
+}
+
 function normalizeFinalResult(raw = {}) {
-  const players = Array.isArray(raw.players) && raw.players.length ? raw.players : (state.players || []);
+  const previous = previousFinalResultFor(raw);
+  const players = firstNonEmptyArray(raw.players, previous?.players, state.players);
+  const spies = Array.isArray(raw.spies)
+    ? raw.spies
+    : (raw.spy ? [raw.spy] : firstNonEmptyArray(previous?.spies, state.spyIds));
+  const suspected = Array.isArray(raw.suspected) ? raw.suspected : (previous?.suspected || []);
   const normalized = {
+    ...previous,
     ...raw,
-    code: raw.code || state.currentCode,
-    host: raw.host || state.hostId || state.lobby?.host || "",
+    code: raw.code || previous?.code || state.currentCode,
+    host: raw.host || previous?.host || state.hostId || state.lobby?.host || "",
     players,
-    spies: Array.isArray(raw.spies) ? raw.spies : (raw.spy ? [raw.spy] : state.spyIds || []),
-    suspected: Array.isArray(raw.suspected) ? raw.suspected : [],
-    votes: raw.votes || state.voteCounts || {},
-    theme: raw.theme || state.theme || "—",
-    trackHistory: Array.isArray(raw.trackHistory) ? raw.trackHistory : (state.trackHistory || []),
-    finalComments: Array.isArray(raw.finalComments) ? raw.finalComments : (state.finalComments || []),
-    spyGuess: raw.spyGuess || state.pendingSpyGuess || { skipped: true, correct: false },
-    civiliansWin: Boolean(raw.civiliansWin)
+    spies,
+    suspected,
+    votes: firstObject(raw.votes, previous?.votes, state.voteCounts),
+    theme: raw.theme || previous?.theme || state.theme || "—",
+    trackHistory: Array.isArray(raw.trackHistory) ? raw.trackHistory : firstNonEmptyArray(previous?.trackHistory, state.trackHistory),
+    finalComments: Array.isArray(raw.finalComments) ? raw.finalComments : firstNonEmptyArray(previous?.finalComments, state.finalComments),
+    spyGuess: raw.spyGuess || previous?.spyGuess || state.pendingSpyGuess || { skipped: true, correct: false },
+    civiliansWin: raw.civiliansWin ?? previous?.civiliansWin ?? false,
+    caughtSpy: raw.caughtSpy ?? previous?.caughtSpy ?? false,
+    economyRewards: Array.isArray(raw.economyRewards) ? raw.economyRewards : (previous?.economyRewards || []),
+    expRewards: Array.isArray(raw.expRewards) ? raw.expRewards : (previous?.expRewards || [])
   };
   normalized.spyNames = raw.spyNames?.length
     ? raw.spyNames
-    : normalized.players.filter((player) => normalized.spies.includes(player.id)).map((player) => player.name || "Шпион");
-  normalized.spyName = raw.spyName || normalized.spyNames.join(", ") || "Шпион";
-  normalized.breakdown = buildFallbackBreakdown(normalized, normalized.players);
+    : (previous?.spyNames?.length
+      ? previous.spyNames
+      : normalized.players.filter((player) => normalized.spies.includes(player.id)).map((player) => player.name || "Шпион"));
+  normalized.spyName = raw.spyName || previous?.spyName || normalized.spyNames.join(", ") || "Шпион";
+  normalized.breakdown = buildFallbackBreakdown({ ...normalized, breakdown: raw.breakdown || previous?.breakdown }, normalized.players);
   return normalized;
 }
 
