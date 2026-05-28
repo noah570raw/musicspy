@@ -13264,3 +13264,178 @@ body[data-screen="game"] .embed {
     min-height: clamp(320px, 54vh, 520px);
   }
 }
+
+/* Final voting timer: one clean countdown circle with the label placed to the left. */
+body[data-screen="voting"] .vote-timer-orbit {
+  display: grid;
+  grid-template-columns: minmax(74px, max-content) auto;
+  align-items: center;
+  justify-items: end;
+  gap: clamp(10px, 1.4vw, 16px);
+  min-width: auto;
+  aspect-ratio: auto;
+}
+
+body[data-screen="voting"] .vote-orbit-ring {
+  display: none;
+}
+
+body[data-screen="voting"] .vote-timer-orbit small {
+  max-width: 9.5rem;
+  margin: 0;
+  color: rgba(248, 246, 255, 0.74);
+  font-size: clamp(0.72rem, 0.84vw, 0.82rem);
+  letter-spacing: 0.11em;
+  line-height: 1.2;
+  text-align: right;
+}
+
+body[data-screen="voting"] .vote-timer-orbit .vote-timer {
+  position: relative;
+  width: clamp(104px, 11vw, 128px);
+  height: clamp(104px, 11vw, 128px);
+  border: 2px solid color-mix(in srgb, var(--accent) 62%, rgba(255, 255, 255, 0.18));
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12) 0 27%, transparent 28%),
+    conic-gradient(from -72deg, color-mix(in srgb, var(--accent-2) 72%, white), var(--accent), color-mix(in srgb, var(--accent) 34%, transparent) 76%, rgba(255, 255, 255, 0.08)),
+    radial-gradient(circle at 50% 50%, rgba(var(--accent-rgb), 0.24), rgba(0, 0, 0, 0.18) 68%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.055),
+    0 0 38px rgba(var(--accent-rgb), 0.2),
+    inset 0 0 28px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+
+/* Results screen refresh: a richer post-game window that matches the site style. */
+body[data-screen="results"] #results {
+  border-color: rgba(var(--accent-rgb), 0.22);
+  background:
+    radial-gradient(circle at 6% 4%, rgba(var(--accent-rgb), 0.24), transparent 28rem),
+    radial-gradient(circle at 88% 76%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 30rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.026) 52%, rgba(0, 0, 0, 0.2)),
+    rgba(7, 8, 13, 0.94);
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, 0.6),
+    0 0 70px rgba(var(--accent-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+body[data-screen="results"] #results::after {
+  content: "";
+  position: absolute;
+  inset: auto 20px 18px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.58), transparent);
+  opacity: 0.72;
+}
+
+body[data-screen="results"] .results-hero {
+  border-color: rgba(var(--accent-rgb), 0.26);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(var(--accent-rgb), 0.28), transparent 18rem),
+    linear-gradient(158deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.034) 68%),
+    rgba(8, 12, 20, 0.58);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+body[data-screen="results"] .results-hero::before {
+  content: "MS";
+  justify-self: start;
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 4px;
+  place-items: center;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.12);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.18);
+}
+
+body[data-screen="results"] .share-card-mini {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(16px, 1.7vw, 22px);
+  border-color: rgba(var(--accent-rgb), 0.28);
+  background:
+    radial-gradient(circle at 88% 16%, rgba(var(--accent-rgb), 0.28), transparent 15rem),
+    radial-gradient(circle at 8% 88%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 16rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.028)),
+    rgba(12, 14, 22, 0.76);
+}
+
+body[data-screen="results"] .share-card-mini::after {
+  content: "♪";
+  position: absolute;
+  right: 18px;
+  bottom: -24px;
+  color: rgba(255, 255, 255, 0.06);
+  font-size: 8rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(-10deg);
+}
+
+body[data-screen="results"] .share-card-mini > * {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-screen="results"] .breakdown-card,
+body[data-screen="results"] .postgame-panel,
+body[data-screen="results"] .result-history,
+body[data-screen="results"] .result-score-panel {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--accent-rgb), 0.1), transparent 13rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.064), rgba(255, 255, 255, 0.018)),
+    rgba(12, 13, 20, 0.68);
+}
+
+body[data-screen="results"] .breakdown-card:first-child {
+  border-color: rgba(var(--accent-rgb), 0.34);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb), 0.25), transparent 14rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+    rgba(14, 16, 25, 0.78);
+}
+
+body[data-screen="results"] .panel-title {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+/* Player area height requested: trim the previous enlarged player by roughly 10%. */
+body[data-screen="game"] .player-card {
+  grid-template-rows: auto minmax(316px, 0.97fr) auto auto auto;
+}
+
+body[data-screen="game"] .embed {
+  min-height: clamp(316px, 51.3vh, 513px);
+}
+
+@media (max-width: 680px) {
+  body[data-screen="voting"] .vote-timer-orbit {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  body[data-screen="voting"] .vote-timer-orbit small {
+    text-align: center;
+  }
+
+  body[data-screen="game"] .player-card {
+    grid-template-rows: auto minmax(288px, 48.6vh) auto auto auto;
+  }
+
+  body[data-screen="game"] .embed {
+    min-height: clamp(288px, 48.6vh, 468px);
+  }
+}
