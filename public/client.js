@@ -5799,8 +5799,8 @@ function renderResults(rawData = {}) {
         level: Number(expReward.level || state.profile.economy?.level || 1)
       }
     };
-    renderProfileHeader();
-    renderProfileCard();
+    if (typeof renderProfileHeader === 'function') renderProfileHeader();
+    if (typeof renderProfileCard === 'function') renderProfileCard();
   }
 
   renderResultBreakdown(data, guessText);
