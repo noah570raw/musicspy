@@ -14174,6 +14174,36 @@ body[data-screen="results"] .results-verdict-board {
   padding: clamp(16px, 1.6vw, 24px);
 }
 
+body[data-screen="results"] .result-economy-rewards {
+  min-width: 0;
+  margin-top: 0;
+}
+
+body[data-screen="results"] .economy-result-card {
+  min-width: 0;
+  max-height: min(34vh, 380px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+body[data-screen="results"] .economy-result-card > div:not(.vinyl-coin),
+body[data-screen="results"] .economy-result-card ul,
+body[data-screen="results"] .economy-result-card li {
+  min-width: 0;
+}
+
+body[data-screen="results"] .economy-result-card strong,
+body[data-screen="results"] .economy-result-card span,
+body[data-screen="results"] .economy-result-card li span {
+  overflow-wrap: anywhere;
+}
+
+body[data-screen="results"] .economy-result-card ul {
+  max-height: 168px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
 body[data-screen="results"] .share-card-mini strong {
   font-size: clamp(1.85rem, 3.55vw, 4.2rem);
 }

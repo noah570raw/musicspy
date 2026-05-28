@@ -1470,6 +1470,10 @@ function clearPlayerReconnectTimer(player) {
   }
 }
 
+function hasActiveGameSession(lobby) {
+  return Boolean(lobby?.started && lobby.phase !== "ended");
+}
+
 function schedulePlayerDeparture(lobby, socket) {
   const player = lobby.players.find((item) => item.id === socket.id);
   if (!player) return;
@@ -1511,7 +1515,7 @@ function sendPrivateGameStart(lobby, socket) {
 
 function reconnectPlayerToGame(socket, { code, reconnectToken } = {}) {
   const lobby = lobbies[normalizeCode(code)];
-  if (!lobby || !lobby.started) return { error: "Активная игра не найдена" };
+  if (!lobby || !hasActiveGameSession(lobby)) return { error: "Активная игра не найдена" };
   const normalizedToken = normalizeReconnectToken(reconnectToken);
   const player = lobby.players.find((item) => item.reconnectToken === normalizedToken);
   if (!player) return { error: "Не удалось восстановить игрока" };
@@ -2323,6 +2327,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
 
   const { economyRewards, expRewards } = updateUserProgressForGame(lobby, civiliansWin, finalVotes, suspected);
   lobby.phase = "ended";
+  lobby.started = false;
   clearTimer(code);
 
   for (const player of lobby.players) {
@@ -3073,7 +3078,7 @@ io.on("connection", (socket) => {
     const roomCode = normalizeCode(code);
     const lobby = lobbies[roomCode];
     if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
     if (lobby.players.some((player) => player.id === socket.id)) {
       return cb({ success: true, code: roomCode, playerId: socket.id });
     }
@@ -3090,7 +3095,7 @@ io.on("connection", (socket) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
-    if (lobby.started) return cb({ error: "Во время игры выйти можно только закрыв вкладку" });
+    if (hasActiveGameSession(lobby)) return cb({ error: "Во время игры выйти можно только закрыв вкладку" });
 
     handlePlayerDeparture(lobby, socket);
     cb({ success: true });
@@ -3100,7 +3105,7 @@ io.on("connection", (socket) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "Настройки может менять только хост" });
-    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
 
     const nextSettings = normalizeSettings({ ...lobby.settings, ...settings });
     if (nextSettings.maxPlayers < lobby.players.length) {
@@ -3116,7 +3121,7 @@ io.on("connection", (socket) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "Название и открытость меняет только хост" });
-    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
 
     if (name !== undefined) {
       lobby.name = normalizeLobbyName(name, defaultLobbyName(lobby.players.find((player) => player.id === lobby.host)?.name));
@@ -3132,7 +3137,7 @@ io.on("connection", (socket) => {
   socket.on("setReady", ({ code, ready }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
     const player = lobby.players.find((item) => item.id === socket.id);
     if (!player) return cb({ error: "Ты не в этой комнате" });
     player.ready = Boolean(ready);
@@ -3143,7 +3148,7 @@ io.on("connection", (socket) => {
   socket.on("updateName", ({ code, name }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
     const player = lobby.players.find((item) => item.id === socket.id);
     if (!player) return cb({ error: "Ты не в этой комнате" });
     if (!player.guest || socket.data.user) {
@@ -3158,6 +3163,7 @@ io.on("connection", (socket) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "Начать игру может только хост" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
     if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Нужно минимум 3 игрока" });
     if (lobby.players.some((player) => !player.ready)) {
       return cb({ error: "Все игроки должны нажать «Готов»" });
@@ -3171,7 +3177,7 @@ io.on("connection", (socket) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Комната не найдена" });
     if (lobby.host !== socket.id) return cb({ error: "FORCE START доступен только хосту" });
-    if (lobby.started) return cb({ error: "Игра уже началась" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
     if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Нужно минимум 3 игрока" });
 
     markAllPlayersReady(lobby);
@@ -3563,7 +3569,7 @@ io.on("connection", (socket) => {
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
       if (!wasInLobby) continue;
 
-      if (lobby.started) {
+      if (hasActiveGameSession(lobby)) {
         schedulePlayerDeparture(lobby, socket);
       } else {
         handlePlayerDeparture(lobby, socket, { leaveRoom: false });
@@ -3678,6 +3684,7 @@ module.exports = {
   handlePlayerDeparture,
   createLobbyState,
   resetLobbyToWaiting,
+  hasActiveGameSession,
   playerFromSocket,
   normalizeAvatar,
   normalizeUsername,
