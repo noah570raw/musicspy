@@ -15286,17 +15286,31 @@ body[data-effects-density="low"] .appearance-preview-orb {
   animation: none;
 }
 
-/* Compact menu settings: keep appearance and game panels cohesive without nested overlap. */
+/* Scrollable menu settings: keep appearance and game panels separated instead of compressing them into overlap. */
 .site-menu-card #settingsPanelAppearance.active,
 .site-menu-card #settingsPanelGame.active {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
   overflow: hidden;
+}
+
+.site-menu-card #settingsPanelAppearance.active > .appearance-lab,
+.site-menu-card #settingsPanelGame.active > .game-settings-suite {
+  flex: 1 1 auto;
+  max-height: 100%;
+  min-height: 0;
 }
 
 .appearance-lab,
 .game-settings-suite {
-  gap: clamp(10px, 1.2vw, 14px);
+  gap: clamp(12px, 1.4vw, 16px);
   padding: clamp(14px, 1.8vw, 20px);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: clamp(14px, 1.8vw, 20px);
+  scrollbar-gutter: stable;
 }
 
 .appearance-hero,
@@ -15381,11 +15395,13 @@ body[data-effects-density="low"] .appearance-preview-orb {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: none;
-  margin-right: 0;
-  overflow: visible;
-  padding: 0;
-  scrollbar-gutter: auto;
+  max-height: clamp(180px, 28dvh, 310px);
+  margin-right: -4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 6px 2px 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .appearance-theme-pill {
@@ -15519,11 +15535,6 @@ body[data-effects-density="low"] .appearance-preview-orb {
 }
 
 @media (max-height: 760px) and (min-width: 861px) {
-  .appearance-hints-grid,
-  .game-settings-hints {
-    display: none;
-  }
-
   .appearance-preview-card,
   .game-settings-orb,
   .streamer-setting-card,
