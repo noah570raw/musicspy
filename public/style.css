@@ -3951,7 +3951,7 @@ body[data-screen="game"] #roleTitle {
 }
 
 body[data-screen="game"] #roleTitle::before {
-  content: "ACCESS GRANTED";
+  content: "PRIVATE CARD";
   display: block;
   margin-bottom: 0.35rem;
   color: var(--accent-2);
@@ -3960,8 +3960,8 @@ body[data-screen="game"] #roleTitle::before {
 }
 
 body[data-screen="game"][data-role="spy"] #roleTitle::before {
-  content: "CLASSIFIED";
-  color: #ff8a8a;
+  content: "PRIVATE CARD";
+  color: var(--theme-text-faint);
 }
 
 body[data-role="civilian"] {
@@ -12360,5 +12360,291 @@ button.terminal-secondary:hover:not(:disabled) {
 
   .streamer-toggle {
     width: 100%;
+  }
+}
+
+/* Polished neutral in-game arena: role no longer recolors the whole UI. */
+body[data-screen="game"] {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(var(--accent-rgb), 0.28), transparent 28rem),
+    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 30rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--bg) 92%, #000), var(--bg));
+}
+
+body[data-screen="game"] .game-layout {
+  position: relative;
+  isolation: isolate;
+}
+
+body[data-screen="game"] .game-layout::before {
+  content: "";
+  position: absolute;
+  inset: -26px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 18%, rgba(0,0,0,0.82), transparent 72%);
+}
+
+body[data-screen="game"] .game-layout .card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--theme-line);
+  background:
+    radial-gradient(circle at 14% 0%, var(--theme-glow), transparent 30%),
+    linear-gradient(145deg, color-mix(in srgb, var(--text) 9%, transparent), color-mix(in srgb, var(--bg) 52%, transparent)),
+    rgba(var(--surface-rgb), 0.82);
+  box-shadow:
+    0 24px 80px color-mix(in srgb, var(--bg) 62%, transparent),
+    0 0 46px var(--theme-glow-soft),
+    inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent);
+  backdrop-filter: blur(22px) saturate(118%);
+}
+
+body[data-screen="game"] .game-layout .card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--theme-glow-soft), transparent) top / 100% 1px no-repeat,
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--text) 6%, transparent), transparent 42%);
+}
+
+body[data-screen="game"] #roleTitle {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(18px, 2.5vw, 24px);
+  border: 1px solid var(--theme-line-strong);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 18% 0%, var(--theme-active-bg-strong), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--text) 11%, transparent), color-mix(in srgb, var(--text) 3%, transparent));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 14%, transparent), 0 18px 44px var(--theme-glow-soft);
+  text-transform: uppercase;
+  letter-spacing: -0.06em;
+}
+
+body[data-screen="game"] #roleTitle::before,
+body[data-screen="game"][data-role="spy"] #roleTitle::before {
+  content: "PRIVATE CARD";
+  display: block;
+  margin-bottom: 0.38rem;
+  color: var(--theme-text-faint);
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+}
+
+body[data-screen="game"] #roleTitle::after {
+  content: "";
+  position: absolute;
+  inset: auto -18% -52% 28%;
+  height: 78%;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--theme-glow-strong), transparent 68%);
+  pointer-events: none;
+}
+
+body[data-screen="game"] .theme-text {
+  margin-top: 14px;
+  color: var(--theme-text-soft);
+  font-weight: 750;
+}
+
+body[data-screen="game"] .round-meter div,
+body[data-screen="game"] .skip-vote-track {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 9%, transparent);
+}
+
+body[data-screen="game"] .round-meter i,
+body[data-screen="game"] .skip-vote-track span {
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent-2) 82%, white));
+  box-shadow: 0 0 24px var(--theme-glow-strong);
+}
+
+body[data-screen="game"] .turn-card,
+body[data-screen="game"] .host-status-grid div,
+body[data-screen="game"] .track-history-panel,
+body[data-screen="game"] .reaction-panel {
+  border: 1px solid var(--theme-line);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+body[data-screen="game"] .player-card {
+  grid-template-rows: auto minmax(260px, 1fr) auto auto auto;
+}
+
+body[data-screen="game"] .timer-ring {
+  filter: drop-shadow(0 0 22px var(--theme-glow));
+}
+
+body[data-screen="game"] .timer-ring .progress {
+  stroke: color-mix(in srgb, var(--accent-2) 82%, white);
+}
+
+body[data-screen="game"] .player-stage {
+  position: relative;
+  min-height: 0;
+}
+
+body[data-screen="game"] .embed {
+  position: relative;
+  min-height: clamp(260px, 48vh, 460px);
+  border-color: var(--theme-line);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 50% 22%, var(--theme-glow-strong), transparent 28%),
+    radial-gradient(circle at 50% 80%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%),
+    linear-gradient(145deg, color-mix(in srgb, var(--text) 8%, transparent), color-mix(in srgb, var(--bg) 34%, transparent));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 11%, transparent), inset 0 -34px 80px color-mix(in srgb, var(--bg) 38%, transparent);
+}
+
+body[data-screen="game"] .embed.empty::before {
+  content: "♪";
+  position: absolute;
+  width: clamp(120px, 20vw, 190px);
+  height: clamp(120px, 20vw, 190px);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--theme-line);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--text) 20%, transparent);
+  font-size: clamp(3.2rem, 8vw, 6rem);
+  box-shadow: inset 0 0 54px var(--theme-glow-soft), 0 0 80px var(--theme-glow-soft);
+}
+
+body[data-screen="game"] .embed.empty span {
+  position: relative;
+  z-index: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--theme-line);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb), 0.48);
+  color: var(--theme-text-soft);
+  font-weight: 850;
+  backdrop-filter: blur(12px);
+}
+
+body[data-screen="game"] .reaction-buttons {
+  gap: 9px;
+}
+
+body[data-screen="game"] .reaction-btn,
+body[data-screen="game"] .order-row,
+body[data-screen="game"] .track-form input,
+body[data-screen="game"] .track-form .primary,
+body[data-screen="game"] .host-action-grid button,
+body[data-screen="game"] .mini-streamer-toggle {
+  border-color: var(--theme-line);
+  background: var(--theme-control-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+body[data-screen="game"] .reaction-btn:hover:not(:disabled),
+body[data-screen="game"] .reaction-btn.selected,
+body[data-screen="game"] .order-row.active,
+body[data-screen="game"] .mini-streamer-toggle:hover,
+body[data-screen="game"] .mini-streamer-toggle.active {
+  border-color: var(--theme-line-strong);
+  background: var(--theme-active-bg);
+  box-shadow: 0 0 28px var(--theme-glow-soft), inset 0 1px 0 color-mix(in srgb, var(--text) 11%, transparent);
+}
+
+body[data-screen="game"] .track-form .primary {
+  border: 1px solid var(--theme-line-strong);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark) 54%, color-mix(in srgb, var(--accent-2) 72%, var(--accent)));
+  box-shadow: 0 18px 40px var(--theme-active-bg-strong), inset 0 1px 0 color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+body[data-screen="game"] .order-row span {
+  background: var(--theme-active-bg-strong);
+  box-shadow: 0 0 20px var(--theme-glow-soft);
+}
+
+body[data-screen="game"] .game-chat-panel {
+  border-color: var(--theme-line);
+  background:
+    radial-gradient(circle at 82% 0%, var(--theme-glow), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--text) 7%, transparent), color-mix(in srgb, var(--bg) 42%, transparent));
+  box-shadow: 0 24px 80px color-mix(in srgb, var(--bg) 60%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.cinematic-curtain {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, var(--theme-glow-strong), transparent 24rem),
+    rgba(0, 0, 0, 0.82);
+}
+
+.cinematic-curtain::before,
+.cinematic-curtain::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  z-index: 0;
+  width: 52%;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.22) 0 14px, rgba(255,255,255,0.045) 14px 24px),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 48%, #120015), color-mix(in srgb, var(--accent-dark) 60%, #030006));
+  box-shadow: inset 0 0 80px rgba(0,0,0,0.44), 0 0 60px var(--theme-glow);
+  animation: curtain-rise 2.6s cubic-bezier(.72,0,.22,1) both;
+}
+
+.cinematic-curtain::before {
+  left: 0;
+  transform-origin: left center;
+}
+
+.cinematic-curtain::after {
+  right: 0;
+  transform-origin: right center;
+}
+
+.cinematic-curtain .cinematic-card {
+  z-index: 1;
+  width: min(100%, 620px);
+  border-color: var(--theme-line-strong);
+  background: rgba(var(--surface-rgb), 0.72);
+  box-shadow: 0 34px 120px rgba(0,0,0,0.58), 0 0 70px var(--theme-glow), inset 0 1px 0 color-mix(in srgb, var(--text) 14%, transparent);
+  animation: curtain-card 2.6s ease both;
+}
+
+.cinematic-curtain .cinematic-vinyl {
+  animation-duration: 2.2s;
+}
+
+.cinematic-curtain.closing::before,
+.cinematic-curtain.closing::after {
+  animation-play-state: paused;
+}
+
+@keyframes curtain-rise {
+  0% { transform: translateY(-105%) scaleX(1.04); filter: brightness(0.84); }
+  18% { transform: translateY(0) scaleX(1.02); filter: brightness(0.98); }
+  64% { transform: translateY(0) scaleX(1); filter: brightness(1); }
+  100% { transform: translateY(-112%) scaleX(0.82); filter: brightness(1.12); }
+}
+
+@keyframes curtain-card {
+  0%, 10% { opacity: 0; transform: translateY(18px) scale(0.96); filter: blur(8px); }
+  26%, 72% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translateY(-16px) scale(0.985); filter: blur(8px); }
+}
+
+@media (max-width: 920px) {
+  body[data-screen="game"] {
+    overflow-y: auto;
+  }
+
+  body[data-screen="game"] .player-card {
+    grid-template-rows: auto minmax(240px, 42vh) auto auto auto;
   }
 }
