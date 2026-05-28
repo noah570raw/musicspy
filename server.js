@@ -2305,6 +2305,8 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
   }
 
   io.to(code).emit("gameEnd", {
+    host: lobby.host,
+    players: lobby.players.map(publicPlayer),
     spies: lobby.spies,
     spy: lobby.spies[0] || null,
     spyNames: spyPlayers.map((player) => player.name),
