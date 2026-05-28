@@ -2769,8 +2769,8 @@ html[lang="ru"] .language-switcher span:first-child {
 
 
 .spy-visible-name {
-  color: #ff4757;
-  text-shadow: 0 0 18px rgba(255, 31, 45, 0.32);
+  color: inherit;
+  text-shadow: none;
 }
 
 .spy-visible-badge {
@@ -12651,12 +12651,17 @@ body[data-screen="game"] .game-chat-panel {
 
 /* In-game polish: cleaner queue, compact player stage, media search and vinyl waiting state. */
 body[data-screen="game"] .player-card {
-  grid-template-rows: auto minmax(234px, 0.9fr) auto auto auto;
+  grid-template-rows: auto minmax(234px, 0.72fr) auto auto auto;
 }
 
-body[data-screen="game"] .embed,
+body[data-screen="game"] .embed {
+  min-height: clamp(234px, 38vh, 380px);
+}
+
 body[data-screen="game"] .embed iframe {
-  min-height: clamp(234px, 43.2vh, 414px);
+  display: block;
+  min-height: 0;
+  height: 100%;
 }
 
 body[data-screen="game"] .embed.empty::before {
@@ -12713,8 +12718,21 @@ body[data-screen="game"] .chat-player-trigger {
 }
 
 body[data-screen="game"] .chat-player-trigger .avatar {
-  border: 1px solid color-mix(in srgb, var(--accent-2) 50%, rgba(255, 255, 255, 0.24));
-  box-shadow: 0 0 0 2px rgba(var(--surface-rgb), 0.72), 0 0 14px var(--theme-glow-soft);
+  display: none;
+}
+
+body[data-screen="game"] .game-chat-player-name {
+  display: inline-flex;
+  max-width: 100%;
+  color: var(--theme-text-soft);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+body[data-screen="game"] .reaction-panel {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
 }
 
 .media-library {
@@ -12746,26 +12764,11 @@ body[data-screen="game"] .chat-player-trigger .avatar {
 }
 
 .media-library-hints {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.media-library-hints button {
-  min-height: 30px;
-  padding: 6px 10px;
-  border: 1px solid var(--theme-line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-control-bg) 86%, transparent);
-  color: var(--theme-text-soft);
+  margin: 0;
+  color: var(--theme-text-faint);
   font-size: 0.74rem;
   font-weight: 800;
-}
-
-.media-library-hints button:hover:not(:disabled) {
-  border-color: var(--theme-line-strong);
-  background: var(--theme-active-bg);
-  color: var(--text);
+  line-height: 1.35;
 }
 
 body[data-screen="game"] .order-row .player-name-text,
