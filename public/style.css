@@ -11375,3 +11375,374 @@ button.terminal-secondary:hover:not(:disabled) {
   padding: 8px 10px;
   font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* Player-accent premium menu panels */
+.site-menu-card #settingsPanelPromo.active,
+.site-menu-card #settingsPanelShop.active,
+.site-menu-card #settingsPanelInventory.active,
+.site-menu-card #settingsPanelDaily.active,
+.site-menu-card #settingsPanelXpbooster.active {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.site-menu-card #settingsPanelPromo.active > .promo-code-card,
+.site-menu-card #settingsPanelShop.active > .shop-panel-root,
+.site-menu-card #settingsPanelInventory.active > .shop-panel-root,
+.site-menu-card #settingsPanelDaily.active > .daily-reward-card,
+.site-menu-card #settingsPanelXpbooster.active > .xp-booster-dashboard {
+  flex: 1 1 auto;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.promo-code-arena {
+  position: relative;
+  align-content: start;
+  gap: clamp(18px, 2vw, 26px);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: clamp(18px, 2.8vw, 30px);
+  overflow: hidden auto;
+  isolation: isolate;
+  border: 1px solid var(--theme-line-strong);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 13% 12%, rgba(var(--accent-rgb), 0.32), transparent 32%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 34%),
+    radial-gradient(circle at 52% 96%, rgba(var(--accent-rgb), 0.2), transparent 44%),
+    linear-gradient(135deg, rgba(var(--surface-rgb), 0.93), color-mix(in srgb, var(--bg) 70%, transparent));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 -28px 60px rgba(2, 6, 23, 0.28),
+    0 24px 70px rgba(2, 6, 23, 0.48),
+    0 0 54px var(--theme-glow);
+  scrollbar-color: rgba(var(--accent-rgb), 0.72) rgba(var(--surface-rgb), 0.58);
+}
+
+.promo-code-arena::before,
+.promo-code-arena::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.promo-code-arena::before {
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent-2) 78%, var(--accent)), rgba(255,255,255,0.42), var(--accent));
+  background-size: 260% 260%;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: dailyBorderFlow 7s linear infinite;
+}
+
+.promo-code-arena::after {
+  inset: -34% -24%;
+  background: linear-gradient(110deg, transparent 34%, rgba(255,255,255,0.14) 46%, transparent 58%);
+  transform: translateX(-48%) rotate(5deg);
+  animation: dailyShimmerSweep 6.1s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+.promo-ambient {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  border-radius: 999px;
+  filter: blur(38px);
+  opacity: 0.52;
+  pointer-events: none;
+}
+
+.promo-ambient-a { top: -86px; right: 10%; background: rgba(var(--accent-rgb), 0.48); animation: xpFloat 9s ease-in-out infinite; }
+.promo-ambient-b { left: -98px; bottom: 4%; background: color-mix(in srgb, var(--accent-2) 44%, transparent); animation: xpFloat 11s ease-in-out infinite reverse; }
+
+.promo-particle-field,
+.promo-particle-field i {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.promo-particle-field i {
+  --size: 4px;
+  left: calc(8% + (var(--i, 1) * 9%));
+  top: calc(11% + (var(--i, 1) * 7%));
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 78%, white);
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.9), 0 0 28px color-mix(in srgb, var(--accent-2) 62%, transparent);
+  opacity: 0.7;
+  animation: xpParticleRise 5.5s ease-in-out infinite;
+}
+
+.promo-particle-field i:nth-child(1) { --i: 1; --size: 4px; animation-delay: -0.2s; }
+.promo-particle-field i:nth-child(2) { --i: 2; --size: 6px; animation-delay: -1.4s; }
+.promo-particle-field i:nth-child(3) { --i: 3; --size: 3px; animation-delay: -2.2s; }
+.promo-particle-field i:nth-child(4) { --i: 4; --size: 5px; animation-delay: -0.8s; }
+.promo-particle-field i:nth-child(5) { --i: 5; --size: 4px; animation-delay: -3s; }
+.promo-particle-field i:nth-child(6) { --i: 6; --size: 7px; animation-delay: -1.8s; }
+.promo-particle-field i:nth-child(7) { --i: 7; --size: 4px; animation-delay: -4s; }
+.promo-particle-field i:nth-child(8) { --i: 8; --size: 5px; animation-delay: -2.7s; }
+
+.promo-code-header,
+.promo-code-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.promo-code-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.promo-kicker,
+.promo-console-label {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--accent) 78%, white);
+  font-size: 0.7rem;
+  font-weight: 1000;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(var(--accent-rgb), 0.72);
+}
+
+.promo-title-stack h3 {
+  margin: 0.2rem 0 0.3rem;
+  font-size: clamp(2.4rem, 6vw, 5.2rem);
+  line-height: 0.86;
+  letter-spacing: -0.08em;
+  background: linear-gradient(90deg, #fff, color-mix(in srgb, var(--accent) 76%, white) 48%, var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 34px var(--theme-glow);
+}
+
+.promo-title-stack p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--theme-text-soft);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.promo-vault-badge {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: clamp(92px, 12vw, 132px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(var(--accent-rgb), 0.42);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255,255,255,0.26), transparent 32%),
+    conic-gradient(from 110deg, var(--accent), var(--accent-2), color-mix(in srgb, var(--accent) 50%, white), var(--accent));
+  box-shadow: inset 0 0 28px rgba(255,255,255,0.14), 0 0 42px var(--theme-glow-strong);
+  transform: rotate(3deg);
+}
+
+.promo-vault-badge span {
+  color: rgba(2,6,23,0.82);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 1000;
+  letter-spacing: -0.08em;
+}
+
+.promo-vault-badge strong {
+  margin-top: -22px;
+  color: rgba(2,6,23,0.72);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+}
+
+.promo-code-stage {
+  display: grid;
+  gap: clamp(14px, 2vw, 22px);
+}
+
+.promo-code-console {
+  display: grid;
+  gap: 12px;
+  padding: clamp(16px, 2vw, 22px);
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(var(--surface-rgb), 0.74), color-mix(in srgb, var(--accent) 9%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 18px 50px rgba(2,6,23,0.28);
+}
+
+.promo-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.promo-code-row input {
+  min-height: 52px;
+  border-color: rgba(var(--accent-rgb), 0.34);
+  background: rgba(var(--surface-rgb), 0.72);
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.promo-activate-button {
+  position: relative;
+  min-height: 52px;
+  overflow: hidden;
+  white-space: nowrap;
+  box-shadow: 0 16px 44px rgba(var(--accent-rgb), 0.34), inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.promo-activate-button i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 24%, rgba(255,255,255,0.28) 42%, transparent 58%);
+  transform: translateX(-120%);
+  animation: shopShine 3.2s ease-in-out infinite;
+}
+
+.promo-code-status {
+  min-height: 22px;
+  margin: 0;
+  color: color-mix(in srgb, var(--accent) 74%, white);
+  font-weight: 800;
+}
+
+.promo-hints-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.promo-hints-grid article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-radius: 20px;
+  background: rgba(var(--surface-rgb), 0.5);
+}
+
+.promo-hints-grid strong {
+  display: block;
+  color: var(--accent);
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+}
+
+.promo-hints-grid span {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--theme-text-soft);
+  font-size: 0.86rem;
+  line-height: 1.42;
+}
+
+#settingsPanelShop .shop-hero,
+#settingsPanelInventory .shop-hero,
+#settingsPanelShop .shop-locked-card,
+#settingsPanelInventory .shop-locked-card {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(var(--accent-rgb), 0.26), transparent 32%),
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--accent-2) 24%, transparent), transparent 30%),
+    linear-gradient(135deg, rgba(var(--surface-rgb), 0.9), color-mix(in srgb, var(--bg) 76%, transparent));
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.45), 0 0 42px var(--theme-glow), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+#settingsPanelShop .shop-category.active,
+#settingsPanelShop .shop-category:hover,
+#settingsPanelInventory .shop-category.active,
+#settingsPanelInventory .shop-category:hover {
+  border-color: rgba(var(--accent-rgb), 0.58);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.24), color-mix(in srgb, var(--accent-2) 20%, transparent));
+  box-shadow: 0 0 24px var(--theme-glow);
+}
+
+#settingsPanelShop .shop-card:hover,
+#settingsPanelInventory .shop-card:hover {
+  border-color: rgba(var(--accent-rgb), 0.48);
+  box-shadow: 0 24px 70px var(--theme-glow);
+}
+
+#settingsPanelShop .vinyl-coin,
+#settingsPanelInventory .vinyl-coin {
+  background:
+    radial-gradient(circle at 50% 50%, #020617 0 13%, transparent 14%),
+    conic-gradient(from 120deg, #f8fafc, var(--accent), var(--accent-2), #fde68a, #f8fafc);
+  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.48), inset 0 0 18px rgba(2, 6, 23, 0.75);
+}
+
+.daily-reward-arena {
+  --daily-cyan: var(--accent);
+  --daily-violet: var(--accent);
+  --daily-pink: var(--accent-2);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background:
+    radial-gradient(circle at 15% 14%, rgba(var(--accent-rgb), 0.26), transparent 30%),
+    radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--accent-2) 24%, transparent), transparent 34%),
+    radial-gradient(circle at 50% 95%, rgba(var(--accent-rgb), 0.22), transparent 44%),
+    linear-gradient(135deg, rgba(var(--surface-rgb), 0.9), color-mix(in srgb, var(--bg) 66%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -28px 60px rgba(2,6,23,0.34), 0 24px 70px rgba(2,6,23,0.48), 0 0 46px var(--theme-glow);
+}
+
+.daily-reward-arena::before {
+  background: linear-gradient(120deg, var(--accent), rgba(var(--accent-rgb), 0.2), color-mix(in srgb, var(--accent-2) 72%, transparent), var(--accent));
+}
+
+.daily-ambient-a { background: rgba(var(--accent-rgb), 0.44); }
+.daily-ambient-b { background: color-mix(in srgb, var(--accent-2) 38%, transparent); }
+.daily-kicker,
+.daily-reward-label,
+.daily-countdown-capsule strong,
+.daily-streak-card i { color: color-mix(in srgb, var(--accent) 78%, white); }
+.daily-claim-button,
+.daily-mission-progress i,
+.daily-streak-track::after { background: linear-gradient(90deg, var(--accent), var(--accent-2), #facc15); }
+
+.xp-booster-dashboard {
+  border-color: rgba(var(--accent-rgb), 0.48);
+  background:
+    radial-gradient(circle at 12% 12%, rgba(var(--accent-rgb), 0.32), transparent 28%),
+    radial-gradient(circle at 86% 18%, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 30%),
+    linear-gradient(135deg, rgba(var(--surface-rgb), 0.95), color-mix(in srgb, var(--accent) 16%, var(--bg)) 52%, color-mix(in srgb, var(--bg) 92%, var(--accent-2)));
+  box-shadow: 0 24px 75px rgba(15, 23, 42, 0.55), inset 0 0 40px rgba(var(--accent-rgb), 0.17), 0 0 48px var(--theme-glow);
+}
+
+.xp-booster-dashboard::before { background: linear-gradient(120deg, var(--accent), var(--accent-2), rgba(255,255,255,0.55), var(--accent)); }
+.xp-ambient-one { background: rgba(var(--accent-rgb), 0.46); }
+.xp-ambient-two { background: color-mix(in srgb, var(--accent-2) 48%, transparent); }
+.xp-kicker,
+.xp-boost-copy span,
+.xp-metric strong { color: color-mix(in srgb, var(--accent) 78%, white); }
+.xp-particle-field i,
+.xp-cursor-particles i { background: color-mix(in srgb, var(--accent) 78%, white); box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.9), 0 0 26px color-mix(in srgb, var(--accent-2) 68%, transparent); }
+.xp-core-orb { background: radial-gradient(circle at 35% 25%, #fff, color-mix(in srgb, var(--accent) 68%, white) 38%, var(--accent-2) 100%); box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.86), 0 0 40px color-mix(in srgb, var(--accent-2) 72%, transparent); }
+.xp-charge-fill { background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.95), color-mix(in srgb, var(--accent-2) 88%, var(--accent))); }
+.xp-charge-track { background: conic-gradient(color-mix(in srgb, var(--accent) 78%, white) var(--charge-progress), rgba(71, 85, 105, 0.22) 0); }
+
+@media (max-width: 720px) {
+  .promo-code-header,
+  .promo-code-row,
+  .promo-hints-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .promo-code-header {
+    display: grid;
+  }
+
+  .promo-vault-badge {
+    width: 88px;
+  }
+}

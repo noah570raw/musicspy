@@ -2196,7 +2196,7 @@ function showAuthModal(mode = "choice") {
 }
 
 function openSettingsSection(section = "profile") {
-  const safeSection = ["profile", "shop", "inventory", "daily", "xpbooster", "appearance", "game", "about"].includes(section) ? section : "profile";
+  const safeSection = ["profile", "promo", "shop", "inventory", "daily", "xpbooster", "appearance", "game", "about"].includes(section) ? section : "profile";
   state.settingsSection = safeSection;
   for (const panel of document.querySelectorAll("[data-settings-panel]")) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
@@ -2205,6 +2205,7 @@ function openSettingsSection(section = "profile") {
     const tabSection = tab.id.replace("settingsTab", "").toLowerCase();
     tab.classList.toggle("active", tabSection === safeSection);
   }
+  if (safeSection === "promo") refreshPromoCodeUi();
   if (safeSection === "appearance") renderAppearanceControls();
   if (safeSection === "game") syncGamePreferenceToggles();
   if (safeSection === "shop" || safeSection === "inventory") requestShopState();

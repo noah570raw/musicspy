@@ -184,6 +184,7 @@
         <nav class="site-menu-tabs" aria-label="Разделы меню">
           <span class="site-menu-tabs-label">System</span>
           <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')"><span class="site-menu-tab-icon" aria-hidden="true">◉</span><span>Профиль</span></button>
+          <button id="settingsTabPromo" class="site-menu-tab" type="button" onclick="openSettingsSection('promo')"><span class="site-menu-tab-icon" aria-hidden="true">✧</span><span>Промокоды</span></button>
           <button id="settingsTabShop" class="site-menu-tab" type="button" onclick="openSettingsSection('shop')"><span class="site-menu-tab-icon" aria-hidden="true">◍</span><span>Магазин</span></button>
           <button id="settingsTabDaily" class="site-menu-tab" type="button" onclick="openSettingsSection('daily')"><span class="site-menu-tab-icon" aria-hidden="true">🎁</span><span>Daily reward</span></button>
           <button id="settingsTabInventory" class="site-menu-tab" type="button" onclick="openSettingsSection('inventory')"><span class="site-menu-tab-icon" aria-hidden="true">🧰</span><span>Инвентарь</span></button>
@@ -226,14 +227,6 @@
               </div>
               <div id="profileStatsGrid" class="profile-stats-grid"></div>
               <div id="profileCosmeticShowcase" class="profile-cosmetic-showcase"></div>
-              <div id="promoCodeCard" class="promo-code-card">
-                <strong>🎁 Промокод</strong>
-                <div class="promo-code-row">
-                  <input id="promoCodeInput" maxlength="120" placeholder="Введите промокод..." autocomplete="off" spellcheck="false">
-                  <button id="promoCodeButton" class="secondary" type="button" onclick="redeemPromoCode()">Активировать</button>
-                </div>
-                <p id="promoCodeStatus" class="status promo-code-status" aria-live="polite"></p>
-              </div>
               <div class="profile-editor-panel">
                 <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
                 <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
@@ -251,6 +244,57 @@
                   <strong>Опасная зона</strong>
                   <span>Удаление аккаунта навсегда очищает профиль, друзей, заявки и текущую сессию.</span>
                   <button id="deleteAccountBtn" class="danger" type="button" onclick="deleteAccount()">Удалить аккаунт</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="settingsPanelPromo" class="site-menu-panel" data-settings-panel="promo">
+            <div id="promoCodeCard" class="promo-code-card promo-code-arena settings-block">
+              <div class="promo-ambient promo-ambient-a" aria-hidden="true"></div>
+              <div class="promo-ambient promo-ambient-b" aria-hidden="true"></div>
+              <div class="promo-particle-field" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+
+              <div class="promo-code-header">
+                <div class="promo-title-stack">
+                  <span class="promo-kicker">Secret drop terminal</span>
+                  <h3>Промокоды</h3>
+                  <p>Вводи специальные коды Music Spy и забирай винилы, бусты и эксклюзивные награды.</p>
+                </div>
+                <div class="promo-vault-badge" aria-hidden="true">
+                  <span>MS</span>
+                  <strong>CODE</strong>
+                </div>
+              </div>
+
+              <div class="promo-code-stage">
+                <div class="promo-code-console">
+                  <span class="promo-console-label">Activation key</span>
+                  <div class="promo-code-row">
+                    <input id="promoCodeInput" maxlength="120" placeholder="Введите промокод..." autocomplete="off" spellcheck="false">
+                    <button id="promoCodeButton" class="primary promo-activate-button" type="button" onclick="redeemPromoCode()">
+                      <span>Активировать</span>
+                      <i aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <p id="promoCodeStatus" class="status promo-code-status" aria-live="polite"></p>
+                </div>
+
+                <div class="promo-hints-grid" aria-label="Подсказки по промокодам">
+                  <article>
+                    <strong>01</strong>
+                    <span>Промокоды автоматически переводятся в верхний регистр.</span>
+                  </article>
+                  <article>
+                    <strong>02</strong>
+                    <span>Награды сразу попадают в экономику аккаунта.</span>
+                  </article>
+                  <article>
+                    <strong>03</strong>
+                    <span>Следи за ивентами и Daily Rewards, чтобы не пропустить дропы.</span>
+                  </article>
                 </div>
               </div>
             </div>
