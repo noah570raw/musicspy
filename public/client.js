@@ -122,6 +122,10 @@ function isInfiniteLevelUser(entity) {
   return username === "noah570raw";
 }
 
+function isInfiniteStatsUser(entity) {
+  return isInfiniteLevelUser(entity);
+}
+
 function devBadgeMarkup(label = "", options = {}) {
   const { showBadge = true } = options;
   const name = label ? `<span class="player-name-text">${label}</span>` : "";
@@ -2599,6 +2603,13 @@ function percent(value, total) {
   return `${Math.round((Number(value || 0) / total) * 100)}%`;
 }
 
+function formatWinStreak(stats = {}, infinite = false) {
+  if (infinite) return "∞ · лучшая - ∞";
+  const current = Math.max(0, Number(stats.winStreak || 0));
+  const best = Math.max(current, Number(stats.bestWinStreak || 0));
+  return `${current} · лучшая - ${best}`;
+}
+
 function getLevelRequirement(level = 1) {
   return Math.max(1, Math.round(100 * Math.pow(1.2, Math.max(1, Number(level || 1)) - 1)));
 }
@@ -2616,21 +2627,20 @@ function renderProfileStats() {
   const grid = $("profileStatsGrid");
   if (!grid || !state.profile) return;
   const stats = state.profile.stats || {};
+  const infiniteStats = isInfiniteStatsUser(state.profile);
   const games = Number(stats.games || 0);
   const spyGames = Number(stats.spyGames || 0);
   const civilianGames = Number(stats.civilianGames || 0);
   const wins = Number(stats.wins || 0);
   const spyWins = Number(stats.spyWins || 0);
   const civilianWins = Number(stats.civilianWins || 0);
-  const spyRate = spyGames ? spyWins / spyGames : 0;
-  const civilianRate = civilianGames ? civilianWins / civilianGames : 0;
   const xpMeta = getEconomyXpMeta(state.profile);
   grid.innerHTML = [
-    ["🎮", t("Игр сыграно"), games],
-    ["🏆", t("Общий винрейт"), percent(wins, games)],
-    ["🕵️", t("Побед за шпиона"), `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
-    ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
-    ["🔥", t("Серия побед"), stats.winStreak || 0],
+    ["🎮", t("Игр сыграно"), infiniteStats ? "∞" : games],
+    ["🏆", t("Общий винрейт"), infiniteStats ? "∞" : percent(wins, games)],
+    ["🕵️", t("Побед за шпиона"), infiniteStats ? "∞" : `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
+    ["🛡️", t("Побед за мирных"), infiniteStats ? "∞" : `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
+    ["🔥", t("Серия побед"), formatWinStreak(stats, infiniteStats)],
     ["⭐", "Уровень", `LVL ${xpMeta.infinite ? "∞" : xpMeta.level}`]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">
@@ -3445,9 +3455,10 @@ function continueAsGuest({ silent = false } = {}) {
 }
 
 function logoutAccount() {
+  const accessToken = getStoredAuthToken();
   const refreshToken = getStoredRefreshToken();
   clearStoredAuthToken();
-  socket.emit("auth:logout", { refreshToken }, () => {
+  socket.emit("auth:logout", { accessToken, token: accessToken, refreshToken }, () => {
     applyProfile({ user: null, guest: true });
     hideAuthModal();
     setAuthStatus("Ты вышел из аккаунта");
@@ -5074,20 +5085,20 @@ document.addEventListener('click', closeChatPlayerActions);
 
 function profileStatsMarkup(user = {}) {
   const stats = user.stats || {};
+  const infiniteStats = isInfiniteStatsUser(user);
   const games = Number(stats.games || 0);
   const spyGames = Number(stats.spyGames || 0);
   const civilianGames = Number(stats.civilianGames || 0);
   const wins = Number(stats.wins || 0);
   const spyWins = Number(stats.spyWins || 0);
   const civilianWins = Number(stats.civilianWins || 0);
-  const streak = Number(stats.winStreak || 0);
   const xpMeta = getEconomyXpMeta(user);
   return [
-    ["🎮", t("Игр сыграно"), games],
-    ["🏆", t("Общий винрейт"), percent(wins, games)],
-    ["🕵️", t("Побед за шпиона"), `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
-    ["🛡️", t("Побед за мирных"), `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
-    ["🔥", t("Серия побед"), streak],
+    ["🎮", t("Игр сыграно"), infiniteStats ? "∞" : games],
+    ["🏆", t("Общий винрейт"), infiniteStats ? "∞" : percent(wins, games)],
+    ["🕵️", t("Побед за шпиона"), infiniteStats ? "∞" : `${spyWins}/${spyGames} · ${percent(spyWins, spyGames)}`],
+    ["🛡️", t("Побед за мирных"), infiniteStats ? "∞" : `${civilianWins}/${civilianGames} · ${percent(civilianWins, civilianGames)}`],
+    ["🔥", t("Серия побед"), formatWinStreak(stats, infiniteStats)],
     ["⭐", "Уровень", `LVL ${xpMeta.infinite ? "∞" : xpMeta.level}`]
   ].map(([icon, label, value]) => `
     <div class="profile-stat-card">

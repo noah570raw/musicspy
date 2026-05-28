@@ -33,6 +33,7 @@ const {
   parseOAuthResponse,
   refreshSession: refreshAuthSession,
   revokeRefreshToken,
+  revokeSessionToken,
   validatePassword,
   verifyPassword
 } = require("./lib/auth");
@@ -364,6 +365,22 @@ function applyRoleEntitlements(user) {
   economy.vinyls = Math.max(Number(economy.vinyls || 0), DEV_VINYL_BALANCE);
   user.economy = economy;
   return true;
+}
+
+function clearSocketPassportSession(socket) {
+  socket.request.logout?.(() => {});
+  const socketSession = socket.request.session;
+  if (!socketSession) return Promise.resolve();
+  socketSession.passport = null;
+  socketSession.user = null;
+  socketSession.oauthReturnTo = null;
+  if (typeof socketSession.save !== "function") return Promise.resolve();
+  return new Promise((resolve) => {
+    socketSession.save((error) => {
+      if (error) console.error("[auth] failed to clear passport session", error);
+      resolve();
+    });
+  });
 }
 
 function publicRoles(user) {
@@ -2594,10 +2611,15 @@ io.on("connection", (socket) => {
     cb({ success: true, ...tokens, token: tokens.accessToken, profile: profileForSocket(socket) });
   });
 
-  socket.on("auth:logout", ({ refreshToken } = {}, cb = () => {}) => {
+  socket.on("auth:logout", async ({ refreshToken, accessToken, token } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (user && refreshToken) revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
+    if (user) {
+      const revokeOptions = { save: saveUsersStore };
+      if (refreshToken) revokeRefreshToken(user, refreshToken, revokeOptions);
+      if (accessToken || token) revokeSessionToken(user, accessToken || token, revokeOptions);
+    }
     unregisterAuthenticatedSocket(socket);
+    await clearSocketPassportSession(socket);
     cb({ success: true, profile: profileForSocket(socket) });
   });
 
