@@ -453,35 +453,64 @@
 
           <section id="settingsPanelGame" class="site-menu-panel" data-settings-panel="game">
             <div class="game-settings-suite settings-block">
+              <div class="game-ambient game-ambient-a" aria-hidden="true"></div>
+              <div class="game-ambient game-ambient-b" aria-hidden="true"></div>
+              <div class="game-particle-field" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+
               <div class="game-settings-hero">
-                <div>
-                  <span class="game-settings-kicker">Party-safe controls</span>
+                <div class="game-title-stack">
+                  <span class="game-settings-kicker">Party-safe control deck</span>
                   <h3>Игра</h3>
-                  <p>Настройки экрана матча: приватность для стрима, глубина эффектов и спокойный Twitch-friendly UI.</p>
+                  <p>Собери комфортный матч: приватность для стрима, глубина эффектов и спокойный Twitch-friendly UI без лишних спойлеров.</p>
                 </div>
                 <div class="game-settings-orb" aria-hidden="true">
                   <span>LIVE</span>
                   <b>SPACE</b>
+                  <em>hold to reveal</em>
                 </div>
               </div>
 
-              <div class="streamer-setting-card">
-                <div class="streamer-setting-copy">
-                  <span class="streamer-setting-label">Streamer Mode</span>
-                  <strong>Скрывать роль и тему на стриме</strong>
-                  <p>В режиме стримера роль и тема не лежат в открытом интерфейсе. Посмотреть их можно только удерживая SPACE.</p>
+              <div class="game-settings-stage">
+                <div class="streamer-setting-card">
+                  <div class="streamer-setting-copy">
+                    <span class="streamer-setting-label">Streamer Mode</span>
+                    <strong>Скрывать роль и тему на стриме</strong>
+                    <p>Роль и тема не лежат в открытом интерфейсе. Посмотреть их можно только удерживая SPACE во время матча.</p>
+                  </div>
+                  <button id="streamerModeToggle" class="streamer-toggle" type="button" role="switch" aria-checked="false" onclick="toggleStreamerModePreference()">
+                    <span class="streamer-toggle-track"><i></i></span>
+                    <b id="streamerModeToggleLabel">OFF</b>
+                  </button>
                 </div>
-                <button id="streamerModeToggle" class="streamer-toggle" type="button" role="switch" aria-checked="false" onclick="toggleStreamerModePreference()">
-                  <span class="streamer-toggle-track"><i></i></span>
-                  <b id="streamerModeToggleLabel">OFF</b>
-                </button>
+
+                <div class="game-preview-console" aria-hidden="true">
+                  <span class="game-console-label">Match HUD preview</span>
+                  <div class="game-console-card">
+                    <span class="game-console-pulse"></span>
+                    <div>
+                      <strong>Secret role</strong>
+                      <small>protected until SPACE hold</small>
+                    </div>
+                    <b>SAFE</b>
+                  </div>
+                </div>
               </div>
 
-              <div class="settings-title compact game-effects-title">
-                <strong>Интенсивность эффектов</strong>
-                <span>Настрой глубину свечения, частиц и кинематографичных движений интерфейса.</span>
+              <div class="game-effects-panel">
+                <div class="settings-title compact game-effects-title">
+                  <strong>Интенсивность эффектов</strong>
+                  <span>Настрой глубину свечения, частиц и кинематографичных движений интерфейса.</span>
+                </div>
+                <div id="effectsDensityChoices" class="effects-density-grid" role="radiogroup" aria-label="Effects Density"></div>
               </div>
-              <div id="effectsDensityChoices" class="effects-density-grid" role="radiogroup" aria-label="Effects Density"></div>
+
+              <div class="game-settings-hints" aria-label="Подсказки по настройкам игры">
+                <article><strong>01</strong><span>Streamer Mode держит секреты матча вне кадра до удержания SPACE.</span></article>
+                <article><strong>02</strong><span>LOW и MEDIUM снижают частицы для слабых ПК и спокойного стрима.</span></article>
+                <article><strong>03</strong><span>Выбор сохраняется в аккаунте и применяется к следующим партиям.</span></article>
+              </div>
             </div>
           </section>
 
