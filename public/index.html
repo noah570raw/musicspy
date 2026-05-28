@@ -184,11 +184,11 @@
         <nav class="site-menu-tabs" aria-label="Разделы меню">
           <span class="site-menu-tabs-label">System</span>
           <button id="settingsTabProfile" class="site-menu-tab active" type="button" onclick="openSettingsSection('profile')"><span class="site-menu-tab-icon" aria-hidden="true">◉</span><span>Профиль</span></button>
-          <button id="settingsTabPromo" class="site-menu-tab" type="button" onclick="openSettingsSection('promo')"><span class="site-menu-tab-icon" aria-hidden="true">✧</span><span>Промокоды</span></button>
-          <button id="settingsTabShop" class="site-menu-tab" type="button" onclick="openSettingsSection('shop')"><span class="site-menu-tab-icon" aria-hidden="true">◍</span><span>Магазин</span></button>
           <button id="settingsTabDaily" class="site-menu-tab" type="button" onclick="openSettingsSection('daily')"><span class="site-menu-tab-icon" aria-hidden="true">🎁</span><span>Daily reward</span></button>
-          <button id="settingsTabInventory" class="site-menu-tab" type="button" onclick="openSettingsSection('inventory')"><span class="site-menu-tab-icon" aria-hidden="true">🧰</span><span>Инвентарь</span></button>
           <button id="settingsTabXpbooster" class="site-menu-tab" type="button" onclick="openSettingsSection('xpbooster')"><span class="site-menu-tab-icon" aria-hidden="true">⚡</span><span>XP Booster</span></button>
+          <button id="settingsTabShop" class="site-menu-tab" type="button" onclick="openSettingsSection('shop')"><span class="site-menu-tab-icon" aria-hidden="true">◍</span><span>Магазин</span></button>
+          <button id="settingsTabInventory" class="site-menu-tab" type="button" onclick="openSettingsSection('inventory')"><span class="site-menu-tab-icon" aria-hidden="true">🧰</span><span>Инвентарь</span></button>
+          <button id="settingsTabPromo" class="site-menu-tab" type="button" onclick="openSettingsSection('promo')"><span class="site-menu-tab-icon" aria-hidden="true">✧</span><span>Промокоды</span></button>
           <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')"><span class="site-menu-tab-icon" aria-hidden="true">✦</span><span>Внешний вид</span></button>
           <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')"><span class="site-menu-tab-icon" aria-hidden="true">≋</span><span>Игра</span></button>
           <button id="settingsTabAbout" class="site-menu-tab" type="button" onclick="openSettingsSection('about')"><span class="site-menu-tab-icon" aria-hidden="true">◇</span><span>О сайте</span></button>
@@ -463,17 +463,37 @@
 
 
           <section id="settingsPanelAbout" class="site-menu-panel" data-settings-panel="about">
-            <div class="about-site-card">
-              <span class="about-site-icon" aria-hidden="true">🕵️‍♂️</span>
-              <div>
-                <h3>Music Spy — музыкальная дедукция</h3>
-                <p>Это сайт для быстрых вечеринок: игроки получают тайную тему, ставят треки и по музыкальным уликам пытаются вычислить шпиона.</p>
+            <div class="about-site-showcase">
+              <div class="about-site-orb about-site-orb-a" aria-hidden="true"></div>
+              <div class="about-site-orb about-site-orb-b" aria-hidden="true"></div>
+              <div class="about-site-hero">
+                <div class="about-site-badge" aria-hidden="true">
+                  <span>MS</span>
+                  <strong>SPY</strong>
+                </div>
+                <div class="about-site-copy">
+                  <span class="about-site-kicker">Music Spy universe</span>
+                  <h3>Музыкальная дедукция, где каждый трек — улика</h3>
+                  <p>Собирай друзей, получай тайную тему, ставь треки и вычисляй шпиона по музыкальным подсказкам. Music Spy превращает обычный плейлист в напряжённую вечеринку с блефом, реакциями и финальным разоблачением.</p>
+                </div>
               </div>
-            </div>
-            <div class="about-site-grid">
-              <article><strong>Для друзей</strong><span>Комнаты, приглашения, QR-коды и открытые лобби помогают собрать компанию без лишних шагов.</span></article>
-              <article><strong>Для эмоций</strong><span>Реакции, история треков и финальные обсуждения превращают партию в мини-концерт.</span></article>
-              <article><strong>Для хитрости</strong><span>Шпион слушает чужие подсказки, блефует треками и пытается назвать тему в финале.</span></article>
+
+              <div class="about-site-actions" aria-label="Ссылки Music Spy">
+                <a class="about-site-link about-site-link-bot" href="https://bot.musicspy.online/" target="_blank" rel="noopener noreferrer">
+                  <span class="about-link-icon" aria-hidden="true">🤖</span>
+                  <span><strong>Сайт Discord-бота</strong><small>Команды, бот и расширение для сервера</small></span>
+                </a>
+                <a class="about-site-link about-site-link-discord" href="https://discord.com/invite/WAN8pKAEMp" target="_blank" rel="noopener noreferrer">
+                  <span class="about-link-icon" aria-hidden="true">💬</span>
+                  <span><strong>Discord сервер</strong><small>Новости, общение и комьюнити Music Spy</small></span>
+                </a>
+              </div>
+
+              <div class="about-site-grid">
+                <article><strong>01</strong><span>Комнаты, приглашения, QR-коды и открытые лобби помогают быстро собрать компанию.</span></article>
+                <article><strong>02</strong><span>Реакции, история треков и обсуждения делают каждую партию похожей на мини-концерт.</span></article>
+                <article><strong>03</strong><span>Шпион слушает подсказки, блефует треками и рискует назвать тему в финале.</span></article>
+              </div>
             </div>
           </section>
         </div>
