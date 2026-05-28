@@ -59,6 +59,7 @@ const state = {
   oauthRedirectError: "",
   latestResult: null,
   finalComments: [],
+  returnedToLobbyAfterGame: false,
   backgroundFadeFrame: null,
   backgroundTrackIndex: 0,
   backgroundTrackFallbackStartedAt: 0,
@@ -4108,6 +4109,8 @@ function restartLobby() {
       const statusId = state.phase === "results" ? "lobbyStatus" : state.phase === "game" ? "gameStatus" : "voteStatus";
       return setStatus(statusId, res.error, true);
     }
+    state.returnedToLobbyAfterGame = true;
+    if (res?.lobby) renderLobby(res.lobby);
     resetEndgameLocalState();
     closeTransientOverlays();
     showScreen("lobby");
@@ -4161,16 +4164,9 @@ function closeHostPlayersModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-function closeSpyReviewModal() {
-  const modal = $("spyReviewModal");
-  if (modal) modal.classList.add("hidden");
-  setStatus("spyReviewStatus");
-}
-
 function closeTransientOverlays() {
   hideCinematicOverlay({ runOnClose: false });
   closeHostPlayersModal();
-  closeSpyReviewModal();
   hideHowToPlay();
   const authModal = $("authModal");
   if (authModal) {
@@ -4230,13 +4226,6 @@ function submitSpyGuess() {
     }
     document.querySelectorAll(".spy-guess-option").forEach((item) => { item.disabled = true; });
     setStatus("spyGuessStatus", "Ответ принят. Сейчас будет финальное раскрытие.");
-  });
-}
-
-function resolveSpyGuess(correct) {
-  socket.emit("hostResolveSpyGuess", { code: state.currentCode, correct }, (res) => {
-    if (res?.error) return setStatus("spyReviewStatus", res.error, true);
-    closeSpyReviewModal();
   });
 }
 
@@ -5508,7 +5497,7 @@ function resultFunnyNomination(data) {
   const reacted = data?.breakdown?.mostReactedTrack;
   if (suspicious?.playerName) return `Красная метка вечера: ${suspicious.playerName}`;
   if (reacted?.playerName) return `Разорвал реакции: ${reacted.playerName}`;
-  return data?.civiliansWin ? "Детективы танцпола" : "Шпион на бис";
+  return data?.civiliansWin ? "Детективы танцпола" : "";
 }
 
 function resultSnapshot(data = state.latestResult) {
@@ -5531,11 +5520,8 @@ function renderSharePreview(data = state.latestResult) {
   const snap = resultSnapshot(data);
   box.innerHTML = `
     <div class="share-card-mini">
-      <span>Music Spy · ${escapeHtml(snap.code)}</span>
+      <span class="share-card-room">Music Spy · ${escapeHtml(snap.code)}</span>
       <strong>${escapeHtml(snap.winners)} победили</strong>
-      <small>Шпион: ${escapeHtml(snap.spies)} · Тема: «${escapeHtml(translateTheme(snap.theme))}»</small>
-      <small>Лучший трек: ${escapeHtml(snap.bestTrack)}</small>
-      <em>${escapeHtml(snap.nomination)}</em>
     </div>
   `;
 }
@@ -5598,10 +5584,7 @@ function drawShareCard(data = state.latestResult) {
   ctx.fillText(`${snap.winners} победили`, 90, 360);
   const rows = [
     ["Победители", snap.winners],
-    ["Шпион", snap.spies],
-    ["Тема", `«${translateTheme(snap.theme)}»`],
-    ["Лучший трек", snap.bestTrack],
-    ["Смешная номинация", snap.nomination]
+    ["Тема", `«${translateTheme(snap.theme)}»`]
   ];
   let y = 520;
   for (const [label, value] of rows) {
@@ -5765,12 +5748,9 @@ function renderResults(rawData = {}) {
   state.finalComments = data.finalComments || [];
   state.trackHistory = data.trackHistory || state.trackHistory || [];
   renderSharePreview(data);
-  renderFinalComments(state.finalComments);
   const suspectedNames = (data.breakdown?.suspectedNames || []).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
-  const guessText = data.spyGuess?.skipped
-    ? t("шпион не называл тему")
-    : `${escapeHtml(data.spyGuess?.playerName || t("Шпион"))}: «${escapeHtml(translateTheme(data.spyGuess?.text || "—"))}»`;
+  const guessText = t("финальное голосование завершено");
   const winnerLabel = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
   $("resultTitle").textContent = winnerLabel;
   const reward = myMatchReward(data);
@@ -6032,6 +6012,7 @@ socket.on("gameStarted", (data) => {
   state.totalRounds = data.totalRounds;
   state.settings = data.settings || state.settings;
   state.currentCode = data.code;
+  state.returnedToLobbyAfterGame = false;
   storeReconnectState(state.currentCode);
   state.votedTarget = null;
   state.voteCounts = {};
@@ -6065,7 +6046,15 @@ socket.on("chat:update", ({ messages }) => {
   console.log(`[CC] received equipped:${JSON.stringify((messages || []).map((msg) => ({ playerId: msg?.playerId, equippedCosmetics: msg?.equippedCosmetics || {} })))}`);
   renderChat(messages || []);
 });
-socket.on("finalComments:update", ({ comments }) => renderFinalComments(comments || []));
+socket.on("finalComments:update", ({ comments }) => { state.finalComments = comments || []; });
+
+socket.on("returnedToLobby", ({ lobby } = {}) => {
+  state.returnedToLobbyAfterGame = true;
+  if (lobby) renderLobby(lobby);
+  resetEndgameLocalState();
+  closeTransientOverlays();
+  showScreen("lobby");
+});
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
 });
@@ -6208,15 +6197,13 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
+  state.returnedToLobbyAfterGame = false;
   state.spyGuessActive = false;
   state.pendingSpyGuess = null;
-  closeSpyReviewModal();
   clearPlayer({ fadeBackground: true });
   updateVoteTimer(null);
-  showSpyRevealCountdown(data, () => {
-    showScreen("results");
-    renderResults(data);
-  });
+  showScreen("results");
+  renderResults(data);
 });
 
 socket.on("stopTrack", ({ skipped, message } = {}) => {
@@ -6242,12 +6229,7 @@ socket.on("spyGuessSubmitted", ({ guess, decoy }) => {
     playSoundCue("confirm");
     return;
   }
-  const text = $("spyReviewText");
-  if (text) text.textContent = `${guess?.playerName || "Шпион"}: «${guess?.text || "—"}»`;
-  setStatus("spyReviewStatus");
-  const modal = $("spyReviewModal");
-  if (modal) modal.classList.remove("hidden");
-  playSoundCue("danger");
+  // Spy guessing is disabled; ignore legacy submissions from older server sessions.
 });
 
 socket.on("hostAction", ({ message }) => {

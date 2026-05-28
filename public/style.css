@@ -14374,3 +14374,17 @@ body[data-screen="results"] .final-comments {
     display: none;
   }
 }
+
+/* Requested in-game player resize: stretch the track player down by ~1.1x from the previous layout. */
+body[data-screen="game"] .player-card {
+  grid-template-rows: auto minmax(348px, 1.07fr) auto auto auto;
+}
+
+body[data-screen="game"] .embed {
+  min-height: clamp(348px, 56.4vh, 564px);
+}
+
+body[data-screen="results"] .share-card-mini .share-card-room {
+  justify-self: center;
+  text-align: center;
+}

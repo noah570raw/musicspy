@@ -547,18 +547,6 @@
     </div>
   </div>
 
-  <div id="spyReviewModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="spyReviewTitle">
-    <div class="auth-modal-card host-players-card">
-      <p class="eyebrow">финальное решение</p>
-      <h2 id="spyReviewTitle">Версия шпиона</h2>
-      <p id="spyReviewText" class="auth-modal-text">Шпион отправил догадку.</p>
-      <div class="actions two-col">
-        <button class="primary" type="button" onclick="resolveSpyGuess(true)">Шпион угадал</button>
-        <button class="danger" type="button" onclick="resolveSpyGuess(false)">Шпион не угадал</button>
-      </div>
-      <p id="spyReviewStatus" class="status"></p>
-    </div>
-  </div>
   <div class="top-left-controls" aria-label="Основное меню">
     <button class="main-menu-button" type="button" onclick="openMainMenu()" aria-label="Открыть меню">☰ Меню</button>
   </div>
@@ -1200,17 +1188,6 @@
             <span>сводка по игрокам</span>
           </div>
           <div id="resultVotes" class="vote-list"></div>
-        </div>
-        <div class="postgame-panel final-comment-panel">
-          <div class="panel-title">
-            <strong>Послеигровой комментарий</strong>
-            <span>одна фраза в финальный отчёт</span>
-          </div>
-          <div class="comment-form">
-            <input id="finalCommentInput" maxlength="90" placeholder="Например: Я с первого раунда знал">
-            <button class="secondary" type="button" onclick="sendFinalComment()">Добавить</button>
-          </div>
-          <div id="finalComments" class="final-comments empty">Комментариев пока нет</div>
         </div>
       </aside>
     </section>
