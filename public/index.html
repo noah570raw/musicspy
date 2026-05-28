@@ -177,7 +177,7 @@
         <h2 id="authModalTitle">Меню</h2>
         <p class="site-menu-kicker">Music Spy Control Deck</p>
         <button class="modal-close" type="button" onclick="hideAuthModal()" aria-label="Закрыть меню">×</button>
-        <p id="authModalText" class="auth-modal-text">Профиль, внешний вид, игра, язык и информация о Music Spy.</p>
+        <p id="authModalText" class="auth-modal-text">Профиль, внешний вид, игра и информация о Music Spy.</p>
       </div>
 
       <div class="site-menu-layout">
@@ -190,7 +190,6 @@
           <button id="settingsTabXpbooster" class="site-menu-tab" type="button" onclick="openSettingsSection('xpbooster')"><span class="site-menu-tab-icon" aria-hidden="true">⚡</span><span>XP Booster</span></button>
           <button id="settingsTabAppearance" class="site-menu-tab" type="button" onclick="openSettingsSection('appearance')"><span class="site-menu-tab-icon" aria-hidden="true">✦</span><span>Внешний вид</span></button>
           <button id="settingsTabGame" class="site-menu-tab" type="button" onclick="openSettingsSection('game')"><span class="site-menu-tab-icon" aria-hidden="true">≋</span><span>Игра</span></button>
-          <button id="settingsTabLanguage" class="site-menu-tab" type="button" onclick="openSettingsSection('language')"><span class="site-menu-tab-icon" aria-hidden="true">⌁</span><span>Язык</span></button>
           <button id="settingsTabAbout" class="site-menu-tab" type="button" onclick="openSettingsSection('about')"><span class="site-menu-tab-icon" aria-hidden="true">◇</span><span>О сайте</span></button>
         </nav>
 
@@ -418,21 +417,6 @@
             </div>
           </section>
 
-          <section id="settingsPanelLanguage" class="site-menu-panel" data-settings-panel="language">
-            <div class="settings-block language-settings-block">
-              <div class="settings-title compact language-title">
-                <strong>Язык интерфейса</strong>
-                <span>Мгновенно переключай локализацию без выхода из партии.</span>
-              </div>
-              <div class="language-switcher" aria-label="Переключатель языка">
-                <span>RU</span>
-                <button id="languageToggle" class="language-toggle" type="button" onclick="toggleLanguage()" aria-pressed="false" title="Switch to English">
-                  <span class="language-toggle-knob"></span>
-                </button>
-                <span>EN</span>
-              </div>
-            </div>
-          </section>
 
           <section id="settingsPanelAbout" class="site-menu-panel" data-settings-panel="about">
             <div class="about-site-card">
@@ -496,7 +480,6 @@
         <strong id="accountToggleLabel">Загрузка</strong>
         <span id="accountToggleLevel" class="account-toggle-level">LVL 1</span>
       </span>
-      <span class="account-toggle-check" aria-hidden="true">✓</span>
     </button>
     <div id="accountXpBar" class="account-xp-bar hidden" aria-live="polite"></div>
   </div>

@@ -536,6 +536,24 @@ test("getSkipVoteState excludes track owner and disconnected listeners", () => {
   assert.equal(shouldCompleteSkip(lobby), true);
 });
 
+test("vinyl transactions do not grant experience or levels", () => {
+  const { addVinylTransaction, defaultEconomy, ensureUserProgress } = require("../server");
+  const user = {
+    id: "vinyl-only-user",
+    roles: [],
+    stats: { vinylsEarned: 0 },
+    economy: { ...defaultEconomy(), xp: 950, level: 1 }
+  };
+
+  ensureUserProgress(user);
+  addVinylTransaction(user, 500, "promo_code", { code: "VINYLONLY" });
+
+  assert.equal(user.economy.vinyls, 500);
+  assert.equal(user.stats.vinylsEarned, 500);
+  assert.equal(user.economy.xp, 950);
+  assert.equal(user.economy.level, 1);
+});
+
 test("economy rewards pay cosmetic-only Vinyls for perfect spy wins and achievements", () => {
   const { buildEconomyRewardsForGame, defaultEconomy, SHOP_CATALOG } = require("../server");
   const perfectTitle = SHOP_CATALOG.find((item) => item.id === "title_perfect_manipulator");

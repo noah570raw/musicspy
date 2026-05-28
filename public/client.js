@@ -2196,7 +2196,7 @@ function showAuthModal(mode = "choice") {
 }
 
 function openSettingsSection(section = "profile") {
-  const safeSection = ["profile", "shop", "inventory", "daily", "xpbooster", "appearance", "game", "language", "about"].includes(section) ? section : "profile";
+  const safeSection = ["profile", "shop", "inventory", "daily", "xpbooster", "appearance", "game", "about"].includes(section) ? section : "profile";
   state.settingsSection = safeSection;
   for (const panel of document.querySelectorAll("[data-settings-panel]")) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === safeSection);
