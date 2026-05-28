@@ -14145,11 +14145,13 @@ body[data-screen="results"] .results-side {
 }
 
 body[data-screen="results"] .results-main {
-  grid-template-rows: minmax(134px, 0.86fr) auto auto;
+  align-content: start;
+  grid-template-rows: auto auto auto;
 }
 
 body[data-screen="results"] .results-side {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1.12fr) auto;
+  align-content: start;
+  grid-template-rows: auto auto auto;
 }
 
 body[data-screen="results"] .results-verdict-board,
@@ -14373,15 +14375,6 @@ body[data-screen="results"] .final-comments {
   body[data-screen="results"] .vote-flow i {
     display: none;
   }
-}
-
-/* Requested in-game player resize: stretch the track player down by ~1.1x from the previous layout. */
-body[data-screen="game"] .player-card {
-  grid-template-rows: auto minmax(348px, 1.07fr) auto auto auto;
-}
-
-body[data-screen="game"] .embed {
-  min-height: clamp(348px, 56.4vh, 564px);
 }
 
 body[data-screen="results"] .share-card-mini .share-card-room {
