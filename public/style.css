@@ -12648,3 +12648,138 @@ body[data-screen="game"] .game-chat-panel {
     grid-template-rows: auto minmax(240px, 42vh) auto auto auto;
   }
 }
+
+/* In-game polish: cleaner queue, compact player stage, media search and vinyl waiting state. */
+body[data-screen="game"] .player-card {
+  grid-template-rows: auto minmax(234px, 0.9fr) auto auto auto;
+}
+
+body[data-screen="game"] .embed,
+body[data-screen="game"] .embed iframe {
+  min-height: clamp(234px, 43.2vh, 414px);
+}
+
+body[data-screen="game"] .embed.empty::before {
+  content: "";
+  width: clamp(128px, 18vw, 176px);
+  height: clamp(128px, 18vw, 176px);
+  border: 0;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.075) 0 1px, transparent 1px 7px),
+    conic-gradient(from 22deg, rgba(255, 255, 255, 0.14), transparent 9%, rgba(var(--accent-rgb), 0.13) 14%, transparent 24%, color-mix(in srgb, var(--accent-2) 14%, transparent) 36%, transparent 50%, rgba(255, 255, 255, 0.08) 60%, transparent 72%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--panel-strong) 78%, #000000) 0 7%, #020617 7.3% 10%, rgba(var(--surface-strong-rgb), 0.94) 10.4% 15%, #02030a 15.4% 100%);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.62),
+    0 0 46px rgba(var(--accent-rgb), 0.27),
+    0 0 76px color-mix(in srgb, var(--accent-2) 18%, transparent),
+    inset 0 0 38px rgba(255, 255, 255, 0.045),
+    inset 0 0 95px rgba(0, 0, 0, 0.9);
+  animation: vinylSpin 8s linear infinite;
+}
+
+body[data-screen="game"] .embed.empty::after {
+  content: "";
+  position: absolute;
+  width: clamp(54px, 7.6vw, 74px);
+  height: clamp(54px, 7.6vw, 74px);
+  border-radius: 999px;
+  background: radial-gradient(circle, #020617 0 12%, color-mix(in srgb, var(--accent) 38%, #111827) 13% 44%, #020617 45% 100%);
+  box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.52), inset 0 0 14px rgba(255, 255, 255, 0.24);
+  pointer-events: none;
+}
+
+body[data-screen="game"] .order-row {
+  grid-template-columns: auto 1fr;
+}
+
+body[data-screen="game"] .order-row small {
+  color: var(--theme-text-soft);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+body[data-screen="game"] .order-row span:first-child {
+  background: transparent;
+  box-shadow: none;
+}
+
+body[data-screen="game"] .spy-visible-badge {
+  display: none;
+}
+
+body[data-screen="game"] .chat-player-trigger {
+  margin-left: -2px;
+  transform: translateX(6px);
+}
+
+body[data-screen="game"] .chat-player-trigger .avatar {
+  border: 1px solid color-mix(in srgb, var(--accent-2) 50%, rgba(255, 255, 255, 0.24));
+  box-shadow: 0 0 0 2px rgba(var(--surface-rgb), 0.72), 0 0 14px var(--theme-glow-soft);
+}
+
+.media-library {
+  display: grid;
+  gap: 8px;
+}
+
+.media-library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--theme-text-soft);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.media-library-head small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.media-library-input-row {
+  position: relative;
+}
+
+.media-library-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.media-library-hints button {
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid var(--theme-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-control-bg) 86%, transparent);
+  color: var(--theme-text-soft);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.media-library-hints button:hover:not(:disabled) {
+  border-color: var(--theme-line-strong);
+  background: var(--theme-active-bg);
+  color: var(--text);
+}
+
+body[data-screen="game"] .order-row .player-name-text,
+body[data-screen="game"] .order-row strong span {
+  display: inline;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+
+body[data-screen="game"] .order-row {
+  display: grid;
+  align-items: center;
+}

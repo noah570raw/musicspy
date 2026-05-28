@@ -4553,6 +4553,7 @@ function sendTrack() {
   socket.emit("playTrack", { code: state.currentCode, url }, (res) => {
     if (res?.error) return setStatus("gameStatus", res.error, true);
     $("url").value = "";
+    updateMediaLibraryHints();
     setStatus("gameStatus", `Трек принят. Слушаем ${state.settings.listenTime || DEFAULT_LISTEN_TIME} секунд...`);
     playSoundCue("track");
     state.turnStage = "listening";
@@ -4721,7 +4722,7 @@ function canSeeSpyMarkers() {
 function playerNameMarkup(player, fallback = "Игрок") {
   const name = nameWithDevBadge(player, fallback, { showBadge: false });
   const isVisibleSpy = canSeeSpyMarkers() && state.spyIds.includes(player?.id);
-  return `<strong class="${isVisibleSpy ? "spy-visible-name" : ""}">${name}</strong>${isVisibleSpy ? `<small class="spy-visible-badge">${t("Шпион")}</small>` : ""}`;
+  return `<strong class="${isVisibleSpy ? "spy-visible-name" : ""}">${name}</strong>`;
 }
 
 function renderOrder() {
@@ -4731,7 +4732,7 @@ function renderOrder() {
     const active = id === state.currentPlayerId;
     return `
       <div class="order-row ${active ? "active" : ""}">
-        <span>${index + 1}</span>
+        <small>${index + 1}</small>
         ${playerNameMarkup(player)}
       </div>
     `;
@@ -5193,7 +5194,58 @@ function updateSendButton(submitted = false) {
   const listening = state.turnStage === "listening";
   $("sendBtn").disabled = !isMine || submitted || listening;
   $("url").disabled = !isMine || submitted || listening;
-  $("sendBtn").textContent = submitted || listening ? t("Трек играет") : isMine ? t("Отправить трек") : t("Ждем ход");
+  $("sendBtn").textContent = submitted || listening ? t("Трек играет") : isMine ? t("Отправить трек") : t("Найди трек");
+  updateMediaLibraryHints();
+}
+
+function mediaLibraryQuery(value = $("url")?.value || "") {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function isProbablyTrackUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return Boolean(parsed.protocol && parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function useMediaLibraryExample(value) {
+  const input = $("url");
+  if (!input || input.disabled) return;
+  input.value = value;
+  input.focus();
+  updateMediaLibraryHints();
+}
+
+function updateMediaLibraryHints() {
+  const input = $("url");
+  const hints = $("mediaLibraryHints");
+  const list = $("mediaLibrarySuggestions");
+  if (!input || !hints) return;
+  const query = mediaLibraryQuery(input.value);
+  const historyTitles = (state.trackHistory || [])
+    .map((track) => track.searchQuery || track.query || "")
+    .filter(Boolean)
+    .slice(-4)
+    .reverse();
+  const baseSuggestions = query.length >= 2 && !isProbablyTrackUrl(query)
+    ? [`${query} official audio`, `${query} live`, `${query} remix`]
+    : historyTitles.length
+      ? historyTitles
+      : ["Daft Punk — Get Lucky", "The Weeknd — Blinding Lights"];
+  if (list) {
+    list.innerHTML = baseSuggestions.map((item) => `<option value="${escapeAttribute(item)}"></option>`).join("");
+  }
+  const disabled = input.disabled;
+  const actions = query.length >= 2 && !isProbablyTrackUrl(query)
+    ? [
+        { label: `YouTube: ${query}`, value: query },
+        { label: `SoundCloud: ${query}`, value: `${query} soundcloud` }
+      ]
+    : baseSuggestions.slice(0, 2).map((value) => ({ label: value, value }));
+  hints.innerHTML = actions.map((item) => `<button type="button" ${disabled ? "disabled" : ""} data-media-query="${escapeAttribute(item.value)}" onclick="useMediaLibraryExample(this.dataset.mediaQuery)">${escapeHtml(item.label)}</button>`).join("");
 }
 
 function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_TIME }) {
@@ -5283,6 +5335,7 @@ function clearPlayer({ fadeBackground = false } = {}) {
 
 function loadTrack(track) {
   const url = typeof track === "string" ? track : track.url;
+  const searchQuery = typeof track === "string" ? "" : mediaLibraryQuery(track.searchQuery || track.query || "");
   const incomingTrackId = typeof track === "string" ? state.currentTrackId : (track.id || state.currentTrackId);
   if (incomingTrackId && incomingTrackId === state.currentTrackId && $("trackFrame")) {
     applySiteVolume();
@@ -5311,6 +5364,9 @@ function loadTrack(track) {
   if (youtubeId) {
     const origin = encodeURIComponent(window.location.origin);
     embed.innerHTML = `<iframe id="trackFrame" src="https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&enablejsapi=1&origin=${origin}" title="YouTube player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  } else if (searchQuery) {
+    const origin = encodeURIComponent(window.location.origin);
+    embed.innerHTML = `<iframe id="trackFrame" src="https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(searchQuery)}&autoplay=1&rel=0&enablejsapi=1&origin=${origin}" title="YouTube search player" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   } else if (soundCloud) {
     embed.innerHTML = `<iframe id="trackFrame" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&visual=true&show_teaser=false" title="SoundCloud player" allow="autoplay"></iframe>`;
     if (window.SC?.Widget) {
