@@ -171,6 +171,9 @@ const ACCENT_COLORS = [
   { id: "cyan", label: "Голубой", hex: "#06b6d4", rgb: "6, 182, 212" },
   { id: "blue", label: "Синий", hex: "#3b82f6", rgb: "59, 130, 246" },
   { id: "violet", label: "Фиолетовый", hex: "#8b5cf6", rgb: "139, 92, 246" },
+  { id: "pink", label: "Розовый", hex: "#ec4899", rgb: "236, 72, 153" },
+  { id: "burgundy", label: "Бордовый", hex: "#9f1239", rgb: "159, 18, 57" },
+  { id: "lime", label: "Лаймовый", hex: "#84cc16", rgb: "132, 204, 22" },
   { id: "white", label: "Белый", hex: "#f8fafc", rgb: "248, 250, 252" },
   { id: "black", label: "Черный", hex: "#111827", rgb: "17, 24, 39" }
 ];
