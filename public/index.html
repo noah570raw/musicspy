@@ -1059,13 +1059,9 @@
               <small>ссылка или исполнитель + трек</small>
             </div>
             <div class="media-library-input-row">
-              <input id="url" list="mediaLibrarySuggestions" placeholder="Вставь ссылку или напиши: исполнитель — трек" oninput="updateMediaLibraryHints()" autocomplete="off">
-              <datalist id="mediaLibrarySuggestions"></datalist>
+              <input id="url" placeholder="Напиши: исполнитель — название трека" oninput="updateMediaLibraryHints()" autocomplete="off">
             </div>
-            <div id="mediaLibraryHints" class="media-library-hints">
-              <button type="button" onclick="useMediaLibraryExample('Daft Punk — Get Lucky')">Daft Punk — Get Lucky</button>
-              <button type="button" onclick="useMediaLibraryExample('The Weeknd — Blinding Lights')">The Weeknd — Blinding Lights</button>
-            </div>
+            <p id="mediaLibraryHints" class="media-library-hints">Нажми «Отправить трек» — медиатека сама найдет первый подходящий трек и запустит его.</p>
           </div>
           <button id="sendBtn" class="primary" onclick="sendTrack()">Отправить трек</button>
         </div>

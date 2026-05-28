@@ -3335,17 +3335,22 @@ io.on("connection", (socket) => {
     cb({ success: true, comment, comments: lobby.finalComments });
   });
 
-  socket.on("playTrack", ({ code, url }, cb = () => {}) => {
+  socket.on("playTrack", async ({ code, url }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     const submission = normalizeTrackSubmission(url);
-    const trackUrl = submission.url;
     if (!lobby || lobby.phase !== "playing") return cb({ error: "Сейчас нельзя отправить трек" });
     if (lobby.order[lobby.currentTurnIndex] !== socket.id) return cb({ error: "Сейчас ход другого игрока" });
     if (lobby.submittedThisTurn) return cb({ error: "Трек уже отправлен" });
     if (!submission.valid) return cb({ error: "Вставь ссылку YouTube/SoundCloud или напиши исполнителя и трек" });
 
-    const player = lobby.players.find((item) => item.id === socket.id);
     lobby.submittedThisTurn = true;
+    if (submission.source === "library" && submission.searchQuery) {
+      const resolvedUrl = await resolveYouTubeSearchUrl(submission.searchQuery);
+      if (resolvedUrl) submission.url = resolvedUrl;
+    }
+    const trackUrl = submission.url;
+
+    const player = lobby.players.find((item) => item.id === socket.id);
     lobby.currentTrackReactions = {};
     resetSkipVotes(lobby);
     lobby.lastTrack = {
@@ -3521,6 +3526,48 @@ io.on("connection", (socket) => {
   });
 });
 
+
+const youtubeSearchCache = new Map();
+const YOUTUBE_SEARCH_CACHE_TTL_MS = 1000 * 60 * 30;
+
+function extractFirstYouTubeVideoId(html = "") {
+  const rendererMatch = html.match(/"videoRenderer"\s*:\s*\{[\s\S]{0,2400}?"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/);
+  if (rendererMatch) return rendererMatch[1];
+  const watchMatch = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+  return watchMatch ? watchMatch[1] : "";
+}
+
+async function resolveYouTubeSearchUrl(query, { fetchImpl = globalThis.fetch } = {}) {
+  const normalizedQuery = String(query || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  if (normalizedQuery.length < 2 || typeof fetchImpl !== "function") return "";
+  const cached = youtubeSearchCache.get(normalizedQuery.toLowerCase());
+  if (cached && Date.now() - cached.createdAt < YOUTUBE_SEARCH_CACHE_TTL_MS) return cached.url;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+  try {
+    const response = await fetchImpl(`https://www.youtube.com/results?search_query=${encodeURIComponent(normalizedQuery)}`, {
+      signal: controller.signal,
+      headers: {
+        "accept-language": "ru,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (compatible; MusicSpyBot/1.0; +https://musicspy.online/)"
+      }
+    });
+    if (!response.ok) return "";
+    const html = await response.text();
+    const videoId = extractFirstYouTubeVideoId(html);
+    if (!videoId) return "";
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    youtubeSearchCache.set(normalizedQuery.toLowerCase(), { url, createdAt: Date.now() });
+    return url;
+  } catch (error) {
+    console.warn(`YouTube search failed for "${normalizedQuery}":`, error?.message || error);
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function normalizeTrackSubmission(input) {
   const raw = String(input || "").trim().replace(/\s+/g, " ");
   if (!raw) return { valid: false, url: "", searchQuery: "", source: "empty" };
@@ -3612,5 +3659,8 @@ module.exports = {
   ensureUserProgress,
   addVinylTransaction,
   xpBoosterState,
-  buildEconomyRewardsForGame
+  buildEconomyRewardsForGame,
+  normalizeTrackSubmission,
+  extractFirstYouTubeVideoId,
+  resolveYouTubeSearchUrl
 };

@@ -4721,8 +4721,7 @@ function canSeeSpyMarkers() {
 
 function playerNameMarkup(player, fallback = "Игрок") {
   const name = nameWithDevBadge(player, fallback, { showBadge: false });
-  const isVisibleSpy = canSeeSpyMarkers() && state.spyIds.includes(player?.id);
-  return `<strong class="${isVisibleSpy ? "spy-visible-name" : ""}">${name}</strong>`;
+  return `<strong>${name}</strong>`;
 }
 
 function renderOrder() {
@@ -4941,15 +4940,17 @@ function lobbyPlayerProfileActionMarkup(message) {
   `;
 }
 
-function renderChat(messages = state.chatMessages) {
-  const boxes = [...document.querySelectorAll("[data-chat-messages]")];
-  if (!boxes.length) return;
-  const list = Array.isArray(messages) ? messages : [];
-  state.chatMessages = list;
-  const markup = list.map((message) => {
+function gameChatPlayerNameMarkup(message) {
+  const player = lobbyPlayerById(message.playerId) || {};
+  const nickname = player.name || message.playerName || "Игрок";
+  return `<strong class="chat-player-name game-chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions }, "Игрок", { showBadge: false })}</strong>`;
+}
+
+function chatMessagesMarkup(list, { gameChat = false } = {}) {
+  return list.map((message) => {
     const isMine = message.playerId === socket.id;
     const actionState = getChatPlayerActionsState(message.playerId);
-    const playerActions = isMine ? "" : `
+    const playerActions = isMine || gameChat ? "" : `
       <div class="chat-player-actions">
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
         <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
@@ -4959,7 +4960,7 @@ function renderChat(messages = state.chatMessages) {
       <div class="chat-message ${isMine ? "mine" : ""}" data-player-id="${escapeAttribute(message.playerId || "")}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
-            ${lobbyPlayerProfileActionMarkup(message)}
+            ${gameChat ? gameChatPlayerNameMarkup(message) : lobbyPlayerProfileActionMarkup(message)}
             ${playerActions}
           </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
@@ -4968,6 +4969,13 @@ function renderChat(messages = state.chatMessages) {
       </div>
     `;
   }).join("");
+}
+
+function renderChat(messages = state.chatMessages) {
+  const boxes = [...document.querySelectorAll("[data-chat-messages]")];
+  if (!boxes.length) return;
+  const list = Array.isArray(messages) ? messages : [];
+  state.chatMessages = list;
 
   for (const box of boxes) {
     const scrollArea = box.closest("[data-chat-scroll]") || box;
@@ -4978,8 +4986,9 @@ function renderChat(messages = state.chatMessages) {
       continue;
     }
     const hadMessages = box.children.length > 0;
+    const gameChat = box.id === "chatMessages" || Boolean(box.closest("#gameChatPanel"));
     box.classList.remove("empty");
-    box.innerHTML = markup;
+    box.innerHTML = chatMessagesMarkup(list, { gameChat });
     if (window.CosmeticsRenderer) {
       const rows = Array.from(box.querySelectorAll(".chat-message"));
       rows.forEach((row, index) => {
@@ -5222,30 +5231,18 @@ function useMediaLibraryExample(value) {
 function updateMediaLibraryHints() {
   const input = $("url");
   const hints = $("mediaLibraryHints");
-  const list = $("mediaLibrarySuggestions");
   if (!input || !hints) return;
   const query = mediaLibraryQuery(input.value);
-  const historyTitles = (state.trackHistory || [])
-    .map((track) => track.searchQuery || track.query || "")
-    .filter(Boolean)
-    .slice(-4)
-    .reverse();
-  const baseSuggestions = query.length >= 2 && !isProbablyTrackUrl(query)
-    ? [`${query} official audio`, `${query} live`, `${query} remix`]
-    : historyTitles.length
-      ? historyTitles
-      : ["Daft Punk — Get Lucky", "The Weeknd — Blinding Lights"];
-  if (list) {
-    list.innerHTML = baseSuggestions.map((item) => `<option value="${escapeAttribute(item)}"></option>`).join("");
-  }
   const disabled = input.disabled;
-  const actions = query.length >= 2 && !isProbablyTrackUrl(query)
-    ? [
-        { label: `YouTube: ${query}`, value: query },
-        { label: `SoundCloud: ${query}`, value: `${query} soundcloud` }
-      ]
-    : baseSuggestions.slice(0, 2).map((value) => ({ label: value, value }));
-  hints.innerHTML = actions.map((item) => `<button type="button" ${disabled ? "disabled" : ""} data-media-query="${escapeAttribute(item.value)}" onclick="useMediaLibraryExample(this.dataset.mediaQuery)">${escapeHtml(item.label)}</button>`).join("");
+  if (disabled) {
+    hints.textContent = t("Медиатека станет доступна в твой ход.");
+  } else if (query.length >= 2 && !isProbablyTrackUrl(query)) {
+    hints.textContent = t("Будет найден и запущен первый подходящий трек на YouTube.");
+  } else if (isProbablyTrackUrl(query)) {
+    hints.textContent = t("Ссылка будет открыта напрямую, если это YouTube или SoundCloud.");
+  } else {
+    hints.textContent = t("Напиши исполнителя и название трека — без ремикс-подсказок и лишних вариантов.");
+  }
 }
 
 function updateTimer({ timeLeft, stage = "waiting", listenTime = DEFAULT_LISTEN_TIME }) {

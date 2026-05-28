@@ -583,3 +583,21 @@ test("economy rewards pay cosmetic-only Vinyls for perfect spy wins and achievem
   assert.equal(spyUser.economy.vinyls, 0);
   assert.equal(previousUsersStore, undefined);
 });
+
+test("normalizeTrackSubmission accepts artist-title search queries for the media library", () => {
+  const { normalizeTrackSubmission } = require("../server");
+
+  const submission = normalizeTrackSubmission("  Daft Punk   -   Get Lucky  ");
+
+  assert.equal(submission.valid, true);
+  assert.equal(submission.searchQuery, "Daft Punk - Get Lucky");
+  assert.equal(submission.source, "library");
+  assert.match(submission.url, /^https:\/\/www\.youtube\.com\/results\?search_query=/);
+});
+
+test("extractFirstYouTubeVideoId picks the first videoRenderer result", () => {
+  const { extractFirstYouTubeVideoId } = require("../server");
+  const html = '{"videoRenderer":{"videoId":"dQw4w9WgXcQ","title":{"runs":[{"text":"Track"}]}}}';
+
+  assert.equal(extractFirstYouTubeVideoId(html), "dQw4w9WgXcQ");
+});
