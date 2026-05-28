@@ -2003,7 +2003,7 @@ function finishVote(code) {
     return;
   }
 
-  startSpyGuess(code, suspected, voteTotals);
+  finishGame(code, suspected, voteTotals, { text: "", correct: false, skipped: true });
 }
 
 function startSpyGuess(code, suspected, voteTotals) {
@@ -3539,6 +3539,11 @@ io.on("connection", (socket) => {
     const isPlayer = lobby.players.some((player) => player.id === socket.id);
     const canReturnAfterGame = lobby.phase === "ended" && isPlayer;
     if (lobby.host !== socket.id && !canReturnAfterGame) return cb({ error: "Вернуть игру в лобби может только хост" });
+
+    if (lobby.phase === "ended" && isPlayer) {
+      socket.emit("returnedToLobby", { lobby: publicLobby(lobby) });
+      return cb({ success: true, localOnly: true, lobby: publicLobby(lobby) });
+    }
 
     clearTimer(lobby.code);
     resetLobbyToWaiting(lobby);
