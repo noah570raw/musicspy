@@ -5411,17 +5411,59 @@ function isSoundCloudUrl(url) {
   }
 }
 
+function voteCandidateStats(playerId) {
+  const tracks = (state.trackHistory || []).filter((track) => track.playerId === playerId);
+  const reactionTotal = tracks.reduce((sum, track) => sum + Object.values(track.reactions || {}).reduce((acc, count) => acc + (Number(count) || 0), 0), 0);
+  const suspiciousTotal = tracks.reduce((sum, track) => sum + (Number(track.reactions?.["🤔"]) || 0), 0);
+  const latestTrack = tracks[tracks.length - 1];
+  return { tracks: tracks.length, reactionTotal, suspiciousTotal, latestTrack };
+}
+
 function renderVoteList(votes = {}) {
   state.voteCounts = votes || {};
   const voteCounts = state.voteCounts;
   const candidates = state.voteCandidates.length ? state.voteCandidates : state.players.map((player) => player.id);
-  $("voteList").innerHTML = state.players.filter((player) => candidates.includes(player.id)).map((player) => {
+  const candidatePlayers = state.players.filter((player) => candidates.includes(player.id));
+  const maxVotes = Math.max(1, ...candidatePlayers.map((player) => Number(voteCounts[player.id]) || 0));
+  $("voteList").innerHTML = candidatePlayers.map((player, index) => {
     const isMe = player.id === socket.id;
-    const countMarkup = state.anonymousVoting ? "<strong>?</strong>" : `<strong>${voteCounts[player.id] || 0}</strong>`;
+    const isHost = player.id === state.hostId;
+    const isSelected = state.votedTarget === player.id;
+    const voteCount = Number(voteCounts[player.id]) || 0;
+    const stats = voteCandidateStats(player.id);
+    const voteMeter = state.anonymousVoting ? 0 : Math.max(8, Math.round((voteCount / maxVotes) * 100));
+    const countMarkup = state.anonymousVoting ? "?" : voteCount;
+    const targetLabel = isMe ? t("это ты") : t("подозреваемый");
+    const latestTrackLabel = stats.latestTrack ? t(`Раунд ${stats.latestTrack.round}, ход ${stats.latestTrack.turnNumber || "?"}`) : t("треков нет");
+    const cardClass = ["vote-row", "vote-player-card", isSelected ? "selected" : "", voteCount ? "has-votes" : "", isMe ? "is-me" : "", isHost ? "is-host" : ""].filter(Boolean).join(" ");
     return `
-      <button class="vote-row ${state.votedTarget === player.id ? "selected" : ""}" ${isMe ? "disabled" : ""} onclick="vote('${player.id}')">
-        <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })} ${isMe ? `(${t("ты")})` : ""}</span>
-        ${countMarkup}
+      <button class="${cardClass}" type="button" data-target="${escapeAttribute(player.id || "")}" style="--vote-meter: ${voteMeter}%; --vote-index: ${index};" ${isMe ? "disabled" : ""} onclick="vote(this.dataset.target)">
+        <span class="vote-card-glow" aria-hidden="true"></span>
+        <span class="vote-card-topline">
+          <span class="lobby-avatar-wrap vote-avatar-wrap">
+            ${playerAvatarMarkup(player, playerInitials(player.name || index + 1))}
+            <span class="lobby-online-dot" aria-hidden="true"></span>
+          </span>
+          <span class="vote-card-identity">
+            <span class="vote-card-name">${nameWithDevBadge(player, "Игрок", { showBadge: true })}</span>
+            <span class="vote-card-subtitle">${escapeHtml(targetLabel)}</span>
+          </span>
+          <span class="vote-card-count" aria-label="${escapeAttribute(t("голосов"))}"><b>${countMarkup}</b><small>${t("голосов")}</small></span>
+        </span>
+        <span class="vote-card-meter" aria-hidden="true"><i></i></span>
+        <span class="vote-card-stats">
+          <span><b>${stats.tracks}</b><small>${t("треков")}</small></span>
+          <span><b>${stats.reactionTotal}</b><small>${t("реакций")}</small></span>
+          <span><b>${stats.suspiciousTotal}</b><small>${t("сомнений")}</small></span>
+        </span>
+        <span class="vote-card-footer">
+          <span>${escapeHtml(latestTrackLabel)}</span>
+          <span class="vote-card-badges">
+            ${isHost ? `<em class="host-chip">HOST</em>` : ""}
+            ${isMe ? `<em class="ready-chip">${t("это ты")}</em>` : ""}
+            ${isSelected ? `<em class="vote-selected-chip">${t("твой голос")}</em>` : `<em class="ready-chip">${t("выбрать")}</em>`}
+          </span>
+        </span>
       </button>
     `;
   }).join("");

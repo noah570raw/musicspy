@@ -1101,20 +1101,36 @@
       </aside>
     </section>
 
-    <section id="voting" class="screen card hidden">
-      <p class="eyebrow">финальное голосование</p>
-      <h2>Кто шпион?</h2>
-      <p id="voteDescription" class="lead small">Выбери игрока, который хуже всех попадал в тему. Менять голос можно до конца голосования.</p>
-      <div id="voteTimer" class="vote-timer hidden">60</div>
-      <div class="track-history-panel voting-history">
-        <div class="panel-title">
-          <strong>История треков</strong>
-          <span>вспомни, кто что ставил</span>
+    <section id="voting" class="screen card hidden final-voting-card">
+      <div class="voting-hero">
+        <div class="voting-copy">
+          <p class="eyebrow">финальное голосование</p>
+          <h2>Кто шпион?</h2>
+          <p id="voteDescription" class="lead small">Выбери игрока, который хуже всех попадал в тему. Менять голос можно до конца голосования.</p>
         </div>
-        <div id="voteTrackHistory" class="track-history empty">Пока треков нет</div>
+        <div class="vote-timer-orbit" aria-label="Таймер голосования">
+          <span class="vote-orbit-ring" aria-hidden="true"></span>
+          <div id="voteTimer" class="vote-timer hidden">60</div>
+          <small>секунд на решение</small>
+        </div>
       </div>
-      <div id="voteList" class="vote-list"></div>
-      <p id="voteStatus" class="status"></p>
+      <div class="voting-layout">
+        <aside class="track-history-panel voting-history voting-evidence">
+          <div class="panel-title">
+            <strong>Досье треков</strong>
+            <span>улики по раундам</span>
+          </div>
+          <div id="voteTrackHistory" class="track-history empty">Пока треков нет</div>
+        </aside>
+        <div class="voting-roster-panel">
+          <div class="panel-title voting-roster-title">
+            <strong>Карточки подозреваемых</strong>
+            <span>выбери одну цель</span>
+          </div>
+          <div id="voteList" class="vote-list vote-card-grid"></div>
+          <p id="voteStatus" class="status"></p>
+        </div>
+      </div>
     </section>
 
     <section id="spyGuess" class="screen card hidden">

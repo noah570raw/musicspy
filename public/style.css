@@ -12864,3 +12864,403 @@ body[data-screen="game"] .order-row {
     min-height: 42px;
   }
 }
+
+/* Final voting premium suspect-board refresh. */
+body[data-screen="voting"] .app-shell {
+  width: min(1180px, calc(100% - 36px));
+  padding: clamp(12px, 2vh, 22px) 0;
+}
+
+body[data-screen="voting"] #voting.final-voting-card {
+  position: relative;
+  display: grid;
+  width: 100%;
+  gap: clamp(16px, 2vw, 24px);
+  overflow: hidden;
+  padding: clamp(18px, 2.2vw, 28px);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  background:
+    radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb), 0.22), transparent 25rem),
+    radial-gradient(circle at 92% 84%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 28rem),
+    linear-gradient(145deg, rgba(255,255,255,0.084), rgba(255,255,255,0.026) 58%),
+    color-mix(in srgb, var(--panel) 88%, #020617);
+}
+
+body[data-screen="voting"] #voting.final-voting-card::before {
+  content: "";
+  position: absolute;
+  inset: -35% -18% auto;
+  height: 55%;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 18%, rgba(255,255,255,0.09), transparent 72%);
+  transform: rotate(-4deg);
+  opacity: 0.75;
+}
+
+.voting-hero,
+.voting-layout,
+.voting-roster-panel,
+.vote-player-card > *:not(.vote-card-glow) {
+  position: relative;
+  z-index: 1;
+}
+
+.voting-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(16px, 3vw, 36px);
+}
+
+.voting-copy h2 {
+  max-width: 720px;
+  font-size: clamp(3.15rem, 8vw, 6.3rem);
+  letter-spacing: -0.075em;
+  background: linear-gradient(100deg, #fff, color-mix(in srgb, var(--accent-2) 54%, #fff), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.voting-copy .lead.small {
+  max-width: 620px;
+  margin: 14px 0 0;
+  font-size: clamp(0.98rem, 1.4vw, 1.13rem);
+}
+
+.vote-timer-orbit {
+  display: grid;
+  position: relative;
+  place-items: center;
+  min-width: clamp(132px, 15vw, 176px);
+  aspect-ratio: 1;
+}
+
+.vote-timer-orbit small {
+  max-width: 96px;
+  margin-top: -12px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.vote-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  border-radius: 999px;
+  background:
+    conic-gradient(from 0deg, rgba(var(--accent-rgb), 0.08), color-mix(in srgb, var(--accent-2) 18%, transparent), rgba(var(--accent-rgb), 0.08)),
+    radial-gradient(circle, rgba(var(--accent-rgb), 0.14), transparent 66%);
+  box-shadow: inset 0 0 24px rgba(255,255,255,0.05), 0 0 34px rgba(var(--accent-rgb),0.16);
+  animation: voting-orbit-spin 9s linear infinite;
+}
+
+.vote-timer-orbit .vote-timer {
+  width: clamp(82px, 9vw, 104px);
+  height: clamp(82px, 9vw, 104px);
+  margin: 0;
+  border-width: 2px;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  text-shadow: 0 0 18px rgba(255,255,255,0.24);
+}
+
+.voting-layout {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.82fr) minmax(0, 1.58fr);
+  gap: clamp(14px, 1.8vw, 22px);
+  align-items: stretch;
+}
+
+.voting-evidence,
+.voting-roster-panel {
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.064), rgba(255,255,255,0.026));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 18px 54px rgba(0,0,0,0.24);
+}
+
+.voting-evidence {
+  margin: 0;
+  max-height: min(560px, 58dvh);
+  overflow: hidden;
+}
+
+.voting-evidence .track-history {
+  max-height: min(478px, 49dvh);
+  padding-right: 2px;
+}
+
+.voting-roster-panel {
+  display: grid;
+  gap: 12px;
+  padding: clamp(14px, 1.8vw, 18px);
+}
+
+.voting-roster-title {
+  margin: 0;
+}
+
+.vote-card-grid,
+.vote-list.vote-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(238px, 1fr));
+  gap: clamp(12px, 1.4vw, 16px);
+  align-items: stretch;
+}
+
+.vote-player-card,
+.vote-row.vote-player-card {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 202px;
+  gap: 12px;
+  align-content: space-between;
+  padding: clamp(14px, 1.55vw, 18px);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(var(--accent-rgb), 0.21), transparent 38%),
+    linear-gradient(145deg, rgba(var(--surface-strong-rgb), 0.38), rgba(var(--surface-rgb), 0.72));
+  box-shadow: 0 20px 58px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease;
+  animation-delay: calc(var(--vote-index, 0) * 0.045s);
+}
+
+.vote-player-card:hover:not(:disabled) {
+  transform: translateY(-5px) scale(1.01);
+  border-color: rgba(var(--accent-rgb), 0.52);
+  box-shadow: 0 26px 78px rgba(0,0,0,0.4), 0 0 42px rgba(var(--accent-rgb), 0.16), inset 0 1px 0 rgba(255,255,255,0.11);
+}
+
+.vote-player-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.vote-player-card.selected {
+  border-color: color-mix(in srgb, var(--accent) 70%, white);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(var(--accent-rgb), 0.36), transparent 39%),
+    radial-gradient(circle at 94% 78%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 42%),
+    linear-gradient(145deg, rgba(var(--accent-rgb), 0.2), rgba(var(--surface-rgb), 0.78));
+  box-shadow: 0 26px 84px rgba(0,0,0,0.44), 0 0 48px rgba(var(--accent-rgb), 0.24), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.vote-card-glow {
+  position: absolute;
+  inset: auto -16% -31%;
+  height: 58%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.24), transparent 70%);
+}
+
+.vote-card-topline {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.vote-avatar-wrap .avatar {
+  width: 62px;
+  height: 62px;
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.28), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.vote-card-identity,
+.vote-card-name {
+  min-width: 0;
+}
+
+.vote-card-name {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  overflow: hidden;
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vote-card-subtitle {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.vote-card-count {
+  display: grid;
+  min-width: 58px;
+  place-items: center;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-radius: 18px;
+  background: rgba(0,0,0,0.22);
+}
+
+.vote-card-count b {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.vote-card-count small {
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vote-card-meter {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.075);
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.42);
+}
+
+.vote-card-meter i {
+  display: block;
+  width: var(--vote-meter, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent-2) 76%, white));
+  box-shadow: 0 0 18px rgba(var(--accent-rgb),0.34);
+  transition: width 0.36s ease;
+}
+
+.vote-card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vote-card-stats span {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 16px;
+  background: rgba(0,0,0,0.16);
+}
+
+.vote-card-stats b {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.vote-card-stats small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.vote-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.vote-card-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.vote-selected-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent-2) 74%, var(--accent)));
+  color: #fff;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 0 20px rgba(var(--accent-rgb),0.28);
+}
+
+.vote-row.vote-player-card.has-votes::after {
+  content: none;
+}
+
+@keyframes voting-orbit-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Player area height requested: make the embedded player roughly 1.5x taller. */
+body[data-screen="game"] .player-card {
+  grid-template-rows: auto minmax(351px, 1.08fr) auto auto auto;
+}
+
+body[data-screen="game"] .embed {
+  min-height: clamp(351px, 57vh, 570px);
+}
+
+@media (max-width: 980px) {
+  .voting-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .voting-evidence,
+  .voting-evidence .track-history {
+    max-height: none;
+  }
+}
+
+@media (max-width: 680px) {
+  body[data-screen="voting"] .app-shell {
+    width: min(100% - 18px, 1180px);
+  }
+
+  .voting-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .vote-timer-orbit {
+    justify-self: center;
+  }
+
+  .vote-card-grid,
+  .vote-list.vote-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-screen="game"] .player-card {
+    grid-template-rows: auto minmax(320px, 54vh) auto auto auto;
+  }
+
+  body[data-screen="game"] .embed {
+    min-height: clamp(320px, 54vh, 520px);
+  }
+}
