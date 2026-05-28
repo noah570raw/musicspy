@@ -601,3 +601,25 @@ test("extractFirstYouTubeVideoId picks the first videoRenderer result", () => {
 
   assert.equal(extractFirstYouTubeVideoId(html), "dQw4w9WgXcQ");
 });
+
+test("resetLobbyToWaiting clears final result while keeping lobby identity", () => {
+  const { createLobbyState, resetLobbyToWaiting } = require("../server");
+  const lobby = createLobbyState("END1", "host", { id: "host", name: "Хост" });
+  lobby.started = true;
+  lobby.phase = "ended";
+  lobby.spies = ["host"];
+  lobby.votes = { guest: "host" };
+  lobby.trackHistory = [{ id: "track-1", playerName: "Хост" }];
+  lobby.finalComments = [{ playerId: "host", text: "gg" }];
+  lobby.finalResult = { matchId: lobby.matchId, spies: ["host"] };
+
+  resetLobbyToWaiting(lobby);
+
+  assert.equal(lobby.code, "END1");
+  assert.equal(lobby.phase, "lobby");
+  assert.equal(lobby.started, false);
+  assert.equal(lobby.finalResult, null);
+  assert.deepEqual(lobby.votes, {});
+  assert.deepEqual(lobby.trackHistory, []);
+  assert.deepEqual(lobby.finalComments, []);
+});

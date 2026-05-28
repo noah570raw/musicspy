@@ -4089,11 +4089,15 @@ function forceStartGame() {
 }
 
 function restartLobby() {
+  const button = $("restartBtn");
+  if (button) button.disabled = true;
   socket.emit("restartLobby", { code: state.currentCode }, (res) => {
+    if (button) button.disabled = false;
     if (res?.error) {
-      const statusId = state.phase === "game" ? "gameStatus" : "voteStatus";
+      const statusId = state.phase === "results" ? "lobbyStatus" : state.phase === "game" ? "gameStatus" : "voteStatus";
       return setStatus(statusId, res.error, true);
     }
+    resetEndgameLocalState();
     closeTransientOverlays();
     showScreen("lobby");
   });
@@ -5672,14 +5676,86 @@ async function shareResultCard() {
   }, "image/png");
 }
 
-function renderResults(data) {
+
+
+function buildFallbackBreakdown(data, players) {
+  const votes = data.votes || {};
+  const voteDetails = players.map((player) => {
+    const targetId = votes[player.id] || null;
+    const target = players.find((item) => item.id === targetId);
+    return {
+      voterId: player.id,
+      voterName: player.name || "Игрок",
+      targetId,
+      targetName: target?.name || (targetId ? "Игрок" : "Не голосовал"),
+      hitSpy: Boolean(targetId && (data.spies || []).includes(targetId)),
+      missing: !targetId
+    };
+  });
+  const sortedVotes = Object.entries(data.votes || {}).sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0));
+  const topVoteCount = sortedVotes[0]?.[1] || 0;
+  return {
+    ...(data.breakdown || {}),
+    voteDetails: data.breakdown?.voteDetails?.length ? data.breakdown.voteDetails : voteDetails,
+    topVoteCount: data.breakdown?.topVoteCount ?? topVoteCount,
+    topVoted: data.breakdown?.topVoted?.length
+      ? data.breakdown.topVoted
+      : sortedVotes.filter(([, count]) => count === topVoteCount && count > 0).map(([id]) => players.find((player) => player.id === id)?.name || "Игрок"),
+    suspectedNames: data.breakdown?.suspectedNames?.length
+      ? data.breakdown.suspectedNames
+      : (data.suspected || []).map((id) => players.find((player) => player.id === id)?.name || "Игрок")
+  };
+}
+
+function normalizeFinalResult(raw = {}) {
+  const players = Array.isArray(raw.players) && raw.players.length ? raw.players : (state.players || []);
+  const normalized = {
+    ...raw,
+    code: raw.code || state.currentCode,
+    host: raw.host || state.hostId || state.lobby?.host || "",
+    players,
+    spies: Array.isArray(raw.spies) ? raw.spies : (raw.spy ? [raw.spy] : state.spyIds || []),
+    suspected: Array.isArray(raw.suspected) ? raw.suspected : [],
+    votes: raw.votes || state.voteCounts || {},
+    theme: raw.theme || state.theme || "—",
+    trackHistory: Array.isArray(raw.trackHistory) ? raw.trackHistory : (state.trackHistory || []),
+    finalComments: Array.isArray(raw.finalComments) ? raw.finalComments : (state.finalComments || []),
+    spyGuess: raw.spyGuess || state.pendingSpyGuess || { skipped: true, correct: false },
+    civiliansWin: Boolean(raw.civiliansWin)
+  };
+  normalized.spyNames = raw.spyNames?.length
+    ? raw.spyNames
+    : normalized.players.filter((player) => normalized.spies.includes(player.id)).map((player) => player.name || "Шпион");
+  normalized.spyName = raw.spyName || normalized.spyNames.join(", ") || "Шпион";
+  normalized.breakdown = buildFallbackBreakdown(normalized, normalized.players);
+  return normalized;
+}
+
+function resetEndgameLocalState() {
+  state.latestResult = null;
+  state.spyGuessActive = false;
+  state.pendingSpyGuess = null;
+  state.votedTarget = null;
+  state.voteCandidates = [];
+  state.voteCounts = {};
+  state.reactionCounts = {};
+  state.selectedReaction = null;
+  state.currentTrackId = null;
+  state.trackHistory = [];
+  state.finalComments = [];
+  applySkipVoteState({});
+}
+
+function renderResults(rawData = {}) {
+  const data = normalizeFinalResult(rawData);
   state.latestResult = data;
   if (Array.isArray(data.players) && data.players.length) state.players = data.players;
   state.hostId = data.host || state.hostId || state.lobby?.host || "";
   state.finalComments = data.finalComments || [];
+  state.trackHistory = data.trackHistory || state.trackHistory || [];
   renderSharePreview(data);
   renderFinalComments(state.finalComments);
-  const suspectedNames = (data.breakdown?.suspectedNames?.length ? data.breakdown.suspectedNames : data.suspected.map((id) => state.players.find((player) => player.id === id)?.name || t("Игрок"))).join(", ");
+  const suspectedNames = (data.breakdown?.suspectedNames || []).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
   const guessText = data.spyGuess?.skipped
     ? t("шпион не называл тему")
@@ -5690,7 +5766,7 @@ function renderResults(data) {
   const expReward = myExpReward(data);
   const rewardText = reward ? ` · +${reward.total} Vinyls` : "";
   const expText = expReward ? ` · +${Number(expReward.total || 0).toLocaleString("ru-RU")} EXP` : "";
-  $("resultText").textContent = t(`Шпионы: ${spyNames}. Тема: «${data.theme}». Зачервили: ${suspectedNames || t("никто")}.`) + rewardText + expText;
+  $("resultText").textContent = t(`Шпионы: ${spyNames || t("неизвестно")}. Тема: «${translateTheme(data.theme)}». Исключили: ${suspectedNames || t("никто")}.`) + rewardText + expText;
   const winnerBadge = $("resultWinnerBadge");
   if (winnerBadge) winnerBadge.textContent = winnerLabel;
   const spyBadge = $("resultSpyBadge");
@@ -5712,19 +5788,14 @@ function renderResults(data) {
 
   renderResultBreakdown(data, guessText);
   renderEconomyRewardSummary(reward);
-  renderVoteDetails(data.breakdown?.voteDetails || []);
-
-  const resultPlayers = state.players?.length ? state.players : (data.players || []);
-  $("resultVotes").innerHTML = resultPlayers.length ? resultPlayers.map((player) => `
-    <div class="vote-row static ${data.spies?.includes(player.id) ? "hit-spy" : ""}">
-      <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })}</span>
-      <strong>${data.votes?.[player.id] || 0}</strong>
-    </div>
-  `).join("") : `<div class="vote-row static"><span>${t("Игроки не найдены")}</span><strong>—</strong></div>`;
-  state.trackHistory = data.trackHistory || state.trackHistory;
+  renderVoteDetails(data.breakdown?.voteDetails || [], data);
+  renderVoteSummary(data);
   renderTrackHistory("resultTrackHistory", state.trackHistory);
-  const isHost = (data.host || state.hostId || state.lobby?.host) === socket.id;
-  $("restartBtn").classList.toggle("hidden", !isHost);
+  const restartBtn = $("restartBtn");
+  if (restartBtn) {
+    restartBtn.classList.remove("hidden");
+    restartBtn.textContent = t("Вернуться в лобби");
+  }
 }
 
 function renderEconomyRewardSummary(reward) {
@@ -5779,21 +5850,55 @@ function renderResultBreakdown(data, guessText) {
   `;
 }
 
-function renderVoteDetails(details = []) {
+function renderVoteSummary(data = state.latestResult || {}) {
+  const el = $("resultVotes");
+  if (!el) return;
+  const players = data.players?.length ? data.players : state.players || [];
+  const suspected = new Set(data.suspected || []);
+  const spies = new Set(data.spies || []);
+  const voteTotals = players.map((player) => ({
+    player,
+    count: Number(data.votes?.[player.id] || 0),
+    excluded: suspected.has(player.id),
+    spy: spies.has(player.id)
+  })).sort((a, b) => b.count - a.count);
+  const reason = data.civiliansWin
+    ? (data.spyGuess?.correct ? t("Шпион был найден, но угадал тему") : t("Команда исключила настоящего шпиона"))
+    : (data.caughtSpy ? t("Шпион спасся финальным угадыванием темы") : t("Шпион не попал под итоговое исключение"));
+  const summaryHeader = `
+    <div class="vote-summary-verdict ${data.civiliansWin ? "civilian-win" : "spy-win"}">
+      <span>${data.civiliansWin ? t("Победа мирных") : t("Победа шпиона")}</span>
+      <strong>${escapeHtml(reason)}</strong>
+      <small>${t("Исключён")}: ${escapeHtml((data.breakdown?.suspectedNames || []).join(", ") || t("никто"))} · ${t("Шпион")}: ${escapeHtml(data.spyName || t("неизвестно"))}</small>
+    </div>`;
+  const rows = voteTotals.length ? voteTotals.map(({ player, count, excluded, spy }) => `
+    <div class="vote-row static vote-total-row ${excluded ? "excluded" : ""} ${spy ? "hit-spy" : ""}">
+      <span>${nameWithDevBadge(player, "Игрок", { showBadge: false })}</span>
+      <em>${excluded ? t("исключён") : ""}${excluded && spy ? " · " : ""}${spy ? t("шпион") : ""}</em>
+      <strong>${count}</strong>
+    </div>
+  `).join("") : `<div class="vote-row static"><span>${t("Игроки не найдены")}</span><strong>—</strong></div>`;
+  el.innerHTML = summaryHeader + rows;
+}
+
+function renderVoteDetails(details = [], data = state.latestResult || {}) {
   const el = $("resultVoteDetails");
   if (!el) return;
-  if (!details.length) {
+  const players = data.players?.length ? data.players : state.players || [];
+  const normalizedDetails = details.length ? details : buildFallbackBreakdown(data, players).voteDetails;
+  if (!normalizedDetails.length) {
     el.innerHTML = `<div class="vote-row static"><span>${t("Голосов не было")}</span><strong>—</strong></div>`;
     return;
   }
 
-  el.innerHTML = details.map((item) => {
-    const voter = state.players.find((player) => player.id === item.voterId) || { name: item.voterName };
-    const target = state.players.find((player) => player.id === item.targetId) || { name: item.targetName };
+  el.innerHTML = normalizedDetails.map((item) => {
+    const voter = players.find((player) => player.id === item.voterId) || { name: item.voterName };
+    const target = players.find((player) => player.id === item.targetId) || { name: item.targetName };
+    const missing = item.missing || !item.targetId;
     return `
-      <div class="vote-row static ${item.hitSpy ? "hit-spy" : ""}">
-        <span>${nameWithDevBadge(voter, "Игрок", { showBadge: false })} → ${nameWithDevBadge(target, "Игрок", { showBadge: false })}</span>
-        <strong>${item.hitSpy ? "🎯" : "•"}</strong>
+      <div class="vote-row static vote-detail-row ${item.hitSpy ? "hit-spy" : "miss-spy"} ${missing ? "no-vote" : ""}">
+        <span class="vote-flow"><b>${nameWithDevBadge(voter, "Игрок", { showBadge: false })}</b><i aria-hidden="true">→</i><b>${missing ? t("не голосовал") : nameWithDevBadge(target, "Игрок", { showBadge: false })}</b></span>
+        <strong>${missing ? "—" : item.hitSpy ? "🎯" : "✕"}</strong>
       </div>
     `;
   }).join("");
@@ -5821,7 +5926,13 @@ socket.on("connect", () => {
 
 socket.on("lobbyUpdate", (lobby) => {
   renderLobby(lobby);
+  if (lobby.phase === "ended" && lobby.finalResult && state.phase !== "results") {
+    showScreen("results");
+    renderResults(lobby.finalResult);
+    return;
+  }
   if (lobby.phase === "lobby" && state.phase !== "menu") {
+    resetEndgameLocalState();
     closeTransientOverlays();
     clearPlayer();
     showScreen("lobby");
