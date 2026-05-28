@@ -452,8 +452,32 @@
           </section>
 
           <section id="settingsPanelGame" class="site-menu-panel" data-settings-panel="game">
-            <div class="settings-block">
-              <div class="settings-title compact">
+            <div class="game-settings-suite settings-block">
+              <div class="game-settings-hero">
+                <div>
+                  <span class="game-settings-kicker">Party-safe controls</span>
+                  <h3>Игра</h3>
+                  <p>Настройки экрана матча: приватность для стрима, глубина эффектов и спокойный Twitch-friendly UI.</p>
+                </div>
+                <div class="game-settings-orb" aria-hidden="true">
+                  <span>LIVE</span>
+                  <b>SPACE</b>
+                </div>
+              </div>
+
+              <div class="streamer-setting-card">
+                <div class="streamer-setting-copy">
+                  <span class="streamer-setting-label">Streamer Mode</span>
+                  <strong>Скрывать роль и тему на стриме</strong>
+                  <p>В режиме стримера роль и тема не лежат в открытом интерфейсе. Посмотреть их можно только удерживая SPACE.</p>
+                </div>
+                <button id="streamerModeToggle" class="streamer-toggle" type="button" role="switch" aria-checked="false" onclick="toggleStreamerModePreference()">
+                  <span class="streamer-toggle-track"><i></i></span>
+                  <b id="streamerModeToggleLabel">OFF</b>
+                </button>
+              </div>
+
+              <div class="settings-title compact game-effects-title">
                 <strong>Интенсивность эффектов</strong>
                 <span>Настрой глубину свечения, частиц и кинематографичных движений интерфейса.</span>
               </div>
@@ -947,10 +971,18 @@
     </section>
 
     <section id="game" class="screen game-layout hidden">
-      <aside id="gameInfoPanel" class="card side-panel">
-        <p class="eyebrow">роль и тема</p>
-        <h2 id="roleTitle">...</h2>
-        <p id="theme" class="theme-text"></p>
+      <aside id="gameInfoPanel" class="card side-panel game-info-card">
+        <div class="game-info-header">
+          <div>
+            <p class="eyebrow">роль и тема</p>
+            <span id="streamerModeBadge" class="streamer-mode-badge hidden">Streamer Mode</span>
+          </div>
+          <button id="gameStreamerModeToggle" class="mini-streamer-toggle" type="button" aria-pressed="false" onclick="toggleStreamerModePreference()">Стример</button>
+        </div>
+        <div id="identityPanel" class="identity-panel" aria-live="polite">
+          <h2 id="roleTitle">...</h2>
+          <p id="theme" class="theme-text"></p>
+        </div>
         <div class="round-meter">
           <span id="roundInfo">Раунд 1/3</span>
           <div><i id="roundBar"></i></div>
@@ -1201,6 +1233,24 @@
       </div>
     </section>
   </aside>
+
+  <div id="streamerRevealOverlay" class="streamer-reveal-overlay hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="streamerRevealTitle">
+    <div class="streamer-reveal-card">
+      <span class="streamer-reveal-pill">PRIVATE REVEAL</span>
+      <h2 id="streamerRevealTitle">Секрет партии</h2>
+      <div class="streamer-secret-grid">
+        <article>
+          <span>Тема</span>
+          <strong id="streamerRevealTheme"></strong>
+        </article>
+        <article>
+          <span>Роль</span>
+          <strong id="streamerRevealRole"></strong>
+        </article>
+      </div>
+      <p>Информация видна только пока удерживается SPACE.</p>
+    </div>
+  </div>
 
   <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="/socket.io/socket.io.js"></script>
