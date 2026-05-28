@@ -15285,3 +15285,257 @@ body[data-effects-density="low"] .appearance-lab::before,
 body[data-effects-density="low"] .appearance-preview-orb {
   animation: none;
 }
+
+/* Compact menu settings: keep appearance and game panels cohesive without nested overlap. */
+.site-menu-card #settingsPanelAppearance.active,
+.site-menu-card #settingsPanelGame.active {
+  overflow: hidden;
+}
+
+.appearance-lab,
+.game-settings-suite {
+  gap: clamp(10px, 1.2vw, 14px);
+  padding: clamp(14px, 1.8vw, 20px);
+  overflow: hidden;
+}
+
+.appearance-hero,
+.game-settings-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.36fr);
+  gap: clamp(10px, 1.4vw, 16px);
+  min-height: 0;
+}
+
+.appearance-title-stack,
+.game-title-stack {
+  gap: 6px;
+}
+
+.appearance-title-stack h3,
+.game-settings-hero h3 {
+  font-size: clamp(1.8rem, 4.2vw, 3.05rem);
+}
+
+.appearance-title-stack p,
+.game-settings-hero p,
+.streamer-setting-copy p {
+  max-width: 58ch;
+  font-size: clamp(0.82rem, 1vw, 0.95rem);
+  line-height: 1.38;
+}
+
+.appearance-preview-card,
+.game-settings-orb,
+.streamer-setting-card,
+.game-preview-console,
+.game-effects-panel,
+.appearance-theme-panel,
+.appearance-color-panel {
+  border-radius: 22px;
+}
+
+.appearance-preview-card,
+.game-settings-orb {
+  min-height: 112px;
+}
+
+.appearance-preview-card {
+  gap: 10px;
+  padding: clamp(12px, 1.3vw, 14px);
+}
+
+.appearance-preview-window,
+.game-console-card {
+  padding: 11px;
+  border-radius: 18px;
+}
+
+.appearance-preview-orb,
+.game-console-pulse {
+  width: 36px;
+  height: 36px;
+}
+
+.appearance-settings-stage {
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.appearance-theme-panel,
+.appearance-color-panel {
+  gap: 10px;
+  padding: clamp(12px, 1.35vw, 15px);
+  min-height: 0;
+}
+
+.appearance-color-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 0;
+}
+
+.site-menu-card .appearance-theme-grid,
+.appearance-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: none;
+  margin-right: 0;
+  overflow: visible;
+  padding: 0;
+  scrollbar-gutter: auto;
+}
+
+.appearance-theme-pill {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.54rem 0.68rem;
+  border-radius: 14px;
+}
+
+.appearance-theme-pill small {
+  font-size: 0.54rem;
+}
+
+.appearance-color-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.appearance-swatch,
+.accent-swatch.appearance-swatch {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.appearance-swatch span {
+  right: 6px;
+  bottom: 6px;
+  left: 6px;
+  font-size: 0.56rem;
+}
+
+.appearance-hints-grid,
+.game-settings-hints {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.appearance-hints-grid article,
+.game-settings-hints article {
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
+.appearance-hints-grid span,
+.game-settings-hints span {
+  margin-top: 0.32rem;
+  font-size: 0.76rem;
+  line-height: 1.28;
+}
+
+.game-settings-stage {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.72fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.streamer-setting-card,
+.game-preview-console {
+  min-height: 112px;
+  padding: clamp(12px, 1.35vw, 15px);
+}
+
+.game-settings-suite .effects-density-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.game-settings-suite .effects-density-option {
+  min-height: 96px;
+  padding: 12px;
+  border-radius: 18px;
+}
+
+.game-settings-suite .effects-density-option strong {
+  font-size: 0.88rem;
+}
+
+.game-settings-suite .effects-density-option small {
+  font-size: 0.75rem;
+  line-height: 1.28;
+}
+
+@media (max-width: 1040px) {
+  .appearance-color-column,
+  .game-settings-suite .effects-density-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .appearance-lab,
+  .game-settings-suite {
+    overflow: hidden auto;
+  }
+
+  .appearance-settings-stage,
+  .appearance-color-column,
+  .game-settings-stage,
+  .appearance-hero,
+  .game-settings-hero,
+  .appearance-hints-grid,
+  .game-settings-hints {
+    grid-template-columns: 1fr;
+  }
+
+  .site-menu-card .appearance-theme-grid,
+  .appearance-theme-grid,
+  .appearance-color-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 861px) {
+  .site-menu-card .appearance-theme-grid,
+  .appearance-theme-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .appearance-hints-grid article,
+  .game-settings-hints article {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+  }
+
+  .appearance-hints-grid span,
+  .game-settings-hints span {
+    margin-top: 0;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 861px) {
+  .appearance-hints-grid,
+  .game-settings-hints {
+    display: none;
+  }
+
+  .appearance-preview-card,
+  .game-settings-orb,
+  .streamer-setting-card,
+  .game-preview-console {
+    min-height: 98px;
+  }
+
+  .appearance-theme-pill {
+    min-height: 38px;
+  }
+
+  .game-settings-suite .effects-density-option {
+    min-height: 88px;
+  }
+}
