@@ -289,6 +289,42 @@ test("buildFinalBreakdown exposes vote details and track highlights", () => {
   assert.deepEqual(breakdown.reactionTotals, { "🔥": 2, "🕵️": 2, "🤔": 1 });
 });
 
+
+test("remapFinalResultPlayerId keeps ended result data aligned after reconnect", () => {
+  const { remapFinalResultPlayerId } = require("../server");
+  const finalResult = {
+    host: "old-socket",
+    spy: "old-socket",
+    spies: ["old-socket"],
+    suspected: ["old-socket"],
+    votes: { "old-socket": 2, other: 1 },
+    players: [{ id: "old-socket", name: "Шпион" }, { id: "other", name: "Друг" }],
+    trackHistory: [{ playerId: "old-socket", playerName: "Шпион" }],
+    finalComments: [{ playerId: "old-socket", text: "gg" }],
+    spyGuess: { playerId: "old-socket", text: "рок" },
+    breakdown: {
+      voteDetails: [{ voterId: "other", targetId: "old-socket", hitSpy: true }],
+      suspectedNames: ["Шпион"]
+    },
+    economyRewards: [{ playerId: "old-socket", total: 150 }],
+    expRewards: [{ playerId: "old-socket", total: 80 }]
+  };
+
+  remapFinalResultPlayerId(finalResult, "old-socket", "new-socket");
+
+  assert.equal(finalResult.host, "new-socket");
+  assert.deepEqual(finalResult.spies, ["new-socket"]);
+  assert.deepEqual(finalResult.suspected, ["new-socket"]);
+  assert.deepEqual(finalResult.votes, { "new-socket": 2, other: 1 });
+  assert.equal(finalResult.players[0].id, "new-socket");
+  assert.equal(finalResult.trackHistory[0].playerId, "new-socket");
+  assert.equal(finalResult.finalComments[0].playerId, "new-socket");
+  assert.equal(finalResult.spyGuess.playerId, "new-socket");
+  assert.equal(finalResult.breakdown.voteDetails[0].targetId, "new-socket");
+  assert.equal(finalResult.economyRewards[0].playerId, "new-socket");
+  assert.equal(finalResult.expRewards[0].playerId, "new-socket");
+});
+
 test("host timer helpers pause and clamp an active listening turn", () => {
   const { pauseTurnTimer, adjustTurnTimer } = require("../server");
   const lobby = {
