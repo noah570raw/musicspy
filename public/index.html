@@ -428,26 +428,76 @@
           </section>
 
           <section id="settingsPanelAppearance" class="site-menu-panel" data-settings-panel="appearance">
-            <div class="settings-block">
-              <div class="settings-title compact">
-                <strong>Тема интерфейса</strong>
-                <span>Выбери общий визуальный вайб сайта.</span>
+            <div class="appearance-lab settings-block">
+              <div class="appearance-ambient appearance-ambient-a" aria-hidden="true"></div>
+              <div class="appearance-ambient appearance-ambient-b" aria-hidden="true"></div>
+              <div class="appearance-particle-field" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
               </div>
-              <div id="interfaceThemeChoices" class="choice-pill-grid theme-choice-scroll neon-scrollbar" data-neon-scroll></div>
-            </div>
-            <div class="settings-block">
-              <div class="settings-title compact">
-                <strong>Акцентный цвет</strong>
-                <span>Основной цвет кнопок, свечения и важных деталей вне ролевого экрана игры.</span>
+
+              <div class="appearance-hero">
+                <div class="appearance-title-stack">
+                  <span class="appearance-kicker">Visual mixer</span>
+                  <h3>Внешний вид</h3>
+                  <p>Собери свой неоновый сетап: тема задаёт атмосферу, акценты перекрашивают кнопки, орбы и подсветки меню.</p>
+                </div>
+                <div class="appearance-preview-card" aria-hidden="true">
+                  <div class="appearance-preview-topline">
+                    <span>LIVE THEME</span>
+                    <b id="appearancePreviewTheme">Neon Club</b>
+                  </div>
+                  <div class="appearance-preview-window">
+                    <span class="appearance-preview-orb"></span>
+                    <div class="appearance-preview-copy">
+                      <strong>Music Spy</strong>
+                      <small id="appearancePreviewPalette">Violet / Cyan</small>
+                    </div>
+                    <em>ON</em>
+                  </div>
+                </div>
               </div>
-              <div id="accentColorChoices" class="accent-color-grid"></div>
-            </div>
-            <div class="settings-block">
-              <div class="settings-title compact">
-                <strong>Второй цвет</strong>
-                <span>Комбинируй его с основным акцентом для градиентов, орбов и подсветок.</span>
+
+              <div class="appearance-settings-stage">
+                <div class="appearance-theme-panel">
+                  <div class="settings-title compact appearance-section-title">
+                    <strong>Тема интерфейса</strong>
+                    <span>Выбери общий визуальный вайб сайта — от винила до galaxy noir.</span>
+                  </div>
+                  <div id="interfaceThemeChoices" class="choice-pill-grid theme-choice-scroll neon-scrollbar appearance-theme-grid" data-neon-scroll></div>
+                </div>
+
+                <div class="appearance-color-column">
+                  <div class="appearance-color-panel">
+                    <div class="settings-title compact appearance-section-title">
+                      <strong>Акцентный цвет</strong>
+                      <span>Основной цвет кнопок, свечения и важных деталей вне ролевого экрана игры.</span>
+                    </div>
+                    <div id="accentColorChoices" class="accent-color-grid appearance-color-grid"></div>
+                  </div>
+                  <div class="appearance-color-panel">
+                    <div class="settings-title compact appearance-section-title">
+                      <strong>Второй цвет</strong>
+                      <span>Комбинируй его с главным акцентом для градиентов, орбов и подсветок.</span>
+                    </div>
+                    <div id="secondaryAccentColorChoices" class="accent-color-grid appearance-color-grid"></div>
+                  </div>
+                </div>
               </div>
-              <div id="secondaryAccentColorChoices" class="accent-color-grid"></div>
+
+              <div class="appearance-hints-grid" aria-label="Подсказки по внешнему виду">
+                <article>
+                  <strong>01</strong>
+                  <span>Выбор сохраняется локально и синхронизируется с аккаунтом после входа.</span>
+                </article>
+                <article>
+                  <strong>02</strong>
+                  <span>Ролевые экраны партии не ломаются: тема действует на меню, лобби и общую навигацию.</span>
+                </article>
+                <article>
+                  <strong>03</strong>
+                  <span>Попробуй контрастные пары цветов — превью сразу покажет будущий вайб.</span>
+                </article>
+              </div>
             </div>
           </section>
 
