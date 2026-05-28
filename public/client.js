@@ -1663,22 +1663,33 @@ function setSecondaryAccentColorPreference(colorId) {
 }
 
 function renderAppearanceControls() {
+  const currentTheme = INTERFACE_THEMES.find((item) => item.id === state.visualTheme) || INTERFACE_THEMES[0];
+  const currentAccent = ACCENT_COLORS.find((item) => item.id === state.accentColor) || ACCENT_COLORS.find((item) => item.id === "violet") || ACCENT_COLORS[0];
+  const currentSecondary = ACCENT_COLORS.find((item) => item.id === state.secondaryAccentColor) || currentAccent;
+  const previewTheme = $("appearancePreviewTheme");
+  const previewPalette = $("appearancePreviewPalette");
+  if (previewTheme) previewTheme.textContent = currentTheme?.label || "Neon Club";
+  if (previewPalette) previewPalette.textContent = `${currentAccent?.label || "Акцент"} / ${currentSecondary?.label || "Второй"}`;
+
   const themeGrid = $("interfaceThemeChoices");
   if (themeGrid) {
     themeGrid.innerHTML = INTERFACE_THEMES.map((theme) => `
-      <button class="choice-pill${theme.id === state.visualTheme ? " selected" : ""}" type="button" onclick="setVisualThemePreference('${theme.id}')">${escapeHtml(theme.label)}</button>
+      <button class="choice-pill appearance-theme-pill${theme.id === state.visualTheme ? " selected" : ""}" type="button" onclick="setVisualThemePreference('${theme.id}')">
+        <span>${escapeHtml(theme.label)}</span>
+        <small>${theme.id === state.visualTheme ? "ACTIVE" : "THEME"}</small>
+      </button>
     `).join("");
   }
   const colorGrid = $("accentColorChoices");
   if (colorGrid) {
     colorGrid.innerHTML = ACCENT_COLORS.map((color) => `
-      <button class="accent-swatch${color.id === state.accentColor ? " selected" : ""}" type="button" onclick="setAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"></button>
+      <button class="accent-swatch appearance-swatch${color.id === state.accentColor ? " selected" : ""}" type="button" onclick="setAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"><span>${escapeHtml(color.label)}</span></button>
     `).join("");
   }
   const secondaryColorGrid = $("secondaryAccentColorChoices");
   if (secondaryColorGrid) {
     secondaryColorGrid.innerHTML = ACCENT_COLORS.map((color) => `
-      <button class="accent-swatch secondary-swatch${color.id === state.secondaryAccentColor ? " selected" : ""}" type="button" onclick="setSecondaryAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"></button>
+      <button class="accent-swatch secondary-swatch appearance-swatch${color.id === state.secondaryAccentColor ? " selected" : ""}" type="button" onclick="setSecondaryAccentColorPreference('${color.id}')" title="${escapeAttribute(color.label)}" aria-label="${escapeAttribute(color.label)}" style="--swatch:${color.hex}"><span>${escapeHtml(color.label)}</span></button>
     `).join("");
   }
 }
