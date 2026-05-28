@@ -2074,10 +2074,6 @@ function addVinylTransaction(user, amount, reason, meta = {}) {
     createdAt: new Date().toISOString()
   };
   economy.vinyls = hasRole(user, DEV_ROLE) ? Math.max(DEV_VINYL_BALANCE, economy.vinyls) : Math.max(0, economy.vinyls + transaction.amount);
-  const boosterActiveUntil = economy.xpBoosterActiveUntil ? Date.parse(economy.xpBoosterActiveUntil) : 0;
-  const xpGain = Math.max(0, transaction.amount) * (boosterActiveUntil > Date.now() ? XP_BOOSTER_MULTIPLIER : 1);
-  economy.xp += xpGain;
-  economy.level = Math.max(economy.level || 1, Math.floor(economy.xp / 1000) + 1);
   economy.transactions = [...(economy.transactions || []), transaction].slice(-80);
   if (transaction.amount > 0) user.stats.vinylsEarned = Number(user.stats.vinylsEarned || 0) + transaction.amount;
   return transaction;
@@ -3595,6 +3591,7 @@ module.exports = {
   defaultEconomy,
   normalizeEconomy,
   ensureUserProgress,
+  addVinylTransaction,
   xpBoosterState,
   buildEconomyRewardsForGame
 };
