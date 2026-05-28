@@ -1578,7 +1578,7 @@ function applyAccentColor() {
   const color = ACCENT_COLORS.find((item) => item.id === state.accentColor) || ACCENT_COLORS.find((item) => item.id === "violet");
   const secondaryColor = ACCENT_COLORS.find((item) => item.id === state.secondaryAccentColor) || color;
   document.body.style.removeProperty("--success");
-  if (!color || document.body.dataset.role) {
+  if (!color) {
     document.body.style.removeProperty("--accent");
     document.body.style.removeProperty("--accent-rgb");
     document.body.style.removeProperty("--accent-dark");
@@ -1591,12 +1591,7 @@ function applyAccentColor() {
   document.body.style.setProperty("--accent-2", secondaryColor.hex);
 }
 
-function applyRoleTheme(role = "") {
-  if (["spy", "civilian"].includes(role)) {
-    document.body.dataset.role = role;
-    applyAccentColor();
-    return;
-  }
+function applyRoleTheme() {
   delete document.body.dataset.role;
   applyAccentColor();
 }
@@ -2040,33 +2035,19 @@ function hideCinematicOverlay({ runOnClose = true } = {}) {
   }, 280);
 }
 
-function showRoleReveal(data) {
+function showGameCurtainIntro() {
   clearCinematicTimers();
-  const isSpy = data.role === "spy";
-  const spyCount = data.spyCount || 1;
-  const visibleSpyNames = isSpy
-    ? (data.players || [])
-      .filter((player) => (data.spyIds || []).includes(player.id))
-      .map((player) => player.name)
-      .join(", ")
-    : "";
-  const meta = isSpy
-    ? `<span>${t("Тема скрыта")}</span><strong>${escapeHtml(visibleSpyNames || `${spyCount} ${spyCount === 1 ? t("1 шпион").replace("1 ", "") : t("Шпионы")}`)}</strong>`
-    : `<span>${t("Тема игры")}</span><strong>«${escapeHtml(translateTheme(data.theme))}»</strong>`;
-
   setCinematicOverlay({
-    eyebrow: t("игра началась"),
-    title: isSpy ? t("Ты шпион") : t("Ты мирный"),
-    text: isSpy
-      ? t("Слушай чужие треки, лови вайб темы и не выдавай себя. Тема тебе не показывается.")
-      : t("Это твоя секретная тема. Ставь треки так, чтобы свои поняли, а шпион запутался."),
-    meta,
-    mode: isSpy ? "spy" : "civilian",
-    closeLabel: t("Запомнил")
+    eyebrow: t("занавес опускается"),
+    title: t("Шоу начинается"),
+    text: t("Сцена закрыта на пару секунд. Когда занавес поднимется — сразу играем."),
+    meta: `<span>${t("готовим сцену")}</span><strong>${t("CURTAIN CALL")}</strong><small>${t("без показа ролей на экране")}</small>`,
+    mode: "curtain",
+    closable: false
   });
 
-  playSoundCue(isSpy ? "danger" : "reveal");
-  state.cinematicTimer = window.setTimeout(hideCinematicOverlay, 5200);
+  playSoundCue("reveal");
+  state.cinematicTimer = window.setTimeout(hideCinematicOverlay, 2600);
 }
 
 function showSpyRevealCountdown(data, onDone) {
@@ -5828,7 +5809,7 @@ socket.on("gameStarted", (data) => {
   $("embed").innerHTML = `<span>${t("Здесь появится YouTube/SoundCloud плеер")}</span>`;
 
   showScreen("game");
-  showRoleReveal(data);
+  showGameCurtainIntro();
   renderOrder();
   renderHostControls();
   renderReactions();
