@@ -15484,6 +15484,17 @@ body[data-effects-density="low"] .appearance-preview-orb {
   line-height: 1.28;
 }
 
+.game-settings-suite {
+  --game-settings-scroll-gutter: 14px;
+}
+
+.game-settings-suite .game-effects-panel,
+.game-settings-suite .game-settings-hints {
+  width: calc(100% + var(--game-settings-scroll-gutter));
+  max-width: none;
+  margin-right: calc(var(--game-settings-scroll-gutter) * -1);
+}
+
 @media (max-width: 1040px) {
   .appearance-color-column,
   .game-settings-suite .effects-density-grid {
