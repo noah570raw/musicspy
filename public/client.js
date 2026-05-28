@@ -74,7 +74,8 @@ const state = {
     cinematicMode: true,
     reactionHints: true,
     autoFocusTrack: false,
-    effectsDensity: "ultra"
+    effectsDensity: "ultra",
+    streamerMode: false
   },
   settingsSection: "profile",
   friendsPanelOpen: false,
@@ -103,7 +104,11 @@ const state = {
   xpBoosterHoldStart: 0,
   devConsoleOpen: false,
   devConsoleLines: [],
-  promoRedeeming: false
+  promoRedeeming: false,
+  streamerHoldTimer: null,
+  streamerOverlayOpen: false,
+  streamerOverlayClosingTimer: null,
+  streamerRevealData: null
 };
 
 function hasDevRole(entity) {
@@ -1697,16 +1702,20 @@ function restoreGamePreferences() {
   if (!EFFECTS_DENSITIES.some((item) => item.id === state.gamePreferences.effectsDensity)) {
     state.gamePreferences.effectsDensity = "ultra";
   }
+  state.gamePreferences.streamerMode = Boolean(state.gamePreferences.streamerMode);
   applyEffectsDensity(state.gamePreferences.effectsDensity);
   syncGamePreferenceToggles();
   renderEffectsDensityControls();
+  renderStreamerModeControls();
+  renderIdentityPanel();
 }
 
 function syncGamePreferenceToggles() {
   const map = {
     cinematicMode: "cinematicModeToggle",
     reactionHints: "reactionHintsToggle",
-    autoFocusTrack: "autoFocusTrackToggle"
+    autoFocusTrack: "autoFocusTrackToggle",
+    streamerMode: "streamerModeToggleInput"
   };
   for (const [key, id] of Object.entries(map)) {
     const el = $(id);
@@ -1739,6 +1748,65 @@ function setEffectsDensityPreference(density) {
   renderEffectsDensityControls();
 }
 
+function roleLabel(role = state.role) {
+  if (!role) return "...";
+  return role === "spy" ? t("Ты шпион") : t("Ты мирный");
+}
+
+function themeLabel(role = state.role, theme = state.theme) {
+  if (!role) return "";
+  if (role === "spy") return t(`Твоя задача — понять тему по чужим трекам и не выдать себя. Шпионов в игре: ${state.settings?.spyCount || state.spyIds?.length || 1}.`);
+  return t(`Тема: «${theme || "—"}»`);
+}
+
+function renderStreamerModeControls() {
+  const enabled = Boolean(state.gamePreferences.streamerMode);
+  const settingsToggle = $("streamerModeToggle");
+  const settingsLabel = $("streamerModeToggleLabel");
+  if (settingsToggle) {
+    settingsToggle.classList.toggle("active", enabled);
+    settingsToggle.setAttribute("aria-checked", String(enabled));
+  }
+  if (settingsLabel) settingsLabel.textContent = enabled ? "ON" : "OFF";
+  const gameToggle = $("gameStreamerModeToggle");
+  if (gameToggle) {
+    gameToggle.classList.toggle("active", enabled);
+    gameToggle.setAttribute("aria-pressed", String(enabled));
+    gameToggle.textContent = enabled ? "Стример: ON" : "Стример";
+  }
+  const badge = $("streamerModeBadge");
+  if (badge) badge.classList.toggle("hidden", !enabled);
+}
+
+function renderIdentityPanel() {
+  const roleEl = $("roleTitle");
+  const themeEl = $("theme");
+  const panel = $("identityPanel");
+  if (!roleEl || !themeEl) return;
+  const enabled = Boolean(state.gamePreferences.streamerMode) && state.phase === "game";
+  if (panel) panel.classList.toggle("streamer-hidden", enabled);
+  if (enabled) {
+    roleEl.textContent = t("Роль скрыта");
+    themeEl.innerHTML = `<span>${t("Тема скрыта")}</span><small>${t("Удерживай SPACE чтобы посмотреть")}</small>`;
+    return;
+  }
+  roleEl.textContent = roleLabel();
+  themeEl.textContent = themeLabel();
+}
+
+function toggleStreamerModePreference() {
+  setStreamerModePreference(!state.gamePreferences.streamerMode);
+}
+
+function setStreamerModePreference(enabled) {
+  state.gamePreferences.streamerMode = Boolean(enabled);
+  saveGamePreferences();
+  persistServerBackedSettings();
+  renderStreamerModeControls();
+  renderIdentityPanel();
+  if (!state.gamePreferences.streamerMode) closeStreamerRevealOverlay();
+}
+
 function updateGamePreference(key, value) {
   if (!Object.hasOwn(state.gamePreferences, key)) return;
   if (key === "effectsDensity") {
@@ -1748,6 +1816,92 @@ function updateGamePreference(key, value) {
   state.gamePreferences[key] = Boolean(value);
   saveGamePreferences();
   persistServerBackedSettings();
+  if (key === "streamerMode") {
+    renderStreamerModeControls();
+    renderIdentityPanel();
+  }
+}
+
+function shouldHandleStreamerSpace(event) {
+  if (!state.gamePreferences.streamerMode || state.phase !== "game") return false;
+  if (event.code !== "Space") return false;
+  const target = event.target;
+  if (target?.closest?.("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return false;
+  return Boolean(state.role);
+}
+
+function loadStreamerRevealData() {
+  state.streamerRevealData = {
+    role: roleLabel(),
+    theme: state.role === "spy" ? t("Тема неизвестна — вычисли её по чужим трекам") : translateTheme(state.theme || "—")
+  };
+  return state.streamerRevealData;
+}
+
+function clearStreamerRevealData() {
+  state.streamerRevealData = null;
+  const themeEl = $("streamerRevealTheme");
+  const roleEl = $("streamerRevealRole");
+  if (themeEl) themeEl.textContent = "";
+  if (roleEl) roleEl.textContent = "";
+}
+
+function openStreamerRevealOverlay() {
+  if (!state.gamePreferences.streamerMode || state.streamerOverlayOpen || state.phase !== "game") return;
+  if (state.streamerOverlayClosingTimer) {
+    window.clearTimeout(state.streamerOverlayClosingTimer);
+    state.streamerOverlayClosingTimer = null;
+  }
+  const overlay = $("streamerRevealOverlay");
+  if (!overlay) return;
+  const reveal = loadStreamerRevealData();
+  $("streamerRevealTheme").textContent = reveal.theme;
+  $("streamerRevealRole").textContent = reveal.role;
+  overlay.classList.remove("hidden", "closing");
+  requestAnimationFrame(() => overlay.classList.add("active"));
+  state.streamerOverlayOpen = true;
+}
+
+function closeStreamerRevealOverlay() {
+  if (state.streamerHoldTimer) {
+    window.clearTimeout(state.streamerHoldTimer);
+    state.streamerHoldTimer = null;
+  }
+  const overlay = $("streamerRevealOverlay");
+  if (!overlay) {
+    clearStreamerRevealData();
+    state.streamerOverlayOpen = false;
+    return;
+  }
+  overlay.classList.remove("active");
+  overlay.classList.add("closing");
+  if (state.streamerOverlayClosingTimer) window.clearTimeout(state.streamerOverlayClosingTimer);
+  state.streamerOverlayClosingTimer = window.setTimeout(() => {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("closing");
+    clearStreamerRevealData();
+    state.streamerOverlayOpen = false;
+    state.streamerOverlayClosingTimer = null;
+  }, 240);
+}
+
+function handleStreamerKeydown(event) {
+  if (!shouldHandleStreamerSpace(event)) return;
+  event.preventDefault();
+  if (event.repeat || state.streamerHoldTimer || state.streamerOverlayOpen) return;
+  state.streamerHoldTimer = window.setTimeout(() => {
+    state.streamerHoldTimer = null;
+    openStreamerRevealOverlay();
+  }, 350);
+}
+
+function handleStreamerKeyup(event) {
+  if (event.code !== "Space") return;
+  if (state.streamerHoldTimer) {
+    window.clearTimeout(state.streamerHoldTimer);
+    state.streamerHoldTimer = null;
+  }
+  if (state.streamerOverlayOpen || state.streamerRevealData) closeStreamerRevealOverlay();
 }
 
 function showScreen(id) {
@@ -1762,6 +1916,9 @@ function showScreen(id) {
   state.phase = id;
   document.body.dataset.screen = id;
   if (LOCAL_APPEARANCE_SCREENS.has(id)) applyRoleTheme();
+  if (id !== "game") closeStreamerRevealOverlay();
+  renderIdentityPanel();
+  renderStreamerModeControls();
   if (id === "playRooms") refreshOpenLobbies();
   updateInviteSecretsVisibility();
   updateMobileTurnBanner();
@@ -2339,8 +2496,12 @@ function restoreServerBackedSettings(user) {
   }
   if (settings.gamePreferences && typeof settings.gamePreferences === "object") {
     state.gamePreferences = { ...state.gamePreferences, ...settings.gamePreferences };
+    state.gamePreferences.streamerMode = Boolean(state.gamePreferences.streamerMode);
     applyEffectsDensity();
     syncGamePreferenceToggles();
+    renderEffectsDensityControls();
+    renderStreamerModeControls();
+    renderIdentityPanel();
   }
   if (settings.lang && settings.lang !== state.lang) {
     state.lang = settings.lang;
@@ -4210,6 +4371,7 @@ function resetRoomState() {
   state.finalComments = [];
   state.latestResult = null;
   state.inviteSecretsVisible = false;
+  closeStreamerRevealOverlay();
   state.lobbyName = "";
   state.lobbyIsOpen = true;
   clearReconnectState();
@@ -5618,12 +5780,14 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeFriendsPanel();
+    handleStreamerKeydown(event);
     if (event.repeat) return;
     if (event.shiftKey && (event.code === "KeyC" || ["c", "с"].includes(event.key.toLowerCase()))) {
       event.preventDefault();
       toggleDevConsole();
     }
   });
+  document.addEventListener("keyup", handleStreamerKeyup);
   const presetCode = normalizeRoomCodeInput(new URL(window.location.href).searchParams.get("room"));
   if (presetCode) {
     state.pendingInviteCode = presetCode;
@@ -5660,10 +5824,6 @@ socket.on("gameStarted", (data) => {
   syncAudioVolume({ fadeTime: 0.32 });
   applyRoleTheme(data.role);
 
-  $("roleTitle").textContent = data.role === "spy" ? t("Ты шпион") : t("Ты мирный");
-  $("theme").textContent = data.role === "spy"
-    ? t(`Твоя задача — понять тему по чужим трекам и не выдать себя. Шпионов в игре: ${data.spyCount || 1}.`)
-    : t(`Тема: «${data.theme}»`);
   $("embed").className = "embed empty";
   $("embed").innerHTML = `<span>${t("Здесь появится YouTube/SoundCloud плеер")}</span>`;
 
