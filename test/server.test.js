@@ -637,3 +637,16 @@ test("resetLobbyToWaiting clears final result while keeping lobby identity", () 
   assert.deepEqual(lobby.trackHistory, []);
   assert.deepEqual(lobby.finalComments, []);
 });
+
+test("finished lobbies are no longer treated as active game sessions", () => {
+  const { createLobbyState, initializeGame, hasActiveGameSession } = require("../server");
+  const lobby = createLobbyState("DONE1", "host", { id: "host", name: "Хост" });
+  lobby.players.push({ id: "guest-1", name: "Гость 1" }, { id: "guest-2", name: "Гость 2" });
+
+  initializeGame(lobby);
+  assert.equal(hasActiveGameSession(lobby), true);
+
+  lobby.phase = "ended";
+  lobby.started = false;
+  assert.equal(hasActiveGameSession(lobby), false);
+});
