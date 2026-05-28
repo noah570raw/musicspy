@@ -15550,3 +15550,191 @@ body[data-effects-density="low"] .appearance-preview-orb {
     min-height: 88px;
   }
 }
+
+/* Cohesive settings panels: stretch inner blocks across the full deck height. */
+@media (min-width: 861px) {
+  .site-menu-card #settingsPanelDaily.active,
+  .site-menu-card #settingsPanelXpbooster.active,
+  .site-menu-card #settingsPanelPromo.active,
+  .site-menu-card #settingsPanelAppearance.active,
+  .site-menu-card #settingsPanelGame.active {
+    min-height: 0;
+  }
+
+  .daily-reward-arena {
+    grid-template-rows: auto minmax(250px, 1fr) auto auto;
+    align-content: stretch;
+    gap: clamp(14px, 1.55vw, 20px);
+    min-height: 100%;
+    padding: clamp(18px, 2vw, 24px);
+  }
+
+  .daily-reward-stage {
+    grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.92fr);
+    align-items: stretch;
+    min-height: clamp(250px, 34vh, 360px);
+  }
+
+  .daily-main-reward,
+  .daily-claim-panel {
+    min-height: 100%;
+  }
+
+  .daily-main-reward {
+    grid-template-columns: minmax(180px, 0.48fr) minmax(0, 1fr);
+  }
+
+  .daily-streak-system,
+  .daily-bonus-missions {
+    margin: 0;
+  }
+
+  .daily-streak-track {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .daily-streak-card {
+    min-height: clamp(104px, 13vh, 132px);
+  }
+
+  .daily-mission-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .xp-booster-dashboard {
+    min-height: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    gap: clamp(14px, 1.6vw, 20px);
+  }
+
+  .xp-booster-stage {
+    grid-template-columns: minmax(320px, 1.02fr) minmax(320px, 0.98fr);
+    align-items: stretch;
+    min-height: 0;
+    margin: 0;
+    transform: none;
+  }
+
+  .xp-core-wrap {
+    align-self: stretch;
+    justify-self: stretch;
+    width: 100%;
+    min-height: clamp(310px, 41vh, 430px);
+  }
+
+  .xp-boost-copy {
+    align-self: stretch;
+    display: grid;
+    align-content: center;
+    max-width: none;
+    min-height: 100%;
+    padding: clamp(14px, 1.8vw, 20px);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(34, 211, 238, 0.16), transparent 38%),
+      rgba(15, 23, 42, 0.34);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .xp-booster-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(10px, 1.25vw, 14px);
+    margin-top: clamp(16px, 2.2vw, 26px);
+  }
+
+  .xp-metric {
+    min-height: clamp(82px, 10vh, 110px);
+    display: grid;
+    align-content: center;
+  }
+
+  .promo-code-arena {
+    min-height: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .promo-code-stage {
+    align-content: center;
+  }
+
+  .promo-code-console {
+    min-height: clamp(150px, 21vh, 210px);
+    align-content: center;
+  }
+
+  .promo-hints-grid article {
+    min-height: clamp(108px, 14vh, 138px);
+    display: grid;
+    align-content: center;
+  }
+
+  .appearance-lab,
+  .game-settings-suite {
+    min-height: 100%;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
+  }
+
+  .appearance-settings-stage,
+  .game-settings-stage {
+    align-items: stretch;
+  }
+
+  .appearance-theme-panel,
+  .appearance-color-panel,
+  .game-effects-panel,
+  .streamer-setting-card,
+  .game-preview-console {
+    min-height: 100%;
+  }
+
+  .appearance-hints-grid,
+  .game-settings-hints {
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 761px) {
+  .shop-panel-root {
+    min-height: 100%;
+  }
+
+  .shop-items-area {
+    flex: 1 1 auto;
+    display: grid;
+    align-content: start;
+  }
+
+  .shop-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+    align-items: stretch;
+  }
+
+  .shop-card {
+    min-height: clamp(320px, 42vh, 390px);
+  }
+
+  .shop-empty-card,
+  .shop-locked-card:only-child {
+    min-height: clamp(300px, 52vh, 440px);
+    display: grid;
+    align-content: center;
+  }
+}
+
+@media (max-width: 860px) {
+  .daily-reward-stage,
+  .xp-booster-stage,
+  .promo-code-row {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-mission-grid,
+  .daily-streak-track,
+  .promo-hints-grid {
+    grid-template-columns: 1fr;
+  }
+}
