@@ -89,6 +89,11 @@ const LOBBY_EFFECTS = {
   'royal-chamber':   { bg: 'linear-gradient(135deg,#0d0020,#200040)', border: 'rgba(124,58,237,0.35)', shadow: '0 0 20px rgba(236,72,153,0.15)', sz: '200% 200%' },
   'sunrise-core':    { bg: 'linear-gradient(135deg,#1a0a00,#2a1500)', border: 'rgba(253,230,138,0.3)', shadow: '0 0 20px rgba(251,113,133,0.2)', sz: '300% 300%' },
   'horizon-mirage':  { bg: 'linear-gradient(135deg,#001020,#002030)', border: 'rgba(167,139,250,0.3)', shadow: '0 0 24px rgba(34,211,238,0.15)', sz: '300% 300%' },
+  // DEV
+  'emerald-grid':   { bg: 'linear-gradient(135deg,#052e16,#10b981,#6ee7b7)', border: 'rgba(52,211,153,0.45)', shadow: '0 0 26px rgba(52,211,153,0.28), inset 0 0 28px rgba(16,185,129,0.12)', sz: '200% 200%' },
+  'jade-hall':      { bg: 'linear-gradient(135deg,#14532d,#22c55e,#bbf7d0)', border: 'rgba(34,197,94,0.45)', shadow: '0 0 26px rgba(34,197,94,0.28), inset 0 0 28px rgba(187,247,208,0.1)', sz: '200% 200%' },
+  'mint-realm':     { bg: 'radial-gradient(circle at 25% 20%,#99f6e4,transparent 34%),linear-gradient(135deg,#064e3b,#34d399,#052e16)', border: 'rgba(153,246,228,0.45)', shadow: '0 0 28px rgba(153,246,228,0.25), inset 0 0 30px rgba(52,211,153,0.12)', sz: '220% 220%' },
+  'viridian-prestige': { bg: 'conic-gradient(from 140deg,#16a34a,#22c55e,#86efac,#16a34a)', border: 'rgba(134,239,172,0.48)', shadow: '0 0 30px rgba(34,197,94,0.3), inset 0 0 28px rgba(134,239,172,0.1)', sz: '240% 240%' },
 };
 
 // ─── CSS-АНИМАЦИИ (инжектируем один раз) ─────────────────────────────────

@@ -3175,7 +3175,6 @@ function renderShop(celebrate = false) {
   const xpMeta = getEconomyXpMeta(state.profile);
   const currentCategory = categories.find((category) => category.id === state.shopCategory) || categories[0];
   const items = state.shopCatalog.filter((item) => item.category === currentCategory.id);
-  const achievementHtml = renderShopAchievements();
   root.innerHTML = `
     <div class="shop-static-header">
       <div class="shop-hero ${celebrate ? "purchase-flash" : ""}">
@@ -3199,7 +3198,6 @@ function renderShop(celebrate = false) {
         ${items.map((item) => renderShopItemCard(item, owned, equipped)).join("") || `<div class="shop-locked-card shop-empty-card">Скоро новые дропы.</div>`}
       </div>
     </div>
-    ${achievementHtml ? `<div class="shop-achievements-section">${achievementHtml}</div>` : ""}
   `;
   applyCosmeticsToShopPreviews(root);
 }
