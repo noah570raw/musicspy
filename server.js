@@ -3337,11 +3337,12 @@ io.on("connection", (socket) => {
 
   socket.on("playTrack", ({ code, url }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    const trackUrl = String(url || "").trim();
+    const submission = normalizeTrackSubmission(url);
+    const trackUrl = submission.url;
     if (!lobby || lobby.phase !== "playing") return cb({ error: "Сейчас нельзя отправить трек" });
     if (lobby.order[lobby.currentTurnIndex] !== socket.id) return cb({ error: "Сейчас ход другого игрока" });
     if (lobby.submittedThisTurn) return cb({ error: "Трек уже отправлен" });
-    if (!isSupportedTrackUrl(trackUrl)) return cb({ error: "Вставь ссылку YouTube или SoundCloud" });
+    if (!submission.valid) return cb({ error: "Вставь ссылку YouTube/SoundCloud или напиши исполнителя и трек" });
 
     const player = lobby.players.find((item) => item.id === socket.id);
     lobby.submittedThisTurn = true;
@@ -3350,6 +3351,8 @@ io.on("connection", (socket) => {
     lobby.lastTrack = {
       id: `${lobby.round}-${lobby.currentTurnIndex + 1}-${Date.now()}`,
       url: trackUrl,
+      searchQuery: submission.searchQuery || "",
+      source: submission.source,
       playerId: socket.id,
       playerName: player?.name || "Игрок",
       round: lobby.round,
@@ -3517,6 +3520,22 @@ io.on("connection", (socket) => {
     if (disconnectedUserId) emitSocialForUserAndFriends(disconnectedUserId);
   });
 });
+
+function normalizeTrackSubmission(input) {
+  const raw = String(input || "").trim().replace(/\s+/g, " ");
+  if (!raw) return { valid: false, url: "", searchQuery: "", source: "empty" };
+  if (isSupportedTrackUrl(raw)) return { valid: true, url: raw, searchQuery: "", source: "url" };
+  const looksLikeUnsupportedUrl = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
+  if (looksLikeUnsupportedUrl) return { valid: false, url: raw, searchQuery: "", source: "unsupported-url" };
+  const query = raw.slice(0, 120);
+  if (query.length < 2) return { valid: false, url: raw, searchQuery: "", source: "short-query" };
+  return {
+    valid: true,
+    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+    searchQuery: query,
+    source: "library"
+  };
+}
 
 function isSupportedTrackUrl(url) {
   try {
