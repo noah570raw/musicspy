@@ -3432,7 +3432,6 @@ io.on("connection", (socket) => {
     }
     const player = lobby.players.find((item) => item.id === socket.id);
     if (!player) return cb({ error: "Ты не в этой комнате" });
-    if (!socket.data.user) return cb({ error: "Войдите в аккаунт, чтобы писать в чат" });
 
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
     if (!messageText) return cb({ error: "Напиши сообщение" });

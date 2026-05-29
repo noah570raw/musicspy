@@ -5100,20 +5100,20 @@ function handleGlobalChatKeydown(event) {
 }
 
 function updateChatAccessUi() {
-  const canWrite = Boolean(state.profile);
+  const canWriteGlobal = Boolean(state.profile);
   const globalInput = $("globalChatInput");
   const globalButton = $("globalChatSendBtn");
   if (globalInput) {
-    globalInput.disabled = !canWrite;
-    globalInput.placeholder = canWrite ? "Написать всем…" : "Войдите, чтобы писать в чат";
+    globalInput.disabled = !canWriteGlobal;
+    globalInput.placeholder = canWriteGlobal ? "Написать всем…" : "Войдите, чтобы писать в глобальный чат";
   }
-  if (globalButton) globalButton.disabled = !canWrite;
+  if (globalButton) globalButton.disabled = !canWriteGlobal;
   for (const input of document.querySelectorAll("[data-chat-input]")) {
-    input.disabled = !canWrite;
-    input.placeholder = canWrite ? (input.id === "lobbyChatInput" ? "Написать в лобби…" : "Написать сообщение…") : "Войдите, чтобы писать в чат";
+    input.disabled = false;
+    input.placeholder = input.id === "lobbyChatInput" ? "Написать в лобби…" : "Написать сообщение…";
   }
   for (const button of document.querySelectorAll("#lobbyChatSendBtn, #chatSendBtn")) {
-    button.disabled = !canWrite;
+    button.disabled = false;
   }
 }
 
@@ -5338,7 +5338,6 @@ function setChatStatus(message = "", isError = false) {
 
 function sendChatMessage() {
   const { input } = activeChatElements();
-  if (!state.profile) return setChatStatus("Войдите в аккаунт, чтобы писать в чат", true);
   const text = input?.value.trim() || "";
   if (!text) return setChatStatus("Напиши сообщение", true);
 
