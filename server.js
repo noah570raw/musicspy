@@ -67,6 +67,7 @@ const HOST_TIMER_STEP_SECONDS = 15;
 const HOST_MIN_TIMER_SECONDS = 5;
 const HOST_MAX_TIMER_SECONDS = 300;
 const MAX_CHAT_MESSAGES = 60;
+const MAX_GLOBAL_CHAT_MESSAGES = 80;
 const MAX_CHAT_MESSAGE_LENGTH = 240;
 const MAX_FINAL_COMMENTS = 24;
 const MAX_FINAL_COMMENT_LENGTH = 90;
@@ -96,6 +97,7 @@ const MATCH_XP_REWARDS = Object.freeze({
 
 
 const lobbies = {};
+let globalChatMessages = [];
 const timers = {};
 const oauthStates = new Map();
 const userSockets = new Map();
@@ -1092,6 +1094,19 @@ function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
     disconnected: false,
     disconnectedAt: null,
     reconnectTimer: null
+  };
+}
+
+function globalChatIdentity(socket, rawName = "") {
+  const player = playerFromSocket(socket, rawName);
+  return {
+    playerId: socket.id,
+    accountId: player.accountId,
+    playerName: player.name,
+    avatar: player.avatar,
+    roles: player.roles || [],
+    permissions: player.permissions || {},
+    equippedCosmetics: player.equippedCosmetics || {}
   };
 }
 
@@ -2580,6 +2595,28 @@ function createLobbyState(code, hostId, player, options = {}) {
 
 io.on("connection", (socket) => {
   socket.data.user = null;
+
+  socket.emit("globalChat:update", { messages: globalChatMessages });
+
+  socket.on("globalChat:get", (cb = () => {}) => {
+    cb({ success: true, messages: globalChatMessages });
+  });
+
+  socket.on("globalChat:send", ({ name, text } = {}, cb = () => {}) => {
+    const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+    if (!messageText) return cb({ error: "Напиши сообщение" });
+
+    const identity = globalChatIdentity(socket, name);
+    const message = {
+      id: `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+      ...identity,
+      text: messageText,
+      createdAt: Date.now()
+    };
+    globalChatMessages = [...globalChatMessages, message].slice(-MAX_GLOBAL_CHAT_MESSAGES);
+    io.emit("globalChat:update", { messages: globalChatMessages });
+    cb({ success: true, message });
+  });
 
   socket.on("auth:session", async ({ token, accessToken } = {}, cb = () => {}) => {
     try {

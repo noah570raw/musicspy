@@ -39,6 +39,8 @@ const state = {
   currentTrackId: null,
   trackHistory: [],
   chatMessages: [],
+  globalChatMessages: [],
+  globalChatOpen: false,
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
   audio: null,
@@ -734,6 +736,7 @@ function setLanguage(lang) {
   syncNameInput();
   updateLobbyRenameControls();
   if (state.lobby) renderLobby(state.lobby);
+  renderGlobalChat();
   if (state.phase === "game") {
     renderOrder();
     renderHostControls();
@@ -4963,11 +4966,16 @@ function gameChatPlayerNameMarkup(message) {
   return `<strong class="chat-player-name game-chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions }, "Игрок", { showBadge: false })}</strong>`;
 }
 
-function chatMessagesMarkup(list, { gameChat = false } = {}) {
+function globalChatPlayerNameMarkup(message) {
+  const nickname = message.playerName || message.name || "Игрок";
+  return `<strong class="chat-player-name global-chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions }, "Игрок", { showBadge: true })}</strong>`;
+}
+
+function chatMessagesMarkup(list, { gameChat = false, globalChat = false } = {}) {
   return list.map((message) => {
     const isMine = message.playerId === socket.id;
     const actionState = getChatPlayerActionsState(message.playerId);
-    const playerActions = isMine || gameChat ? "" : `
+    const playerActions = isMine || gameChat || globalChat ? "" : `
       <div class="chat-player-actions">
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
         <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
@@ -4977,7 +4985,7 @@ function chatMessagesMarkup(list, { gameChat = false } = {}) {
       <div class="chat-message ${isMine ? "mine" : ""}" data-player-id="${escapeAttribute(message.playerId || "")}">
         <div class="chat-message-meta">
           <div class="chat-player-meta-wrap">
-            ${gameChat ? gameChatPlayerNameMarkup(message) : lobbyPlayerProfileActionMarkup(message)}
+            ${globalChat ? globalChatPlayerNameMarkup(message) : (gameChat ? gameChatPlayerNameMarkup(message) : lobbyPlayerProfileActionMarkup(message))}
             ${playerActions}
           </div>
           <span>${escapeHtml(formatChatTime(message.createdAt))}</span>
@@ -4986,6 +4994,87 @@ function chatMessagesMarkup(list, { gameChat = false } = {}) {
       </div>
     `;
   }).join("");
+}
+
+function setGlobalChatStatus(message = "", isError = false) {
+  const status = $("globalChatStatus");
+  if (!status) return;
+  status.textContent = t(message);
+  status.classList.toggle("error", isError);
+}
+
+function renderGlobalChat(messages = state.globalChatMessages) {
+  const box = $("globalChatMessages");
+  if (!box) return;
+  const list = Array.isArray(messages) ? messages : [];
+  state.globalChatMessages = list;
+  const scrollArea = box.closest("[data-chat-scroll]") || box;
+  if (!list.length) {
+    box.classList.add("empty");
+    box.textContent = t("Пока сообщений нет");
+    scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "auto" });
+    return;
+  }
+  const hadMessages = box.children.length > 0;
+  box.classList.remove("empty");
+  box.innerHTML = chatMessagesMarkup(list, { globalChat: true });
+  if (window.CosmeticsRenderer) {
+    const rows = Array.from(box.querySelectorAll(".chat-message"));
+    rows.forEach((row, index) => {
+      const message = list[index] || {};
+      CosmeticsRenderer.applyAll({ equippedCosmetics: message.equippedCosmetics || {} }, {
+        nickname: row.querySelector(".chat-player-name"),
+        avatar: row.querySelector(".avatar"),
+        chatBubble: row
+      });
+    });
+  }
+  scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: hadMessages ? "smooth" : "auto" });
+}
+
+function toggleGlobalChat(force) {
+  state.globalChatOpen = typeof force === "boolean" ? force : !state.globalChatOpen;
+  const panel = $("globalChatPanel");
+  const toggle = $("globalChatToggle");
+  document.body.classList.toggle("global-chat-open", state.globalChatOpen);
+  if (panel) panel.setAttribute("aria-hidden", String(!state.globalChatOpen));
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", String(state.globalChatOpen));
+    toggle.setAttribute("aria-label", state.globalChatOpen ? "Закрыть глобальный чат" : "Открыть глобальный чат");
+  }
+  if (state.globalChatOpen) {
+    socket.emit("globalChat:get", (res) => {
+      if (res?.messages) renderGlobalChat(res.messages);
+    });
+    window.setTimeout(() => $("globalChatInput")?.focus({ preventScroll: true }), 180);
+  }
+}
+
+function handleGlobalChatKeydown(event) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    toggleGlobalChat(false);
+    return;
+  }
+  if (event.key !== "Enter" || event.shiftKey) return;
+  event.preventDefault();
+  sendGlobalChatMessage();
+}
+
+function sendGlobalChatMessage() {
+  const input = $("globalChatInput");
+  const text = input?.value.trim() || "";
+  if (!text) return setGlobalChatStatus("Напиши сообщение", true);
+  if (input) input.value = "";
+  input?.focus({ preventScroll: true });
+  socket.emit("globalChat:send", { name: getName(), text }, (res) => {
+    if (res?.error) {
+      if (input && !input.value) input.value = text;
+      input?.focus({ preventScroll: true });
+      return setGlobalChatStatus(res.error, true);
+    }
+    setGlobalChatStatus("Сообщение отправлено");
+  });
 }
 
 function renderChat(messages = state.chatMessages) {
@@ -5949,6 +6038,9 @@ function escapeAttribute(value) {
 socket.on("connect", () => {
   state.myId = socket.id;
   state.authResolved = false;
+  socket.emit("globalChat:get", (res) => {
+    if (res?.messages) renderGlobalChat(res.messages);
+  });
   consumeOAuthRedirectParams();
   authenticateWithStoredToken();
 });
@@ -6000,6 +6092,7 @@ window.addEventListener("DOMContentLoaded", () => {
   tryAutoplayBackgroundAfterDelay(1000);
   renderReactions();
   initChatScrollbarFeedback();
+  renderGlobalChat();
   initCustomSelects();
   initFriendsSystem();
   if ($("promoCodeInput")) {
@@ -6080,6 +6173,9 @@ socket.on("gameStarted", (data) => {
 });
 
 socket.on("gameState", renderGameState);
+socket.on("globalChat:update", ({ messages }) => {
+  renderGlobalChat(messages || []);
+});
 socket.on("chat:update", ({ messages }) => {
   console.log(`[CC] received equipped:${JSON.stringify((messages || []).map((msg) => ({ playerId: msg?.playerId, equippedCosmetics: msg?.equippedCosmetics || {} })))}`);
   renderChat(messages || []);
