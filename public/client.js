@@ -41,6 +41,7 @@ const state = {
   chatMessages: [],
   globalChatMessages: [],
   globalChatOpen: false,
+  siteOnlineCount: 0,
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
   audio: null,
@@ -4996,6 +4997,16 @@ function chatMessagesMarkup(list, { gameChat = false, globalChat = false } = {})
   }).join("");
 }
 
+
+function renderSiteOnlineCount(count = state.siteOnlineCount) {
+  const value = Math.max(0, Number(count) || 0);
+  state.siteOnlineCount = value;
+  const label = $("globalChatOnlineCount");
+  if (!label) return;
+  const suffix = value === 1 ? "игрок онлайн" : "игроков онлайн";
+  label.innerHTML = `<i aria-hidden="true"></i> ${value} ${suffix}`;
+}
+
 function setGlobalChatStatus(message = "", isError = false) {
   const status = $("globalChatStatus");
   if (!status) return;
@@ -6175,6 +6186,10 @@ socket.on("gameStarted", (data) => {
 socket.on("gameState", renderGameState);
 socket.on("globalChat:update", ({ messages }) => {
   renderGlobalChat(messages || []);
+});
+
+socket.on("siteOnline:update", ({ count } = {}) => {
+  renderSiteOnlineCount(count);
 });
 socket.on("chat:update", ({ messages }) => {
   console.log(`[CC] received equipped:${JSON.stringify((messages || []).map((msg) => ({ playerId: msg?.playerId, equippedCosmetics: msg?.equippedCosmetics || {} })))}`);
