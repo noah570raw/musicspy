@@ -642,6 +642,34 @@
     <div id="accountXpBar" class="account-xp-bar hidden" aria-live="polite"></div>
   </div>
 
+  <button id="globalChatToggle" class="global-chat-toggle" type="button" onclick="toggleGlobalChat()" aria-expanded="false" aria-controls="globalChatPanel" aria-label="Открыть глобальный чат">
+    <span class="global-chat-toggle-core" aria-hidden="true">
+      <i></i>
+    </span>
+    <span class="global-chat-toggle-label">CHAT</span>
+  </button>
+
+  <aside id="globalChatPanel" class="global-chat-panel" aria-label="Глобальный чат" aria-hidden="true">
+    <div class="global-chat-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="game-chat-panel global-chat-card">
+      <div class="chat-header panel-title global-chat-header">
+        <span class="global-chat-live"><i aria-hidden="true"></i> GLOBAL LINK</span>
+        <strong>Чат сайта</strong>
+        <span>общий эфир Music Spy</span>
+      </div>
+      <div class="chat-messages-area global-chat-messages-area" data-chat-scroll>
+        <div id="globalChatMessages" class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-form global-chat-form">
+          <input id="globalChatInput" maxlength="240" placeholder="Написать всем…" onkeydown="handleGlobalChatKeydown(event)">
+          <button id="globalChatSendBtn" class="secondary chat-send-button" type="button" onclick="sendGlobalChatMessage()" aria-label="Отправить в глобальный чат"><span aria-hidden="true">➤</span></button>
+        </div>
+        <p id="globalChatStatus" class="status"></p>
+      </div>
+    </div>
+  </aside>
+
   <div id="volumeControl" class="volume-control" aria-label="Громкость сайта">
     <button id="volumeToggle" class="corner-toggle sound-toggle" type="button" onclick="toggleVolumePanel()" aria-expanded="false" aria-controls="volumePanel" title="Звук в игре">
       <span id="musicToggleIcon">🎧</span>
