@@ -3344,6 +3344,8 @@ body[data-screen="game"] .language-switcher {
   background: transparent;
   color: inherit;
   cursor: pointer;
+  font: inherit;
+  line-height: 1;
 }
 
 .chat-player-trigger .avatar {
@@ -3355,6 +3357,7 @@ body[data-screen="game"] .language-switcher {
 .chat-player-name {
   min-width: 0;
   overflow: hidden;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -15566,9 +15569,9 @@ body[data-effects-density="low"] .appearance-preview-orb {
 .global-chat-toggle,
 .global-chat-panel {
   --global-chat-left: 18px;
-  --global-chat-width: min(440px, calc(100vw - 36px));
+  --global-chat-width: min(352px, calc(100vw - 36px));
   --global-chat-top: 82px;
-  --global-chat-bottom: 254px;
+  --global-chat-bottom: 146px;
   --global-chat-y-offset: 7px;
 }
 
@@ -15775,9 +15778,9 @@ body[data-screen]:not([data-screen="menu"]) .global-chat-panel {
   .global-chat-toggle,
   .global-chat-panel {
     --global-chat-left: 12px;
-    --global-chat-width: min(360px, calc(100vw - 24px));
+    --global-chat-width: min(288px, calc(100vw - 24px));
     --global-chat-top: 74px;
-    --global-chat-bottom: 190px;
+    --global-chat-bottom: 136px;
   }
 
   .global-chat-toggle {
