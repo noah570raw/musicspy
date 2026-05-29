@@ -15812,3 +15812,65 @@ body[data-screen]:not([data-screen="menu"]) .global-chat-panel {
     padding: 10px;
   }
 }
+
+/* ========================================
+   MENU FIX — appearance + game tabs
+   Добавь в конец style.css
+   ======================================== */
+
+/* 1. Убираем ограничение высоты у списка тем */
+.appearance-theme-grid {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* 2. Убираем анимированную рамку (зелёная линия) с обоих панелей */
+.game-settings-suite::before,
+.appearance-lab::before {
+  animation: none !important;
+  background: linear-gradient(
+    120deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent-2) 80%, var(--accent)),
+    rgba(255,255,255,0.3),
+    var(--accent)
+  ) !important;
+  background-size: 100% 100% !important;
+  opacity: 0.55 !important;
+}
+
+/* 3. Убираем overflow:hidden который обрезает контент */
+.game-settings-suite,
+.appearance-lab {
+  overflow: hidden auto !important;
+}
+
+/* 4. Фикс appearance-settings-stage — 
+      колонки не должны выходить за контейнер */
+.appearance-settings-stage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  min-width: 0;
+}
+
+/* 5. Панели тем и цветов — нормальный scroll внутри */
+.appearance-theme-panel,
+.appearance-color-panel {
+  min-width: 0;
+  overflow: visible;
+}
+
+/* 6. Color panel — две колонки не налезают */
+.appearance-color-column {
+  min-width: 0;
+  overflow: visible;
+}
+
+/* 7. Hints grid внизу не обрезается */
+.appearance-hints-grid {
+  overflow: visible;
+}
+
+/* 8. Game tab — intensity cards не обрезаются */
+.game-settings-suite .effects-density-grid {
+  overflow: visible;
+}
