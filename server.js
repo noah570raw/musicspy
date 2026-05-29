@@ -2613,6 +2613,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("globalChat:send", ({ name, text } = {}, cb = () => {}) => {
+    if (!socket.data.user) return cb({ error: "Войдите в аккаунт, чтобы писать в чат" });
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
     if (!messageText) return cb({ error: "Напиши сообщение" });
 
@@ -3070,10 +3071,10 @@ io.on("connection", (socket) => {
     cb({ success: true, user: publicUser(user) });
   });
 
-  socket.on("friend:request", ({ nickname } = {}, cb = () => {}) => {
+  socket.on("friend:request", ({ nickname, accountId } = {}, cb = () => {}) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Войди в аккаунт, чтобы добавлять друзей" });
-    const receiver = findUserByNicknameOrUsername(nickname);
+    const receiver = accountId ? findUserById(String(accountId || "").trim()) : findUserByNicknameOrUsername(nickname);
     if (!receiver) return cb({ error: "Пользователь не найден" });
     const result = createFriendRequest(user.id, receiver.id);
     cb(result.success ? { success: true } : result);
@@ -3431,6 +3432,7 @@ io.on("connection", (socket) => {
     }
     const player = lobby.players.find((item) => item.id === socket.id);
     if (!player) return cb({ error: "Ты не в этой комнате" });
+    if (!socket.data.user) return cb({ error: "Войдите в аккаунт, чтобы писать в чат" });
 
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
     if (!messageText) return cb({ error: "Напиши сообщение" });

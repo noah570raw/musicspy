@@ -15568,7 +15568,7 @@ body[data-effects-density="low"] .appearance-preview-orb {
   --global-chat-left: 18px;
   --global-chat-width: min(440px, calc(100vw - 36px));
   --global-chat-top: 82px;
-  --global-chat-bottom: 146px;
+  --global-chat-bottom: 254px;
   --global-chat-y-offset: 7px;
 }
 
@@ -15672,20 +15672,21 @@ body.global-chat-open .global-chat-panel {
 
 .global-chat-header {
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   z-index: 1;
 }
 
 .global-chat-header strong {
-  grid-column: 1;
+  min-width: 0;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
 .global-chat-live {
-  grid-column: 1 / -1;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -15714,6 +15715,11 @@ body.global-chat-open .global-chat-panel {
 
 .global-chat-messages-area {
   min-height: 0;
+}
+
+
+.global-chat-player-trigger {
+  margin-left: 0;
 }
 
 .global-chat-panel .chat-message {
@@ -15771,7 +15777,7 @@ body[data-screen]:not([data-screen="menu"]) .global-chat-panel {
     --global-chat-left: 12px;
     --global-chat-width: min(360px, calc(100vw - 24px));
     --global-chat-top: 74px;
-    --global-chat-bottom: 136px;
+    --global-chat-bottom: 190px;
   }
 
   .global-chat-toggle {

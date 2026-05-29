@@ -735,6 +735,7 @@ function setLanguage(lang) {
   renderAppearanceControls();
   updateMusicToggle();
   syncNameInput();
+  updateChatAccessUi();
   updateLobbyRenameControls();
   if (state.lobby) renderLobby(state.lobby);
   renderGlobalChat();
@@ -2568,6 +2569,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   if (user?.economy?.xpBooster) applyXpBoosterState(user.economy.xpBooster);
   renderDailyReward();
   syncNameInput();
+  updateChatAccessUi();
   updateLobbyRenameControls();
   if (profileData.social) applySocialState(profileData.social);
   else requestSocialState();
@@ -4938,14 +4940,23 @@ function isLobbyPlayerAlreadyFriend(player = {}) {
   });
 }
 
-function getChatPlayerActionsState(playerId) {
-  const player = lobbyPlayerById(playerId) || {};
-  const alreadyFriend = isLobbyPlayerAlreadyFriend(player);
+function isAccountAlreadyFriend(accountId) {
+  const normalizedId = String(accountId || "");
+  return Boolean(normalizedId) && state.friends.some((friend) => String(friend.id || "") === normalizedId);
+}
+
+function chatActionState({ playerId = "", accountId = "" } = {}) {
+  const player = playerId ? (lobbyPlayerById(playerId) || {}) : {};
+  const alreadyFriend = accountId ? isAccountAlreadyFriend(accountId) : isLobbyPlayerAlreadyFriend(player);
   return {
     alreadyFriend,
     addFriendLabel: alreadyFriend ? "Уже в друзьях" : "Добавить в друзья",
     addFriendDisabled: alreadyFriend ? "disabled" : ""
   };
+}
+
+function getChatPlayerActionsState(playerId) {
+  return chatActionState({ playerId });
 }
 
 function lobbyPlayerProfileActionMarkup(message) {
@@ -4969,19 +4980,35 @@ function gameChatPlayerNameMarkup(message) {
 
 function globalChatPlayerNameMarkup(message) {
   const nickname = message.playerName || message.name || "Игрок";
-  return `<strong class="chat-player-name global-chat-player-name">${nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions }, "Игрок", { showBadge: true })}</strong>`;
+  const nameMarkup = nameWithDevBadge({ name: nickname, roles: message.roles, permissions: message.permissions }, "Игрок", { showBadge: true });
+  if (!message.accountId || message.playerId === socket.id) {
+    return `<strong class="chat-player-name global-chat-player-name">${nameMarkup}</strong>`;
+  }
+  const triggerLabel = escapeAttribute(`Профиль ${nickname}`);
+  return `
+    <button class="chat-player-trigger global-chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
+      <span class="chat-player-name global-chat-player-name">${nameMarkup}</span>
+    </button>
+  `;
 }
 
 function chatMessagesMarkup(list, { gameChat = false, globalChat = false } = {}) {
   return list.map((message) => {
     const isMine = message.playerId === socket.id;
-    const actionState = getChatPlayerActionsState(message.playerId);
-    const playerActions = isMine || gameChat || globalChat ? "" : `
+    const actionState = globalChat
+      ? chatActionState({ accountId: message.accountId })
+      : getChatPlayerActionsState(message.playerId);
+    const playerActions = isMine || gameChat ? "" : (globalChat ? (message.accountId ? `
+      <div class="chat-player-actions">
+        <button type="button" onclick="viewGlobalChatPlayerProfile('${escapeAttribute(message.accountId || '')}')">Посмотреть профиль</button>
+        <button type="button" onclick="requestFriendFromGlobalChat('${escapeAttribute(message.accountId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
+      </div>
+    ` : "") : `
       <div class="chat-player-actions">
         <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
         <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
       </div>
-    `;
+    `);
     return `
       <div class="chat-message ${isMine ? "mine" : ""}" data-player-id="${escapeAttribute(message.playerId || "")}">
         <div class="chat-message-meta">
@@ -5003,8 +5030,7 @@ function renderSiteOnlineCount(count = state.siteOnlineCount) {
   state.siteOnlineCount = value;
   const label = $("globalChatOnlineCount");
   if (!label) return;
-  const suffix = value === 1 ? "игрок онлайн" : "игроков онлайн";
-  label.innerHTML = `<i aria-hidden="true"></i> ${value} ${suffix}`;
+  label.innerHTML = `<i aria-hidden="true"></i> ${value} online`;
 }
 
 function setGlobalChatStatus(message = "", isError = false) {
@@ -5057,6 +5083,7 @@ function toggleGlobalChat(force) {
     socket.emit("globalChat:get", (res) => {
       if (res?.messages) renderGlobalChat(res.messages);
     });
+    updateChatAccessUi();
     window.setTimeout(() => $("globalChatInput")?.focus({ preventScroll: true }), 180);
   }
 }
@@ -5072,8 +5099,27 @@ function handleGlobalChatKeydown(event) {
   sendGlobalChatMessage();
 }
 
+function updateChatAccessUi() {
+  const canWrite = Boolean(state.profile);
+  const globalInput = $("globalChatInput");
+  const globalButton = $("globalChatSendBtn");
+  if (globalInput) {
+    globalInput.disabled = !canWrite;
+    globalInput.placeholder = canWrite ? "Написать всем…" : "Войдите, чтобы писать в чат";
+  }
+  if (globalButton) globalButton.disabled = !canWrite;
+  for (const input of document.querySelectorAll("[data-chat-input]")) {
+    input.disabled = !canWrite;
+    input.placeholder = canWrite ? (input.id === "lobbyChatInput" ? "Написать в лобби…" : "Написать сообщение…") : "Войдите, чтобы писать в чат";
+  }
+  for (const button of document.querySelectorAll("#lobbyChatSendBtn, #chatSendBtn")) {
+    button.disabled = !canWrite;
+  }
+}
+
 function sendGlobalChatMessage() {
   const input = $("globalChatInput");
+  if (!state.profile) return setGlobalChatStatus("Войдите в аккаунт, чтобы писать в чат", true);
   const text = input?.value.trim() || "";
   if (!text) return setGlobalChatStatus("Напиши сообщение", true);
   if (input) input.value = "";
@@ -5184,6 +5230,27 @@ function viewLobbyPlayerProfile(playerId) {
 
 document.addEventListener('click', closeChatPlayerActions);
 
+function requestFriendFromGlobalChat(accountId) {
+  closeChatPlayerActions();
+  if (!state.profile) return setGlobalChatStatus('Войдите в аккаунт, чтобы добавлять друзей', true);
+  if (!accountId) return setGlobalChatStatus('Не удалось определить игрока', true);
+  if (isAccountAlreadyFriend(accountId)) return setGlobalChatStatus('Этот игрок уже у вас в друзьях');
+  socket.emit('friend:request', { accountId }, (res) => {
+    if (res?.error) return setGlobalChatStatus(res.error, true);
+    requestSocialState();
+    setGlobalChatStatus('Заявка отправлена');
+  });
+}
+
+function viewGlobalChatPlayerProfile(accountId) {
+  closeChatPlayerActions();
+  if (!accountId) return setGlobalChatStatus('Профиль игрока недоступен', true);
+  socket.emit("profile:view", { accountId }, (res) => {
+    if (res?.error || !res?.user) return setGlobalChatStatus(res?.error || "Профиль игрока недоступен", true);
+    showPublicProfileModal(res.user);
+  });
+}
+
 function profileStatsMarkup(user = {}) {
   const stats = user.stats || {};
   const infiniteStats = isInfiniteStatsUser(user);
@@ -5271,6 +5338,7 @@ function setChatStatus(message = "", isError = false) {
 
 function sendChatMessage() {
   const { input } = activeChatElements();
+  if (!state.profile) return setChatStatus("Войдите в аккаунт, чтобы писать в чат", true);
   const text = input?.value.trim() || "";
   if (!text) return setChatStatus("Напиши сообщение", true);
 
