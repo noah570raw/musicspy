@@ -643,9 +643,6 @@
   </div>
 
   <button id="globalChatToggle" class="global-chat-toggle" type="button" onclick="toggleGlobalChat()" aria-expanded="false" aria-controls="globalChatPanel" aria-label="Открыть глобальный чат">
-    <span class="global-chat-toggle-core" aria-hidden="true">
-      <i></i>
-    </span>
     <span class="global-chat-toggle-label">CHAT</span>
   </button>
 
@@ -653,9 +650,8 @@
     <div class="global-chat-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="game-chat-panel global-chat-card">
       <div class="chat-header panel-title global-chat-header">
-        <span class="global-chat-live"><i aria-hidden="true"></i> GLOBAL LINK</span>
-        <strong>Чат сайта</strong>
-        <span>общий эфир Music Spy</span>
+        <span id="globalChatOnlineCount" class="global-chat-live"><i aria-hidden="true"></i> 0 игроков онлайн</span>
+        <strong>ГЛОБАЛЬНЫЙ ЧАТ</strong>
       </div>
       <div class="chat-messages-area global-chat-messages-area" data-chat-scroll>
         <div id="globalChatMessages" class="chat-messages empty" aria-live="polite">Пока сообщений нет</div>

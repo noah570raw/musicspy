@@ -2593,10 +2593,20 @@ function createLobbyState(code, hostId, player, options = {}) {
   };
 }
 
+function currentSiteOnlineCount() {
+  return io.of("/").sockets.size;
+}
+
+function emitSiteOnlineCount() {
+  io.emit("siteOnline:update", { count: currentSiteOnlineCount() });
+}
+
 io.on("connection", (socket) => {
   socket.data.user = null;
 
+  emitSiteOnlineCount();
   socket.emit("globalChat:update", { messages: globalChatMessages });
+  socket.emit("siteOnline:update", { count: currentSiteOnlineCount() });
 
   socket.on("globalChat:get", (cb = () => {}) => {
     cb({ success: true, messages: globalChatMessages });
@@ -3652,6 +3662,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     const disconnectedUserId = socket.data.user?.id || null;
     unregisterAuthenticatedSocket(socket);
+    emitSiteOnlineCount();
     for (const code of Object.keys(lobbies)) {
       const lobby = lobbies[code];
       const wasInLobby = lobby.players.some((player) => player.id === socket.id);
