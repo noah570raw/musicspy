@@ -3338,14 +3338,20 @@ body[data-screen="game"] .language-switcher {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 0;
   margin-left: -8px;
   padding: 0;
   border: 0;
+  overflow: visible;
   background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
   line-height: 1;
+}
+
+.chat-player-trigger::before {
+  content: none;
 }
 
 .chat-player-trigger .avatar {
@@ -8621,13 +8627,19 @@ body,
 
 .friend-lobby-pill {
   flex: 0 0 auto;
-  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  height: 1.25em;
+  padding: 0 7px;
   border: 1px solid rgba(var(--accent-rgb), 0.32);
   border-radius: 999px;
   color: var(--text);
   background: rgba(var(--accent-rgb), 0.12);
   font-size: 0.67rem;
   font-weight: 900;
+  line-height: 1;
 }
 
 .friend-actions {
@@ -15722,7 +15734,10 @@ body.global-chat-open .global-chat-panel {
 
 
 .global-chat-player-trigger {
+  min-height: 0;
+  height: 0.58em;
   margin-left: 0;
+  line-height: 0.58;
 }
 
 .global-chat-panel .chat-message {
