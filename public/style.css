@@ -15876,120 +15876,85 @@ body[data-screen]:not([data-screen="menu"]) .global-chat-panel {
 }
 
 /* ============================================================
-   MENU FIX — вставь В САМЫЙ КОНЕЦ style.css
+   MENU FIX v3 — вставь В САМЫЙ КОНЕЦ style.css
+   (замени предыдущий menu-fix если вставлял)
    ============================================================ */
 
-/* --- ОБЩИЙ КОНТЕЙНЕР ВКЛАДОК --- */
-
-/* Панели Appearance и Game должны скроллиться сами,
-   не обрезать вложенный контент */
-.site-menu-card #settingsPanelAppearance.active > .appearance-lab,
-.site-menu-card #settingsPanelGame.active > .game-settings-suite {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
+/* 1. УБИВАЕМ анимированную зелёную рамку полностью */
+.appearance-lab::before,
+.game-settings-suite::before {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+  opacity: 0 !important;
 }
 
-/* --- APPEARANCE TAB --- */
+/* 2. Убираем shimmer overlay тоже (он иногда создаёт артефакты) */
+.appearance-lab::after,
+.game-settings-suite::after {
+  display: none !important;
+}
 
-/* Убираем max-height который обрезает список тем */
+/* 3. Компенсируем — добавляем простой статичный border вместо анимации */
+.appearance-lab,
+.game-settings-suite {
+  border: 1px solid rgba(var(--accent-rgb), 0.35) !important;
+}
+
+/* 4. УБИРАЕМ max-height у списка тем */
 .appearance-theme-grid {
   max-height: none !important;
   overflow: visible !important;
 }
 
-/* Hero-блок: превью слева + описание справа */
-.appearance-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 0.42fr);
-  gap: 16px;
-  align-items: start; /* start вместо stretch — не растягивает насильно */
-}
-
-/* Основная сетка: темы слева, цвета справа */
+/* 5. Колонки не налезают друг на друга */
 .appearance-settings-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 14px;
-  align-items: start; /* start — каждая колонка своей высоты */
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) !important;
+  gap: 14px !important;
+  align-items: start !important;
 }
 
-/* Панели тем и цветов — не обрезаются */
 .appearance-theme-panel,
 .appearance-color-panel {
-  min-width: 0;
-  overflow: visible;
-  align-self: start;
+  align-self: start !important;
+  min-width: 0 !important;
+  overflow: visible !important;
 }
 
-/* Колонка цветов — не обрезается */
-.appearance-color-column {
-  min-width: 0;
-  overflow: visible;
-}
-
-/* Нижние подсказки 01/02/03 — обычный поток, без позиционирования */
+/* 6. HINTS (01 02 03) — убираем из потока карточек,
+   вешаем как обычный grid внизу без наслоения */
 .appearance-hints-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  overflow: visible;
-  position: relative;
-  z-index: 1;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  position: static !important;  /* убираем absolute если есть */
+  z-index: 1 !important;
+  margin-top: 6px !important;
+  overflow: visible !important;
 }
 
-/* --- GAME TAB --- */
-
-/* Убираем position:relative overflow:hidden который обрезает */
-.game-settings-suite {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-}
-
-/* Streamer card и hero — нормальный поток */
-.game-settings-hero,
-.streamer-setting-card {
-  position: relative;
-  z-index: 1;
-  overflow: visible;
-}
-
-/* Intensity grid — карточки не обрезаются */
-.game-settings-suite .effects-density-grid {
-  overflow: visible;
-  align-items: start;
-}
-
-/* Нижние подсказки game — не наслаиваются */
+/* То же для game hints */
 .game-settings-hints {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  overflow: visible;
-  position: relative;
-  z-index: 1;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  position: static !important;
+  z-index: 1 !important;
+  margin-top: 6px !important;
+  overflow: visible !important;
 }
 
-/* --- SCROLLBAR — тонкий, не ломает layout --- */
+/* 7. Скроллбар тонкий */
 .appearance-lab,
 .game-settings-suite {
   scrollbar-width: thin;
   scrollbar-gutter: stable;
 }
-
 .appearance-lab::-webkit-scrollbar,
-.game-settings-suite::-webkit-scrollbar {
-  width: 4px;
-}
-
+.game-settings-suite::-webkit-scrollbar { width: 4px; }
 .appearance-lab::-webkit-scrollbar-track,
-.game-settings-suite::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+.game-settings-suite::-webkit-scrollbar-track { background: transparent; }
 .appearance-lab::-webkit-scrollbar-thumb,
 .game-settings-suite::-webkit-scrollbar-thumb {
   background: rgba(var(--accent-rgb), 0.4);
