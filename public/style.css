@@ -16978,3 +16978,144 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
     justify-self: start;
   }
 }
+
+/* Game history modal should sit above the main menu and use the same premium settings/about visual language. */
+.game-history-modal {
+  z-index: 46;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(var(--accent-rgb), 0.24), transparent 30rem),
+    radial-gradient(circle at 82% 72%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 28rem),
+    rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(18px) saturate(132%);
+}
+
+.game-history-card {
+  position: relative;
+  width: min(100%, 720px);
+  max-height: min(86vh, 760px);
+  overflow: hidden;
+  border-color: rgba(var(--accent-rgb), 0.28);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025)),
+    rgba(var(--surface-rgb), 0.88);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.58),
+    0 0 54px rgba(var(--accent-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-align: left;
+}
+
+.game-history-shell {
+  display: grid;
+  gap: clamp(14px, 2vw, 20px);
+}
+
+.game-history-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: clamp(16px, 2.6vw, 24px);
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--accent-rgb), 0.22), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    rgba(var(--surface-rgb), 0.42);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.game-history-hero h2 {
+  margin: 3px 0 6px;
+  font-size: clamp(1.75rem, 4vw, 2.8rem);
+}
+
+.game-history-hero .auth-modal-text {
+  max-width: 44rem;
+  margin: 0;
+}
+
+.game-history-orb {
+  display: grid;
+  place-items: center;
+  width: clamp(76px, 12vw, 118px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.28), transparent 26%),
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.72), color-mix(in srgb, var(--accent-2) 54%, transparent));
+  color: var(--on-accent);
+  box-shadow: 0 20px 54px rgba(var(--accent-rgb), 0.2);
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.game-history-list {
+  max-height: min(48vh, 410px);
+  overflow: hidden auto;
+  padding-right: 4px;
+  scrollbar-color: rgba(var(--accent-rgb), 0.58) rgba(255, 255, 255, 0.045);
+}
+
+.game-history-list.empty {
+  display: grid;
+  min-height: 170px;
+  margin-top: 0;
+  place-items: center;
+  border-color: rgba(var(--accent-rgb), 0.2);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(var(--accent-rgb), 0.14), transparent 42%),
+    rgba(var(--surface-rgb), 0.34);
+  text-align: center;
+  font-weight: 800;
+}
+
+.game-history-row {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-history-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.08), transparent 58%);
+  opacity: 0;
+  transform: translateX(-35%);
+  transition: opacity 0.2s ease, transform 0.35s ease;
+}
+
+.game-history-row:hover {
+  transform: translateY(-1px);
+}
+
+.game-history-row:hover::before {
+  opacity: 1;
+  transform: translateX(35%);
+}
+
+.game-history-status {
+  min-height: 22px;
+  margin: 0;
+}
+
+.promo-code-card:hover {
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .game-history-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .game-history-orb {
+    display: none;
+  }
+}

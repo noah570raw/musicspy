@@ -3686,7 +3686,9 @@ io.on("connection", (socket) => {
     const message = {
       id: `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
       playerId: socket.id,
+      accountId: player.accountId || null,
       playerName: player.name,
+      avatar: player.avatar || "",
       roles: player.roles || [],
       permissions: player.permissions || {},
       equippedCosmetics: { ...(player.equippedCosmetics || {}) },

@@ -627,13 +627,21 @@
     </div>
   </div>
 
-  <div id="gameHistoryModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="gameHistoryTitle">
+  <div id="gameHistoryModal" class="auth-modal host-players-modal game-history-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="gameHistoryTitle">
     <div class="auth-modal-card host-players-card game-history-card">
       <button class="modal-close" type="button" onclick="hideGameHistoryModal()" aria-label="Закрыть историю игр">×</button>
-      <p class="eyebrow">последние матчи</p>
-      <h2 id="gameHistoryTitle">История игр</h2>
-      <div id="gameHistoryContent" class="game-history-list empty">История игр пока пуста</div>
-      <p id="gameHistoryStatus" class="status"></p>
+      <div class="game-history-shell">
+        <div class="game-history-hero">
+          <div>
+            <p class="eyebrow">последние матчи</p>
+            <h2 id="gameHistoryTitle">История игр</h2>
+            <p id="gameHistorySubtitle" class="auth-modal-text">Победы, роли и быстрый переход к результатам сыгранных партий.</p>
+          </div>
+          <div class="game-history-orb" aria-hidden="true"><span>MS</span></div>
+        </div>
+        <div id="gameHistoryContent" class="game-history-list empty">История игр пока пуста</div>
+        <p id="gameHistoryStatus" class="status game-history-status"></p>
+      </div>
     </div>
   </div>
 
