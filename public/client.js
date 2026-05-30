@@ -165,7 +165,10 @@ const INTERFACE_THEMES = [
   { id: "galaxy", label: "Galaxy Noir" },
   { id: "candy", label: "Candy Wave" },
   { id: "midnight", label: "Midnight Gold" },
-  { id: "ember", label: "Ember Bloom" }
+  { id: "ember", label: "Ember Bloom" },
+  { id: "ice", label: "Ice Rave" },
+  { id: "solar", label: "Solar Flare" },
+  { id: "velvet", label: "Royal Velvet" }
 ];
 const ACCENT_COLORS = [
   { id: "red", label: "Красный", hex: "#ef4444", rgb: "239, 68, 68" },
