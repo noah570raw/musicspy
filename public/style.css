@@ -16782,3 +16782,12 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   }
 }
 
+
+/* Final polish: requested role/result typography adjustments. */
+body[data-screen="game"] #identityPanel:not(.streamer-hidden) #roleTitle {
+  font-size: 80%;
+}
+
+body[data-screen="results"] .breakdown-card:first-child .breakdown-result-text {
+  font-size: 70%;
+}
