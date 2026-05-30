@@ -220,6 +220,7 @@ h2 {
 
 #resultTitle {
   line-height: 1.02;
+  font-size: clamp(1.8rem, 5vw, 3.2rem);  /* добавь эту строку */
 }
 
 #resultText.lead.small {
