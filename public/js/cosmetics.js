@@ -203,6 +203,12 @@ window.CosmeticsRenderer = {
     el.style.backgroundSize = cfg.sz || '200% 200%';
     el.style.animation = 'banner-shift 5s ease-in-out infinite';
     el.dataset.cosmeticBanner = id;
+    const card = el.closest?.('.profile-command-card');
+    if (card) {
+      const glow = String(cfg.bg).match(/#[0-9a-f]{3,8}/i)?.[0] || '#22d3ee';
+      card.style.setProperty('--profile-history-button-bg', cfg.bg);
+      card.style.setProperty('--profile-history-button-glow', glow);
+    }
   },
 
   applyAll(player, elements = {}) {
