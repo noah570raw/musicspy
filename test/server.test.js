@@ -708,5 +708,13 @@ test("leaderboardMetric formats profile stat categories", () => {
   assert.deepEqual(leaderboardMetric(user, "spyWins"), { score: 2, tie: 2 / 3, value: "2/3", meta: "67%" });
   assert.deepEqual(leaderboardMetric(user, "civilianWins"), { score: 4, tie: 0.8, value: "4/5", meta: "80%" });
   assert.deepEqual(leaderboardMetric(user, "winStreak"), { score: 5, tie: 2, value: "5", meta: "текущая: 2" });
-  assert.deepEqual(leaderboardMetric(user, "level"), { score: 7, tie: 6400, value: "LVL 7", meta: "6 400 XP" });
+  assert.deepEqual(leaderboardMetric(user, "level"), { score: 7, tie: 6400, value: "LVL 7", meta: "" });
+});
+
+test("leaderboard exclusion hides configured usernames", () => {
+  const { isLeaderboardExcludedUser } = require("../server");
+
+  assert.equal(isLeaderboardExcludedUser({ username: "noah570raw" }), true);
+  assert.equal(isLeaderboardExcludedUser({ username: "@Noah570Raw" }), true);
+  assert.equal(isLeaderboardExcludedUser({ username: "another-player" }), false);
 });

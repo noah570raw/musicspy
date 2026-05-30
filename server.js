@@ -80,6 +80,7 @@ const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8, 9];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const DEV_USERNAMES = new Set(["noah570raw"]);
+const LEADERBOARD_EXCLUDED_USERNAMES = new Set(["noah570raw"]);
 const DEV_ROLE = "dev";
 const DEV_VINYL_BALANCE = 999_999_999;
 const DAILY_REWARD_STREAK_AMOUNTS = [300, 350, 400, 450, 500, 650, 700];
@@ -501,7 +502,7 @@ function leaderboardMetric(user, categoryId) {
       return { score: best, tie: current, value: `${best}`, meta: `текущая: ${current}` };
     }
     case "level":
-      return { score: Number(economy.level || 1), tie: Number(economy.xp || 0), value: `LVL ${Number(economy.level || 1)}`, meta: `${Number(economy.xp || 0).toLocaleString("ru-RU")} XP` };
+      return { score: Number(economy.level || 1), tie: Number(economy.xp || 0), value: `LVL ${Number(economy.level || 1)}`, meta: "" };
     default:
       return { score: 0, tie: 0, value: "0", meta: "" };
   }
@@ -523,11 +524,16 @@ function publicLeaderboardEntry(user, categoryId, rank) {
   };
 }
 
+function isLeaderboardExcludedUser(user) {
+  const username = String(user?.username || "").trim().replace(/^@+/, "").toLowerCase();
+  return LEADERBOARD_EXCLUDED_USERNAMES.has(username);
+}
+
 function buildLeaderboard(categoryId = "games", limit = 10) {
   const category = LEADERBOARD_CATEGORIES.find((entry) => entry.id === categoryId) || LEADERBOARD_CATEGORIES[0];
   const maxEntries = Math.max(1, Math.min(25, Math.floor(Number(limit || 10))));
   const rankedUsers = (usersStore.users || [])
-    .filter(Boolean)
+    .filter((user) => user && !isLeaderboardExcludedUser(user))
     .map((user) => {
       ensureUserProgress(user);
       return { user, metric: leaderboardMetric(user, category.id) };
@@ -3912,5 +3918,6 @@ module.exports = {
   resolveYouTubeSearchUrl,
   LEADERBOARD_CATEGORIES,
   leaderboardMetric,
+  isLeaderboardExcludedUser,
   buildLeaderboard
 };
