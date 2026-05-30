@@ -235,7 +235,33 @@
                 <input id="profileDisplayName" maxlength="18" placeholder="Имя в профиле">
                 <input id="profileUsername" maxlength="24" placeholder="@nickname" autocomplete="username" spellcheck="false">
                 <p class="profile-editor-hint">Тег нужен для поиска друзей: 3–24 символа, латиница, цифры, _ или -.</p>
-                <input id="avatarInput" type="file" accept="image/png,image/png,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
+                <label class="avatar-file-picker">
+                  <span>Аватар до 3 МБ</span>
+                  <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previewAvatarFile(this.files?.[0])">
+                </label>
+                <div id="avatarCropper" class="avatar-cropper hidden" aria-live="polite">
+                  <div
+                    id="avatarCropStage"
+                    class="avatar-crop-stage"
+                    onpointerdown="startAvatarCropDrag(event)"
+                    onpointermove="moveAvatarCropDrag(event)"
+                    onpointerup="endAvatarCropDrag(event)"
+                    onpointercancel="endAvatarCropDrag(event)"
+                  >
+                    <img id="avatarCropImage" alt="Выбранная аватарка" draggable="false">
+                    <span class="avatar-crop-grid" aria-hidden="true"></span>
+                    <span class="avatar-crop-ring" aria-hidden="true"></span>
+                  </div>
+                  <label class="avatar-zoom-control">
+                    <span>Масштаб</span>
+                    <input id="avatarZoom" type="range" min="1" max="3" step="0.01" value="1" oninput="setAvatarCropZoom(this.value)">
+                  </label>
+                  <p class="profile-editor-hint">Перетащи изображение внутри круга, выбери масштаб и нажми «Применить область».</p>
+                  <div class="actions two-col avatar-crop-actions">
+                    <button class="primary" type="button" onclick="applyAvatarCrop()">Применить область</button>
+                    <button class="secondary" type="button" onclick="resetAvatarCrop()">По центру</button>
+                  </div>
+                </div>
                 <div class="actions two-col">
                   <button class="primary" type="button" onclick="saveProfile()">Сохранить профиль</button>
                   <button class="secondary" type="button" onclick="clearAvatar()">Убрать аватар</button>

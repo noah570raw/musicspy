@@ -64,6 +64,7 @@ const state = {
   profile: null,
   authGuest: true,
   pendingAvatar: undefined,
+  avatarCrop: null,
   authFormMode: "choice",
   authResolved: false,
   pendingInviteCode: "",
@@ -3564,40 +3565,169 @@ function toggleProfileEditor() {
   });
 }
 
+function avatarLimitLabel(bytes = AVATAR_MAX_BYTES) {
+  const megabytes = bytes / (1024 * 1024);
+  return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(1)} МБ`;
+}
+
+function hideAvatarCropper() {
+  const cropper = $("avatarCropper");
+  cropper?.classList.add("hidden");
+  state.avatarCrop = null;
+}
+
+function resetAvatarFileInput() {
+  const input = $("avatarInput");
+  if (input) input.value = "";
+}
+
 function previewAvatarFile(file) {
   state.pendingAvatar = undefined;
+  hideAvatarCropper();
   if (!file) return;
-  if (!file.type.startsWith("image/")) return setAuthStatus("Выбери картинку", true);
-  if (file.size > 1024 * 1024) return setAuthStatus("Файл слишком большой. Выбери картинку до 1 МБ", true);
+  if (!file.type.startsWith("image/")) {
+    resetAvatarFileInput();
+    return setAuthStatus("Выбери картинку", true);
+  }
+  if (file.size > AVATAR_FILE_MAX_BYTES) {
+    resetAvatarFileInput();
+    return setAuthStatus(`Файл слишком большой. Выбери картинку до ${avatarLimitLabel(AVATAR_FILE_MAX_BYTES)}`, true);
+  }
   const reader = new FileReader();
   reader.onload = () => {
     const image = new Image();
     image.onload = () => {
-      const canvas = document.createElement("canvas");
-      const size = 128;
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, size, size);
-      const scale = Math.max(size / image.width, size / image.height);
-      const width = image.width * scale;
-      const height = image.height * scale;
-      ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
-      const dataUrl = canvas.toDataURL("image/webp", 0.72);
-      if (dataUrl.length > AVATAR_MAX_BYTES) {
-        return setAuthStatus("Аватар не удалось сжать до 64 КБ", true);
-      }
-      state.pendingAvatar = dataUrl;
-      $("profileAvatar").innerHTML = `<img src="${escapeAttribute(dataUrl)}" alt="Предпросмотр аватара">`;
-      setAuthStatus("Предпросмотр готов. Нажми «Сохранить профиль»");
+      state.avatarCrop = {
+        image,
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        dragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        startOffsetX: 0,
+        startOffsetY: 0
+      };
+      const cropImage = $("avatarCropImage");
+      if (cropImage) cropImage.src = String(reader.result || "");
+      const zoom = $("avatarZoom");
+      if (zoom) zoom.value = "1";
+      $("avatarCropper")?.classList.remove("hidden");
+      renderAvatarCrop();
+      setAuthStatus("Выбери область аватарки и нажми «Применить область»");
+    };
+    image.onerror = () => {
+      resetAvatarFileInput();
+      setAuthStatus("Не удалось открыть изображение", true);
     };
     image.src = String(reader.result || "");
   };
   reader.readAsDataURL(file);
 }
 
+function avatarCropMetrics() {
+  const crop = state.avatarCrop;
+  const stage = $("avatarCropStage");
+  if (!crop?.image || !stage) return null;
+  const rect = stage.getBoundingClientRect();
+  const stageSize = Math.max(1, Math.min(rect.width || 0, rect.height || 0));
+  const baseScale = Math.max(stageSize / crop.image.naturalWidth, stageSize / crop.image.naturalHeight);
+  const drawWidth = crop.image.naturalWidth * baseScale * crop.scale;
+  const drawHeight = crop.image.naturalHeight * baseScale * crop.scale;
+  return { stage, stageSize, baseScale, drawWidth, drawHeight };
+}
+
+function clampAvatarCrop() {
+  const crop = state.avatarCrop;
+  const metrics = avatarCropMetrics();
+  if (!crop || !metrics) return;
+  const maxX = Math.max(0, (metrics.drawWidth - metrics.stageSize) / 2);
+  const maxY = Math.max(0, (metrics.drawHeight - metrics.stageSize) / 2);
+  crop.offsetX = Math.max(-maxX, Math.min(maxX, crop.offsetX));
+  crop.offsetY = Math.max(-maxY, Math.min(maxY, crop.offsetY));
+}
+
+function renderAvatarCrop() {
+  const crop = state.avatarCrop;
+  const metrics = avatarCropMetrics();
+  const cropImage = $("avatarCropImage");
+  if (!crop || !metrics || !cropImage) return;
+  clampAvatarCrop();
+  cropImage.style.width = `${metrics.drawWidth}px`;
+  cropImage.style.height = `${metrics.drawHeight}px`;
+  cropImage.style.left = `${metrics.stageSize / 2 + crop.offsetX}px`;
+  cropImage.style.top = `${metrics.stageSize / 2 + crop.offsetY}px`;
+}
+
+function setAvatarCropZoom(value) {
+  if (!state.avatarCrop) return;
+  state.avatarCrop.scale = Math.max(1, Math.min(3, Number(value) || 1));
+  renderAvatarCrop();
+}
+
+function startAvatarCropDrag(event) {
+  if (!state.avatarCrop || event.button > 0) return;
+  state.avatarCrop.dragging = true;
+  state.avatarCrop.dragStartX = event.clientX;
+  state.avatarCrop.dragStartY = event.clientY;
+  state.avatarCrop.startOffsetX = state.avatarCrop.offsetX;
+  state.avatarCrop.startOffsetY = state.avatarCrop.offsetY;
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+}
+
+function moveAvatarCropDrag(event) {
+  const crop = state.avatarCrop;
+  if (!crop?.dragging) return;
+  crop.offsetX = crop.startOffsetX + event.clientX - crop.dragStartX;
+  crop.offsetY = crop.startOffsetY + event.clientY - crop.dragStartY;
+  renderAvatarCrop();
+}
+
+function endAvatarCropDrag(event) {
+  if (!state.avatarCrop) return;
+  state.avatarCrop.dragging = false;
+  event.currentTarget?.releasePointerCapture?.(event.pointerId);
+}
+
+function resetAvatarCrop() {
+  if (!state.avatarCrop) return;
+  state.avatarCrop.scale = 1;
+  state.avatarCrop.offsetX = 0;
+  state.avatarCrop.offsetY = 0;
+  const zoom = $("avatarZoom");
+  if (zoom) zoom.value = "1";
+  renderAvatarCrop();
+}
+
+function applyAvatarCrop() {
+  const crop = state.avatarCrop;
+  const metrics = avatarCropMetrics();
+  if (!crop?.image || !metrics) return setAuthStatus("Сначала выбери изображение", true);
+  clampAvatarCrop();
+  const canvas = document.createElement("canvas");
+  const size = 512;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, size, size);
+  const ratio = size / metrics.stageSize;
+  const left = metrics.stageSize / 2 + crop.offsetX - metrics.drawWidth / 2;
+  const top = metrics.stageSize / 2 + crop.offsetY - metrics.drawHeight / 2;
+  ctx.drawImage(crop.image, left * ratio, top * ratio, metrics.drawWidth * ratio, metrics.drawHeight * ratio);
+  const dataUrl = canvas.toDataURL("image/webp", 0.86);
+  if (dataUrl.length > AVATAR_MAX_BYTES) {
+    return setAuthStatus(`Аватар слишком большой. Максимум ${avatarLimitLabel(AVATAR_MAX_BYTES)}`, true);
+  }
+  state.pendingAvatar = dataUrl;
+  $("profileAvatar").innerHTML = `<img src="${escapeAttribute(dataUrl)}" alt="Предпросмотр аватара">`;
+  hideAvatarCropper();
+  setAuthStatus("Область применена. Нажми «Сохранить профиль»");
+}
+
 function clearAvatar() {
+  hideAvatarCropper();
+  resetAvatarFileInput();
   state.pendingAvatar = "";
   $("profileAvatar").textContent = ($("profileDisplayName").value || "?").slice(0, 1).toUpperCase();
   setAuthStatus("Аватар будет удален после сохранения");
