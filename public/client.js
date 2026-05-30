@@ -308,23 +308,20 @@ function applyCosmeticsForFriends() {
 function renderFriendCard(friend) {
   const isOnline = Boolean(friend.online);
   const name = friendDisplayName(friend);
-  const friendId = escapeAttribute(friend.id);
   const activity = getFriendActivity(friend);
   const lobby = friend.lobby;
   const unread = Number(friend.unread || 0);
-  const lobbyPill = lobby ? `<button class="friend-lobby-pill" type="button" onclick="requestFriendLobby('${friendId}')">${Number(lobby.players || 0)}/${Number(lobby.maxPlayers || 0)}</button>` : "";
+  const lobbyPill = lobby ? `<button class="friend-lobby-pill" type="button" onclick="requestFriendLobby('${escapeAttribute(friend.id)}')">${Number(lobby.players || 0)}/${Number(lobby.maxPlayers || 0)}</button>` : "";
   const primaryLobbyAction = lobby?.canJoin ? "Присоединиться" : "Подать заявку";
   return `
-    <article class="friend-card" data-friend-id="${friendId}">
-      <button class="friend-profile-trigger friend-avatar" type="button" onclick="viewFriendProfile('${friendId}')" aria-label="Открыть профиль ${escapeAttribute(name)}">
+    <article class="friend-card" data-friend-id="${escapeAttribute(friend.id)}">
+      <div class="friend-avatar" aria-hidden="true">
         ${friendAvatarMarkup(friend)}
         <span class="friend-status-dot ${isOnline ? "online" : "offline"}"></span>
-      </button>
+      </div>
       <div class="friend-meta">
         <div class="friend-name-row">
-          <button class="friend-profile-trigger friend-name-trigger" type="button" onclick="viewFriendProfile('${friendId}')" aria-label="Открыть профиль ${escapeAttribute(name)}">
-            <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
-          </button>
+          <strong class="friend-name">${nameWithDevBadge(friend, "Игрок", { showBadge: true })}</strong>
           <span class="friend-state ${isOnline ? "online" : "offline"}">${friendStatusLabel(friend)}</span>
         </div>
         <div class="friend-activity-row">
@@ -333,20 +330,12 @@ function renderFriendCard(friend) {
         </div>
       </div>
       <div class="friend-actions" aria-label="Действия с ${escapeAttribute(name)}">
-        <button class="friend-action" type="button" onclick="inviteFriendToLobby('${friendId}')">Пригласить в лобби</button>
-        <button class="friend-action" type="button" onclick="requestFriendLobby('${friendId}')">${primaryLobbyAction}</button>
-        <button class="friend-action" type="button" onclick="messageFriend('${friendId}')">Написать${unread ? ` (${unread})` : ""}</button>
-        <button class="friend-action danger" type="button" onclick="removeFriend('${friendId}')">Удалить из друзей</button>
+        <button class="friend-action" type="button" onclick="inviteFriendToLobby('${escapeAttribute(friend.id)}')">Пригласить в лобби</button>
+        <button class="friend-action" type="button" onclick="requestFriendLobby('${escapeAttribute(friend.id)}')">${primaryLobbyAction}</button>
+        <button class="friend-action" type="button" onclick="messageFriend('${escapeAttribute(friend.id)}')">Написать${unread ? ` (${unread})` : ""}</button>
+        <button class="friend-action danger" type="button" onclick="removeFriend('${escapeAttribute(friend.id)}')">Удалить из друзей</button>
       </div>
     </article>`;
-}
-
-function viewFriendProfile(friendId) {
-  if (!friendId) return setFriendAddStatus("Профиль друга недоступен", "error");
-  socket.emit("profile:view", { accountId: friendId }, (res) => {
-    if (res?.error || !res?.user) return setFriendAddStatus(res?.error || "Профиль друга недоступен", "error");
-    showPublicProfileModal(res.user);
-  });
 }
 
 function renderFriendRequests() {
