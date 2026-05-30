@@ -3139,6 +3139,27 @@ function equipShopItem(itemId) {
   });
 }
 
+function profileCosmeticsMarkup(user = state.profile, emptyMessage = "Коллекция готова: зайди в «Магазин», чтобы экипировать титул, баннер, рамку или эффект.") {
+  const equipped = user === state.profile ? equippedCosmetics() : (user?.economy?.equipped || user?.equippedCosmetics || {});
+  const entries = Object.entries(equipped).map(([slot, itemId]) => {
+    const item = shopItem(itemId) || {
+      id: itemId,
+      name: String(itemId || slot || "Активный стиль"),
+      rarity: "common",
+      preview: "linear-gradient(135deg,#38bdf8,#8b5cf6)"
+    };
+    return [slot, item];
+  }).filter(([, item]) => item?.id);
+  if (!entries.length) return `<div class="profile-cosmetic-empty">${escapeHtml(emptyMessage)}</div>`;
+  return entries.map(([slot, item]) => `
+    <div class="profile-cosmetic-chip rarity-${escapeAttribute(item.rarity)}">
+      <i style="background:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}"></i>
+      <span>${escapeHtml(item.name)}</span>
+      <small>${escapeHtml(rarityLabel(item.rarity))}</small>
+    </div>
+  `).join("");
+}
+
 function renderProfileCosmetics() {
   const target = $("profileCosmeticShowcase");
   if (!target) return;
@@ -3146,19 +3167,7 @@ function renderProfileCosmetics() {
     target.innerHTML = "";
     return;
   }
-  const equipped = equippedCosmetics();
-  const entries = Object.entries(equipped).map(([slot, itemId]) => [slot, shopItem(itemId)]).filter(([, item]) => item);
-  if (!entries.length) {
-    target.innerHTML = `<div class="profile-cosmetic-empty">Коллекция готова: зайди в «Магазин», чтобы экипировать титул, баннер, рамку или эффект.</div>`;
-    return;
-  }
-  target.innerHTML = entries.map(([slot, item]) => `
-    <div class="profile-cosmetic-chip rarity-${escapeAttribute(item.rarity)}">
-      <i style="background:${escapeAttribute(item.preview || "linear-gradient(135deg,#38bdf8,#8b5cf6)")}"></i>
-      <span>${escapeHtml(item.name)}</span>
-      <small>${escapeHtml(rarityLabel(item.rarity))}</small>
-    </div>
-  `).join("");
+  target.innerHTML = profileCosmeticsMarkup(state.profile);
 }
 
 
@@ -5575,15 +5584,34 @@ function showPublicProfileModal(user = {}) {
   const displayName = user.displayName || user.username || "Игрок";
   const login = user.username ? `@${user.username}` : "без аккаунт-тега";
   content.innerHTML = `
-    <div class="profile-banner public-profile-banner"></div>
-    <div class="profile-hero">
-      <div class="profile-avatar profile-avatar-large">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар игрока">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
-      <div>
-        <strong class="public-profile-name">${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
-        <span>${hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : escapeHtml(login)}</span>
+    <div class="profile-command-card public-profile-command-card">
+      <span class="profile-orbit profile-orbit-one" aria-hidden="true"></span>
+      <span class="profile-orbit profile-orbit-two" aria-hidden="true"></span>
+      <div class="profile-banner public-profile-banner"></div>
+      <div class="profile-hero">
+        <div class="profile-avatar profile-avatar-large">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар игрока">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
+        <div class="profile-identity-copy">
+          <strong class="public-profile-name">${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
+          <span>${hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : escapeHtml(login)}</span>
+        </div>
       </div>
     </div>
+    <div class="profile-section-heading">
+      <div>
+        <span>Performance board</span>
+        <strong>Статистика профиля</strong>
+      </div>
+      <i aria-hidden="true"></i>
+    </div>
     <div class="profile-stats-grid">${profileStatsMarkup(user)}</div>
+    <div class="profile-section-heading compact">
+      <div>
+        <span>Equipped style</span>
+        <strong>Активная коллекция</strong>
+      </div>
+      <i aria-hidden="true"></i>
+    </div>
+    <div class="profile-cosmetic-showcase">${profileCosmeticsMarkup(user, "У игрока пока нет активных косметических предметов.")}</div>
   `;
   if (window.CosmeticsRenderer) {
     console.log(`[CC] received equipped:${JSON.stringify(user?.equippedCosmetics || user?.economy?.equipped || {})}`);

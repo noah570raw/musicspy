@@ -16607,11 +16607,11 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   margin-top: 0;
 }
 
-.site-menu-card .profile-stats-grid {
+:is(.site-menu-card, .public-profile-card) .profile-stats-grid {
   gap: 10px;
 }
 
-.site-menu-card .profile-stat-card {
+:is(.site-menu-card, .public-profile-card) .profile-stat-card {
   position: relative;
   min-height: 126px;
   padding: 13px;
@@ -16624,7 +16624,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.site-menu-card .profile-stat-card::after {
+:is(.site-menu-card, .public-profile-card) .profile-stat-card::after {
   content: "";
   position: absolute;
   right: -20px;
@@ -16635,7 +16635,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   background: rgba(var(--accent-rgb), 0.1);
 }
 
-.site-menu-card .profile-stat-card span {
+:is(.site-menu-card, .public-profile-card) .profile-stat-card span {
   position: relative;
   z-index: 1;
   display: inline-grid;
@@ -16649,34 +16649,34 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   font-size: 1.18rem;
 }
 
-.site-menu-card .profile-stat-card small,
-.site-menu-card .profile-stat-card strong,
-.site-menu-card .profile-xp-card em,
-.site-menu-card .profile-xp-card .xp-bar-track {
+:is(.site-menu-card, .public-profile-card) .profile-stat-card small,
+:is(.site-menu-card, .public-profile-card) .profile-stat-card strong,
+:is(.site-menu-card, .public-profile-card) .profile-xp-card em,
+:is(.site-menu-card, .public-profile-card) .profile-xp-card .xp-bar-track {
   position: relative;
   z-index: 1;
 }
 
-.site-menu-card .profile-stat-card strong {
+:is(.site-menu-card, .public-profile-card) .profile-stat-card strong {
   font-size: clamp(1rem, 1.45vw, 1.22rem);
 }
 
-.site-menu-card .profile-xp-card {
+:is(.site-menu-card, .public-profile-card) .profile-xp-card {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   min-height: 102px;
 }
 
-.site-menu-card .profile-xp-card span {
+:is(.site-menu-card, .public-profile-card) .profile-xp-card span {
   grid-row: span 3;
 }
 
-.site-menu-card .profile-xp-card em,
-.site-menu-card .profile-xp-card .xp-bar-track {
+:is(.site-menu-card, .public-profile-card) .profile-xp-card em,
+:is(.site-menu-card, .public-profile-card) .profile-xp-card .xp-bar-track {
   grid-column: 2;
 }
 
-.site-menu-card .profile-cosmetic-showcase {
+:is(.site-menu-card, .public-profile-card) .profile-cosmetic-showcase {
   margin-top: 0;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -16685,14 +16685,14 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.site-menu-card .profile-cosmetic-chip,
-.site-menu-card .profile-cosmetic-empty {
+:is(.site-menu-card, .public-profile-card) .profile-cosmetic-chip,
+:is(.site-menu-card, .public-profile-card) .profile-cosmetic-empty {
   border-color: rgba(var(--accent-rgb), 0.2);
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.13), rgba(255, 255, 255, 0.05));
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
-.site-menu-card .profile-editor-panel {
+:is(.site-menu-card, .public-profile-card) .profile-editor-panel {
   position: relative;
   z-index: 2;
   margin-top: auto;
@@ -16704,13 +16704,13 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   backdrop-filter: blur(16px) saturate(135%);
 }
 
-.site-menu-card .profile-tune-button {
+:is(.site-menu-card, .public-profile-card) .profile-tune-button {
   border-color: rgba(var(--accent-rgb), 0.34);
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.24), rgba(255, 255, 255, 0.07));
   box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.14);
 }
 
-.site-menu-card .profile-editor:not(.hidden) {
+:is(.site-menu-card, .public-profile-card) .profile-editor:not(.hidden) {
   border-color: rgba(var(--accent-rgb), 0.2);
   border-radius: 24px;
   background:
@@ -16732,13 +16732,13 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   }
 
 
-  .site-menu-card .profile-xp-card {
+  :is(.site-menu-card, .public-profile-card) .profile-xp-card {
     grid-template-columns: 1fr;
   }
 
-  .site-menu-card .profile-xp-card span,
-  .site-menu-card .profile-xp-card em,
-  .site-menu-card .profile-xp-card .xp-bar-track {
+  :is(.site-menu-card, .public-profile-card) .profile-xp-card span,
+  :is(.site-menu-card, .public-profile-card) .profile-xp-card em,
+  :is(.site-menu-card, .public-profile-card) .profile-xp-card .xp-bar-track {
     grid-column: 1;
     grid-row: auto;
   }
