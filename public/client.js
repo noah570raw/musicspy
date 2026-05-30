@@ -2571,6 +2571,10 @@ function applyProfile(profileData = { user: null, guest: true }) {
       ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар профиля">`
       : escapeHtml(displayName.slice(0, 1).toUpperCase() || "?");
   }
+  if ($("profileVinylBalance")) {
+    const vinyls = Number(user?.economy?.vinyls || 0).toLocaleString("ru-RU");
+    $("profileVinylBalance").textContent = user ? `${vinyls} vinyls` : "0 vinyls";
+  }
   if (window.CosmeticsRenderer && user) {
     CosmeticsRenderer.applyAll({ equippedCosmetics: user?.economy?.equipped || user?.equippedCosmetics || {} }, {
       nickname: $("profileName"),

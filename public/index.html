@@ -217,18 +217,41 @@
             </div>
 
             <div id="accountProfileView" class="account-profile-view hidden">
-              <div class="profile-banner public-profile-banner"></div>
-              <div class="profile-hero">
-                <div id="profileAvatar" class="profile-avatar profile-avatar-large">?</div>
-                <div>
-                  <strong id="profileName">Гость</strong>
-                  <span id="profileLogin">без аккаунта</span>
+              <div class="profile-command-card">
+                <span class="profile-orbit profile-orbit-one" aria-hidden="true"></span>
+                <span class="profile-orbit profile-orbit-two" aria-hidden="true"></span>
+                <div class="profile-banner public-profile-banner"></div>
+                <div class="profile-hero">
+                  <div id="profileAvatar" class="profile-avatar profile-avatar-large">?</div>
+                  <div class="profile-identity-copy">
+                    <span class="profile-kicker">player identity</span>
+                    <strong id="profileName">Гость</strong>
+                    <span id="profileLogin">без аккаунта</span>
+                    <div class="profile-meta-row" aria-label="Статус профиля">
+                      <span>Live account</span>
+                      <span id="profileVinylBalance">0 vinyls</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+              <div class="profile-section-heading">
+                <div>
+                  <span>Performance board</span>
+                  <strong>Статистика профиля</strong>
+                </div>
+                <i aria-hidden="true"></i>
+              </div>
               <div id="profileStatsGrid" class="profile-stats-grid"></div>
+              <div class="profile-section-heading compact">
+                <div>
+                  <span>Equipped style</span>
+                  <strong>Активная коллекция</strong>
+                </div>
+                <i aria-hidden="true"></i>
+              </div>
               <div id="profileCosmeticShowcase" class="profile-cosmetic-showcase"></div>
               <div class="profile-editor-panel">
-                <button class="secondary" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
+                <button class="secondary profile-tune-button" type="button" onclick="toggleProfileEditor()">Настроить профиль</button>
                 <button id="logoutBtn" class="ghost-button" type="button" onclick="logoutAccount()">Выйти</button>
               </div>
               <div id="profileEditor" class="profile-editor hidden">
