@@ -2759,6 +2759,7 @@ html[lang="ru"] .language-switcher span:first-child {
 
 .public-profile-card #publicProfileTitle {
   margin-top: -15px;
+  font-size: clamp(1.1rem, 4vw, 2rem);
 }
 
 .host-modal-list {
