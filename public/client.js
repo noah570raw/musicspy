@@ -2718,6 +2718,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
       avatarId: "profileAvatar",
       nameId: "profileName",
       loginId: "profileLogin",
+      nameClass: "profile-display-name",
       avatarAlt: "Аватар профиля"
     });
   } else if (accountProfileCard) {
@@ -5771,7 +5772,7 @@ function showPublicProfileModal(user = {}, options = {}) {
   const content = $("publicProfileContent");
   if (!modal || !content) return;
   content.innerHTML = `
-    ${profileCommandCardMarkup(user, { commandClass: "public-profile-command-card", nameClass: "public-profile-name" })}
+    ${profileCommandCardMarkup(user, { commandClass: "public-profile-command-card", nameClass: "profile-display-name public-profile-name" })}
     <div class="profile-section-heading">
       <div>
         <strong>Статистика профиля</strong>
