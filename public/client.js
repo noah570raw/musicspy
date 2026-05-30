@@ -2652,13 +2652,40 @@ function getLevelRequirement(level = 1) {
   return Math.max(1, Math.round(100 * Math.pow(1.2, Math.max(1, Number(level || 1)) - 1)));
 }
 
+function calculateXpProgress(totalXp = 0) {
+  let level = 1;
+  let currentLevelXp = Math.max(0, Math.floor(Number(totalXp || 0)));
+  let required = getLevelRequirement(level);
+  let steps = 0;
+  while (currentLevelXp >= required && steps < 9999) {
+    currentLevelXp -= required;
+    level += 1;
+    required = getLevelRequirement(level);
+    steps += 1;
+  }
+  return {
+    level,
+    currentLevelXp,
+    required,
+    left: Math.max(0, required - currentLevelXp),
+    progress: required ? Math.min(100, Math.floor((currentLevelXp / required) * 100)) : 0
+  };
+}
+
 function getEconomyXpMeta(user = state.profile) {
-  if (isInfiniteLevelUser(user)) return { level: "∞", required: Infinity, clampedXp: Infinity, left: 0, progress: 100, infinite: true };
-  const level = Math.max(1, Number(user?.economy?.level || 1));
-  const xp = Math.max(0, Number(user?.economy?.xp || 0));
-  const required = getLevelRequirement(level);
-  const clampedXp = Math.min(xp, required);
-  return { level, required, clampedXp, left: Math.max(0, required - clampedXp), progress: required ? Math.min(100, Math.round((clampedXp / required) * 100)) : 0, infinite: false };
+  if (isInfiniteLevelUser(user)) return { level: "∞", totalXp: Infinity, required: Infinity, currentLevelXp: Infinity, clampedXp: Infinity, left: 0, progress: 100, infinite: true };
+  const totalXp = Math.max(0, Math.floor(Number(user?.economy?.xp || 0)));
+  const serverProgress = user?.economy?.xpProgress;
+  const xpMeta = serverProgress && Number.isFinite(Number(serverProgress.required))
+    ? {
+      level: Math.max(1, Math.floor(Number(serverProgress.level || 1))),
+      currentLevelXp: Math.max(0, Math.floor(Number(serverProgress.currentLevelXp || 0))),
+      required: Math.max(1, Math.floor(Number(serverProgress.required || 1))),
+      left: Math.max(0, Math.floor(Number(serverProgress.left || 0))),
+      progress: Math.max(0, Math.min(100, Math.floor(Number(serverProgress.progress || 0))))
+    }
+    : calculateXpProgress(totalXp);
+  return { ...xpMeta, totalXp, clampedXp: xpMeta.currentLevelXp, infinite: false };
 }
 
 function renderProfileStats() {
