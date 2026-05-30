@@ -3752,6 +3752,16 @@ body[data-visual-theme="candy"] {
   --accent-2: #7dd3fc;
 }
 
+body[data-visual-theme="ember"] {
+  --bg: #120608;
+  --panel: rgba(38, 12, 15, 0.9);
+  --surface-rgb: 38, 12, 15;
+  --surface-strong-rgb: 66, 24, 20;
+  --accent: #ff6b35;
+  --accent-rgb: 255, 107, 53;
+  --accent-2: #ffd166;
+}
+
 .player-stage {
   position: relative;
   display: grid;
@@ -16005,4 +16015,14 @@ body[data-screen]:not([data-screen="menu"]) .global-chat-panel {
   gap: 16px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+}
+/* Appearance tab preview card: make the live theme preview about 50% wider toward the left. */
+.appearance-hero {
+  grid-template-columns: minmax(0, 0.82fr) minmax(285px, 0.54fr) !important;
+}
+
+@media (max-width: 860px) {
+  .appearance-hero {
+    grid-template-columns: 1fr !important;
+  }
 }
