@@ -90,6 +90,9 @@ const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
 const XP_BOOSTER_DURATION_MS = 60 * 60 * 1000;
 const XP_BOOSTER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const XP_BOOSTER_MULTIPLIER = 2;
+const LEVEL_XP_BASE = 100;
+const LEVEL_XP_GROWTH = 1.2;
+const MAX_LEVEL_CALCULATION_STEPS = 9999;
 const MATCH_XP_REWARDS = Object.freeze({
   WIN: 100,
   LOSS: 50,
@@ -299,6 +302,39 @@ async function refreshUserFromDatabase(user) {
   else usersStore.users[existingIndex] = mergedUser;
   return mergedUser;
 }
+function levelRequirement(level = 1) {
+  const safeLevel = Math.max(1, Math.floor(Number(level || 1)));
+  return Math.max(1, Math.round(LEVEL_XP_BASE * Math.pow(LEVEL_XP_GROWTH, safeLevel - 1)));
+}
+
+function totalXpForLevel(level = 1) {
+  const targetLevel = Math.max(1, Math.floor(Number(level || 1)));
+  let total = 0;
+  for (let currentLevel = 1; currentLevel < targetLevel; currentLevel += 1) {
+    total += levelRequirement(currentLevel);
+  }
+  return total;
+}
+
+function levelProgressFromXp(xp = 0) {
+  const totalXp = Math.max(0, Math.floor(Number(xp || 0)));
+  let level = 1;
+  let currentLevelXp = totalXp;
+  let required = levelRequirement(level);
+  let steps = 0;
+
+  while (currentLevelXp >= required && steps < MAX_LEVEL_CALCULATION_STEPS) {
+    currentLevelXp -= required;
+    level += 1;
+    required = levelRequirement(level);
+    steps += 1;
+  }
+
+  const left = Math.max(0, required - currentLevelXp);
+  const progress = required ? Math.min(100, Math.floor((currentLevelXp / required) * 100)) : 0;
+  return { totalXp, level, currentLevelXp, required, left, progress };
+}
+
 
 function defaultStats() {
   return {
@@ -401,10 +437,12 @@ function normalizeEconomy(economy = {}) {
       if (item && owned.has(itemId) && item.category === category.id) safeEquipped[category.equipSlot] = itemId;
     }
   }
+  const xp = Math.max(0, Math.floor(Number(economy.xp || 0)));
+  const xpProgress = levelProgressFromXp(xp);
   return {
     vinyls: Math.max(0, Math.floor(Number(economy.vinyls || 0))),
-    level: Math.max(1, Math.floor(Number(economy.level || 1))),
-    xp: Math.max(0, Math.floor(Number(economy.xp || 0))),
+    level: xpProgress.level,
+    xp,
     ownedCosmetics: Array.from(owned),
     equipped: safeEquipped,
     achievements: economy.achievements && typeof economy.achievements === "object" ? economy.achievements : {},
@@ -430,6 +468,7 @@ function publicEconomy(user) {
     vinyls: economy.vinyls,
     level: economy.level,
     xp: economy.xp,
+    xpProgress: levelProgressFromXp(economy.xp),
     ownedCosmetics: economy.ownedCosmetics,
     equipped: economy.equipped,
     achievements: economy.achievements,
@@ -676,7 +715,7 @@ function grantPromoReward(user, promo) {
   if (promo.reward_type === "xp") {
     const delta = Math.max(1, Number(promo.reward_value));
     user.economy.xp = Math.max(0, user.economy.xp + delta);
-    user.economy.level = Math.max(1, Math.floor(user.economy.xp / 1000) + 1);
+    user.economy.level = levelProgressFromXp(user.economy.xp).level;
     return `+${delta} XP`;
   }
   if (promo.reward_type === "item") {
@@ -2419,7 +2458,7 @@ function awardMatchExpRewards(lobby, civiliansWin, finalVotes = {}) {
     if (total <= 0) continue;
 
     economy.xp = Math.max(0, Math.floor(Number(economy.xp || 0))) + total;
-    economy.level = Math.max(1, Math.floor(economy.xp / 1000) + 1);
+    economy.level = levelProgressFromXp(economy.xp).level;
     user.updatedAt = new Date().toISOString();
     rewards.push({
       playerId: player.id,
@@ -3051,7 +3090,8 @@ io.on("connection", (socket) => {
     if (!target) return cb({ error: "Пользователь не найден" });
     ensureUserProgress(target);
     if (parsed.type === "setLevel") {
-      target.economy.level = Math.max(1, Math.min(999, Math.floor(parsed.level)));
+      target.economy.xp = totalXpForLevel(Math.max(1, Math.min(999, Math.floor(parsed.level))));
+      target.economy.level = levelProgressFromXp(target.economy.xp).level;
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
@@ -3089,7 +3129,7 @@ io.on("connection", (socket) => {
     }
     if (parsed.type === "setXp") {
       target.economy.xp = Math.max(0, Math.floor(parsed.xp));
-      target.economy.level = Math.max(1, Math.floor(target.economy.xp / 1000) + 1);
+      target.economy.level = levelProgressFromXp(target.economy.xp).level;
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
@@ -3104,7 +3144,7 @@ io.on("connection", (socket) => {
     }
     if (parsed.type === "giveXp") {
       target.economy.xp = Math.max(0, target.economy.xp + Math.floor(parsed.xp));
-      target.economy.level = Math.max(1, Math.floor(target.economy.xp / 1000) + 1);
+      target.economy.level = levelProgressFromXp(target.economy.xp).level;
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
@@ -3919,5 +3959,8 @@ module.exports = {
   LEADERBOARD_CATEGORIES,
   leaderboardMetric,
   isLeaderboardExcludedUser,
-  buildLeaderboard
+  buildLeaderboard,
+  levelRequirement,
+  totalXpForLevel,
+  levelProgressFromXp
 };

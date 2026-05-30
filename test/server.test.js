@@ -601,7 +601,19 @@ test("vinyl transactions do not grant experience or levels", () => {
   assert.equal(user.economy.vinyls, 500);
   assert.equal(user.stats.vinylsEarned, 500);
   assert.equal(user.economy.xp, 950);
-  assert.equal(user.economy.level, 1);
+  assert.equal(user.economy.level, 6);
+});
+
+test("experience levels advance on scaled thresholds without full progress states", () => {
+  const { levelRequirement, levelProgressFromXp, totalXpForLevel } = require("../server");
+
+  assert.equal(levelRequirement(1), 100);
+  assert.equal(levelRequirement(2), 120);
+  assert.equal(levelRequirement(3), 144);
+  assert.deepEqual(levelProgressFromXp(99), { totalXp: 99, level: 1, currentLevelXp: 99, required: 100, left: 1, progress: 99 });
+  assert.deepEqual(levelProgressFromXp(100), { totalXp: 100, level: 2, currentLevelXp: 0, required: 120, left: 120, progress: 0 });
+  assert.deepEqual(levelProgressFromXp(220), { totalXp: 220, level: 3, currentLevelXp: 0, required: 144, left: 144, progress: 0 });
+  assert.equal(totalXpForLevel(4), 364);
 });
 
 test("economy rewards pay cosmetic-only Vinyls for perfect spy wins and achievements", () => {
@@ -708,7 +720,7 @@ test("leaderboardMetric formats profile stat categories", () => {
   assert.deepEqual(leaderboardMetric(user, "spyWins"), { score: 2, tie: 2 / 3, value: "2/3", meta: "67%" });
   assert.deepEqual(leaderboardMetric(user, "civilianWins"), { score: 4, tie: 0.8, value: "4/5", meta: "80%" });
   assert.deepEqual(leaderboardMetric(user, "winStreak"), { score: 5, tie: 2, value: "5", meta: "текущая: 2" });
-  assert.deepEqual(leaderboardMetric(user, "level"), { score: 7, tie: 6400, value: "LVL 7", meta: "" });
+  assert.deepEqual(leaderboardMetric(user, "level"), { score: 15, tie: 6400, value: "LVL 15", meta: "" });
 });
 
 test("leaderboard exclusion hides configured usernames", () => {
