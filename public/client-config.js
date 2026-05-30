@@ -8,7 +8,8 @@ const LEGACY_AUTH_TOKEN_KEY = "musicspy_auth_token";
 const REFRESH_TOKEN_KEY = "musicspy_auth_refresh_token";
 const RECONNECT_STATE_KEY = "musicspy_reconnect_state";
 const RECONNECT_TOKEN_KEY = "musicspy_reconnect_token";
-const AVATAR_MAX_BYTES = 64 * 1024;
+const AVATAR_MAX_BYTES = 3 * 1024 * 1024;
+const AVATAR_FILE_MAX_BYTES = 3 * 1024 * 1024;
 const GAME_MODE_PRESETS = {
   classic: {
     label: "Классика",

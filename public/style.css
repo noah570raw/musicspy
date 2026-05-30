@@ -2495,6 +2495,99 @@ select:focus-visible {
   line-height: 1.35;
 }
 
+.avatar-file-picker,
+.avatar-cropper,
+.avatar-zoom-control,
+.avatar-crop-actions {
+  grid-column: 1 / -1;
+}
+
+.avatar-file-picker {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.avatar-file-picker > span,
+.avatar-zoom-control > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.avatar-cropper {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.12), rgba(255, 255, 255, 0.045));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.avatar-cropper.hidden {
+  display: none;
+}
+
+.avatar-crop-stage {
+  position: relative;
+  width: min(280px, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #0b1020;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.35);
+}
+
+.avatar-crop-stage:active {
+  cursor: grabbing;
+}
+
+.avatar-crop-stage img {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: none;
+  pointer-events: none;
+}
+
+.avatar-crop-grid,
+.avatar-crop-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.avatar-crop-grid {
+  background:
+    linear-gradient(90deg, transparent 33%, rgba(255, 255, 255, 0.22) 33% 34%, transparent 34% 66%, rgba(255, 255, 255, 0.22) 66% 67%, transparent 67%),
+    linear-gradient(0deg, transparent 33%, rgba(255, 255, 255, 0.22) 33% 34%, transparent 34% 66%, rgba(255, 255, 255, 0.22) 66% 67%, transparent 67%);
+  mix-blend-mode: screen;
+  opacity: 0.42;
+}
+
+.avatar-crop-ring {
+  border-radius: 999px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.42), inset 0 0 0 2px rgba(255, 255, 255, 0.9), inset 0 0 28px rgba(var(--accent-rgb), 0.22);
+}
+
+.avatar-zoom-control {
+  display: grid;
+  gap: 8px;
+  width: min(280px, 100%);
+}
+
+.avatar-zoom-control input {
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 .account-corner .status {
   max-width: 100%;
   margin: 0 0 8px;

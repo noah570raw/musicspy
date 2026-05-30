@@ -111,14 +111,14 @@ test("account helpers normalize usernames and verify password hashes", () => {
   assert.equal(verifyPassword("bad-password", { salt: user.salt, passwordHash: user.hash }), false);
 });
 
-test("normalizeAvatar accepts small image data urls and rejects oversized avatars", () => {
+test("normalizeAvatar accepts image data urls up to the avatar limit and rejects oversized avatars", () => {
   const { normalizeAvatar } = require("../server");
   const avatar = `data:image/png;base64,${Buffer.from("tiny").toString("base64")}`;
-  const oversized = `data:image/png;base64,${"a".repeat(70 * 1024)}`;
+  const oversized = `data:image/png;base64,${"a".repeat(3 * 1024 * 1024 + 1)}`;
 
   assert.equal(normalizeAvatar(avatar), avatar);
   assert.throws(() => normalizeAvatar("https://example.com/avatar.png"), /Поддерживаются/);
-  assert.throws(() => normalizeAvatar(oversized), /слишком большая/);
+  assert.throws(() => normalizeAvatar(oversized), /3 МБ/);
 });
 
 
