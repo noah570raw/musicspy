@@ -14616,8 +14616,8 @@ body[data-screen="results"] .share-card-mini .share-card-room {
 
 .game-settings-hero p {
   margin: 0;
-  color: rgba(226, 232, 240, 0.76);
-  font-weight: 760;
+  color: rgba(226, 232, 240, 0.72);
+  font-weight: inherit;
 }
 
 .game-settings-orb {
