@@ -3762,6 +3762,36 @@ body[data-visual-theme="ember"] {
   --accent-2: #ffd166;
 }
 
+body[data-visual-theme="ice"] {
+  --bg: #03111f;
+  --panel: rgba(8, 28, 44, 0.9);
+  --surface-rgb: 8, 28, 44;
+  --surface-strong-rgb: 14, 46, 70;
+  --accent: #67e8f9;
+  --accent-rgb: 103, 232, 249;
+  --accent-2: #e0f2fe;
+}
+
+body[data-visual-theme="solar"] {
+  --bg: #180b02;
+  --panel: rgba(48, 22, 6, 0.9);
+  --surface-rgb: 48, 22, 6;
+  --surface-strong-rgb: 82, 38, 9;
+  --accent: #f59e0b;
+  --accent-rgb: 245, 158, 11;
+  --accent-2: #fde68a;
+}
+
+body[data-visual-theme="velvet"] {
+  --bg: #12031c;
+  --panel: rgba(36, 9, 54, 0.9);
+  --surface-rgb: 36, 9, 54;
+  --surface-strong-rgb: 62, 18, 86;
+  --accent: #c084fc;
+  --accent-rgb: 192, 132, 252;
+  --accent-2: #f0abfc;
+}
+
 .player-stage {
   position: relative;
   display: grid;
@@ -16016,9 +16046,9 @@ body[data-screen]:not([data-screen="menu"]) .global-chat-panel {
   overflow-y: auto !important;
   overflow-x: hidden !important;
 }
-/* Appearance tab preview card: make the live theme preview about 50% wider toward the left. */
+/* Appearance tab preview card: align its left edge with the color column and widen it toward the left. */
 .appearance-hero {
-  grid-template-columns: minmax(0, 0.82fr) minmax(285px, 0.54fr) !important;
+  grid-template-columns: minmax(0, 1.1fr) minmax(285px, 0.9fr) !important;
 }
 
 @media (max-width: 860px) {
