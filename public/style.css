@@ -16786,3 +16786,20 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
     font-size: 0.66rem;
   }
 }
+
+/* Keep the current player's own nickname readable instead of shortening it with an ellipsis. */
+#accountProfileView .profile-command-card .profile-hero strong#profileName {
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#accountProfileView .profile-command-card .profile-hero strong#profileName .player-name-text {
+  display: inline;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
