@@ -125,7 +125,9 @@ const state = {
   streamerHoldTimer: null,
   streamerOverlayOpen: false,
   streamerOverlayClosingTimer: null,
-  streamerRevealData: null
+  streamerRevealData: null,
+  routeSyncing: false,
+  pendingRoute: null
 };
 
 function hasDevRole(entity) {
@@ -203,6 +205,152 @@ const EFFECTS_DENSITIES = [
   { id: "ultra", label: "Ultra", details: "Полные lighting, particles, UI glow и ambient effects — стартовый режим для новых игроков." }
 ];
 
+
+const MENU_ROUTE_TO_SECTION = {
+  profile: "profile",
+  dailyreward: "daily",
+  xpbooster: "xpbooster",
+  shop: "shop",
+  inventory: "inventory",
+  promocodes: "promo",
+  visualmixer: "appearance",
+  settings: "game",
+  aboutus: "about"
+};
+const MENU_SECTION_TO_ROUTE = Object.fromEntries(Object.entries(MENU_ROUTE_TO_SECTION).map(([route, section]) => [section, route]));
+
+function normalizeRouteCode(value = "") {
+  return normalizeRoomCodeInput(value);
+}
+
+function pathForCurrentScreen() {
+  const code = normalizeRouteCode(state.currentCode);
+  if (state.phase === "playRooms" || state.phase === "createLobbySetup") return "/lobby";
+  if (state.phase === "lobby") return code ? `/lobby/${encodeURIComponent(code)}` : "/lobby";
+  if (["game", "voting", "spyGuess"].includes(state.phase)) return code ? `/game/${encodeURIComponent(code)}` : "/lobby";
+  if (state.phase === "results") return code ? `/game/results/${encodeURIComponent(code)}` : "/";
+  return "/";
+}
+
+function updateBrowserRoute(path, { replace = false } = {}) {
+  if (state.routeSyncing || !path || !window.history?.pushState) return;
+  const nextPath = path.startsWith("/") ? path : `/${path}`;
+  const currentPath = `${window.location.pathname}${window.location.search}`;
+  if (currentPath === nextPath) return;
+  const method = replace ? "replaceState" : "pushState";
+  window.history[method]({}, "", nextPath);
+}
+
+function routeForMenuSection(section = "profile") {
+  return `/menu/${MENU_SECTION_TO_ROUTE[section] || "profile"}`;
+}
+
+function requestResultByCode(code) {
+  const roomCode = normalizeRouteCode(code);
+  if (!roomCode || !socket.connected) {
+    state.pendingRoute = { type: "result", code: roomCode };
+    return;
+  }
+  state.currentCode = roomCode;
+  setStatus("menuError", "Загружаем результаты игры...");
+  socket.emit("result:get", { code: roomCode }, (res = {}) => {
+    if (res.error) {
+      showScreen("menu");
+      return setStatus("menuError", res.error, true);
+    }
+    state.currentCode = res.result?.code || roomCode;
+    showScreen("results");
+    renderResults(res.result || {});
+    setStatus("menuError");
+  });
+}
+
+function requestPublicProfileByUsername(username) {
+  const cleanUsername = String(username || "").trim().replace(/^@+/, "");
+  if (!cleanUsername || !socket.connected) {
+    state.pendingRoute = { type: "profile", username: cleanUsername };
+    return;
+  }
+  socket.emit("profile:view", { username: cleanUsername }, (res = {}) => {
+    if (res.error || !res.user) return setStatus("menuError", res.error || "Профиль игрока не найден", true);
+    showPublicProfileModal(res.user, { updateRoute: false });
+  });
+}
+
+function reconnectRouteGame(code) {
+  const roomCode = normalizeRouteCode(code);
+  if (!roomCode || !socket.connected) {
+    state.pendingRoute = { type: "game", code: roomCode };
+    return;
+  }
+  state.currentCode = roomCode;
+  socket.emit("reconnectGame", { code: roomCode, reconnectToken: getReconnectToken() }, (res = {}) => {
+    if (res.error) {
+      showScreen("menu");
+      setStatus("menuError", res.error, true);
+      return;
+    }
+    state.currentCode = res.code || roomCode;
+    state.myId = res.playerId || socket.id;
+    storeReconnectState(state.currentCode);
+  });
+}
+
+function handleCurrentRoute({ replace = false } = {}) {
+  const parts = window.location.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  state.routeSyncing = true;
+  try {
+    if (!parts.length) {
+      hideAuthModal();
+      hidePublicProfileModal({ updateRoute: false });
+      if (!["game", "voting", "spyGuess", "results", "lobby"].includes(state.phase)) showScreen("menu");
+      return;
+    }
+    if (parts[0] === "menu") {
+      const section = MENU_ROUTE_TO_SECTION[(parts[1] || "profile").toLowerCase()] || "profile";
+      hidePublicProfileModal({ updateRoute: false });
+      openMainMenu(section, { updateRoute: false });
+      return;
+    }
+    if (parts[0] === "lobby") {
+      hideAuthModal();
+      hidePublicProfileModal({ updateRoute: false });
+      if (parts[1]) joinLobbyByCode(parts[1], "menuError");
+      else showScreen("playRooms");
+      return;
+    }
+    if (parts[0] === "game" && parts[1] === "results" && parts[2]) {
+      hideAuthModal();
+      hidePublicProfileModal({ updateRoute: false });
+      requestResultByCode(parts[2]);
+      return;
+    }
+    if (parts[0] === "game" && parts[1]) {
+      hideAuthModal();
+      hidePublicProfileModal({ updateRoute: false });
+      reconnectRouteGame(parts[1]);
+      return;
+    }
+    if (parts[0] === "profile" && parts[1]) {
+      hideAuthModal();
+      requestPublicProfileByUsername(parts[1]);
+      return;
+    }
+    updateBrowserRoute("/", { replace: true });
+    showScreen("menu");
+  } finally {
+    state.routeSyncing = false;
+  }
+}
+
+function flushPendingRoute() {
+  const pending = state.pendingRoute;
+  state.pendingRoute = null;
+  if (!pending) return;
+  if (pending.type === "result") requestResultByCode(pending.code);
+  if (pending.type === "profile") requestPublicProfileByUsername(pending.username);
+  if (pending.type === "game") reconnectRouteGame(pending.code);
+}
 
 function initFriendsSystem() {
   state.friends = [];
@@ -1966,6 +2114,7 @@ function showScreen(id) {
     startBackgroundMusic({ fadeIn: GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(previousPhase) });
   }
   syncAudioVolume({ fadeTime: 0.32, fadeBackground: GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(previousPhase) && !GAMEPLAY_BACKGROUND_MUSIC_SCREENS.has(id) });
+  updateBrowserRoute(pathForCurrentScreen());
   if (previousPhase !== id) playSoundCue("screen");
 }
 
@@ -2392,11 +2541,13 @@ function openSettingsSection(section = "profile") {
   if (safeSection === "shop" || safeSection === "inventory") requestShopState();
   if (safeSection === "daily") requestDailyRewardState();
   if (safeSection === "xpbooster") requestXpBoosterState();
+  updateBrowserRoute(routeForMenuSection(safeSection));
 }
 
-function openMainMenu(section = "profile") {
+function openMainMenu(section = "profile", options = {}) {
   showAuthModal(state.profile ? "profile" : "choice");
   openSettingsSection(section);
+  if (options.updateRoute !== false) updateBrowserRoute(routeForMenuSection(state.settingsSection));
 }
 
 function openAccountPanel() {
@@ -2408,6 +2559,7 @@ function hideAuthModal() {
   $("authModal").classList.add("hidden");
   document.body.classList.remove("site-menu-modal-open");
   setAuthStatus();
+  if (window.location.pathname.startsWith("/menu/")) updateBrowserRoute(pathForCurrentScreen());
 }
 
 
@@ -5577,7 +5729,7 @@ function profileStatsMarkup(user = {}) {
     </div>`;
 }
 
-function showPublicProfileModal(user = {}) {
+function showPublicProfileModal(user = {}, options = {}) {
   const modal = $("publicProfileModal");
   const content = $("publicProfileContent");
   if (!modal || !content) return;
@@ -5613,10 +5765,12 @@ function showPublicProfileModal(user = {}) {
     });
   }
   modal.classList.remove("hidden");
+  if (options.updateRoute !== false && user.username) updateBrowserRoute(`/profile/@${encodeURIComponent(user.username)}`);
 }
 
-function hidePublicProfileModal() {
+function hidePublicProfileModal(options = {}) {
   $("publicProfileModal")?.classList.add("hidden");
+  if (options.updateRoute !== false && window.location.pathname.startsWith("/profile/")) updateBrowserRoute(pathForCurrentScreen());
 }
 
 function handleChatKeydown(event) {
@@ -6425,6 +6579,7 @@ socket.on("connect", () => {
   });
   consumeOAuthRedirectParams();
   authenticateWithStoredToken();
+  flushPendingRoute();
 });
 
 socket.on("lobbyUpdate", (lobby) => {
@@ -6507,6 +6662,8 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
   document.addEventListener("keyup", handleStreamerKeyup);
+  window.addEventListener("popstate", () => handleCurrentRoute({ replace: true }));
+  handleCurrentRoute({ replace: true });
   const presetCode = normalizeRoomCodeInput(new URL(window.location.href).searchParams.get("room"));
   if (presetCode) {
     state.pendingInviteCode = presetCode;
@@ -6568,7 +6725,11 @@ socket.on("chat:update", ({ messages }) => {
   console.log(`[CC] received equipped:${JSON.stringify((messages || []).map((msg) => ({ playerId: msg?.playerId, equippedCosmetics: msg?.equippedCosmetics || {} })))}`);
   renderChat(messages || []);
 });
-socket.on("finalComments:update", ({ comments }) => { state.finalComments = comments || []; });
+socket.on("finalComments:update", ({ comments }) => {
+  state.finalComments = comments || [];
+  if (state.latestResult) state.latestResult.finalComments = state.finalComments;
+  if (state.phase === "results") renderFinalComments(state.finalComments);
+});
 
 socket.on("returnedToLobby", ({ lobby } = {}) => {
   state.returnedToLobbyAfterGame = true;
@@ -6720,6 +6881,7 @@ socket.on("runoffStarted", () => {
 });
 
 socket.on("gameEnd", (data) => {
+  if (data?.code) state.currentCode = data.code;
   state.returnedToLobbyAfterGame = false;
   state.spyGuessActive = false;
   state.pendingSpyGuess = null;

@@ -1,6 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const http = require("http");
+const path = require("path");
 const { Server } = require("socket.io");
 const session = require("express-session");
 const PgSession = require("connect-pg-simple")(session);
@@ -14,9 +15,11 @@ const {
   getOrCreateUser,
   getUser,
   initializeDatabase,
+  loadGameResult,
   loadUserStore,
   pool,
   resolveDataDir,
+  saveGameResult,
   saveUserStore,
   updateUser
 } = require("./lib/persistence");
@@ -2558,6 +2561,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     endedAt: new Date().toISOString()
   };
   lobby.finalResult = finalResult;
+  saveGameResult(lobby.code, finalResult).catch((error) => console.error("[db] failed to save game result", error));
   io.to(code).emit("gameEnd", finalResult);
   emitLobbyUpdate(code);
 }
@@ -3200,12 +3204,28 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("profile:view", async ({ accountId } = {}, cb = () => {}) => {
+  socket.on("profile:view", async ({ accountId, username } = {}, cb = () => {}) => {
+    const requestedUsername = String(username || "").trim().replace(/^@+/, "").toLowerCase();
     const userId = String(accountId || "").trim();
-    if (!userId) return cb({ error: "Профиль игрока недоступен" });
-    const user = findUserById(userId) || await getUser(userId);
+    if (!userId && !requestedUsername) return cb({ error: "Профиль игрока недоступен" });
+    const user = requestedUsername
+      ? findUserByNicknameOrUsername(requestedUsername)
+      : (findUserById(userId) || await getUser(userId));
     if (!user) return cb({ error: "Профиль игрока не найден" });
     cb({ success: true, user: publicUser(user) });
+  });
+
+  socket.on("result:get", async ({ code } = {}, cb = () => {}) => {
+    const normalizedCode = normalizeCode(code);
+    const liveResult = lobbies[normalizedCode]?.finalResult || null;
+    if (liveResult) return cb({ success: true, result: liveResult });
+    try {
+      const result = await loadGameResult(normalizedCode);
+      if (!result) return cb({ error: "Результаты игры не найдены" });
+      cb({ success: true, result });
+    } catch (error) {
+      cb({ error: "Не удалось загрузить результаты игры" });
+    }
   });
 
   socket.on("friend:request", ({ nickname, accountId } = {}, cb = () => {}) => {
@@ -3613,6 +3633,10 @@ io.on("connection", (socket) => {
       ...(lobby.finalComments || []).filter((item) => item.playerId !== socket.id),
       comment
     ].slice(-MAX_FINAL_COMMENTS);
+    if (lobby.finalResult) {
+      lobby.finalResult.finalComments = lobby.finalComments;
+      saveGameResult(lobby.code, lobby.finalResult).catch((error) => console.error("[db] failed to update game result comments", error));
+    }
     io.to(lobby.code).emit("finalComments:update", { comments: lobby.finalComments });
     cb({ success: true, comment, comments: lobby.finalComments });
   });
@@ -3888,6 +3912,10 @@ function isSupportedTrackUrl(url) {
 function pickTheme() {
   return THEMES[Math.floor(Math.random() * THEMES.length)];
 }
+
+app.get(/^\/(?!socket\.io|api\/|auth\/).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 if (require.main === module) {
   initializePersistentState()
