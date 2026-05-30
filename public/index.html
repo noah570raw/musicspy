@@ -625,6 +625,25 @@
     <span class="global-chat-toggle-label">CHAT</span>
   </button>
 
+  <button id="leaderboardToggle" class="leaderboard-toggle" type="button" onclick="toggleLeaderboard()" aria-expanded="false" aria-controls="leaderboardPanel" aria-label="Открыть лидерборд">
+    <span class="global-chat-toggle-label">TOP</span>
+  </button>
+
+  <aside id="leaderboardPanel" class="leaderboard-panel" aria-label="Лидерборд" aria-hidden="true">
+    <div class="global-chat-ambient leaderboard-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="game-chat-panel global-chat-card leaderboard-card">
+      <div class="chat-header panel-title global-chat-header leaderboard-header">
+        <strong>ЛИДЕРБОРД</strong>
+        <span id="leaderboardStatusPill" class="global-chat-live"><i aria-hidden="true"></i> top players</span>
+      </div>
+      <div id="leaderboardCategories" class="leaderboard-categories" aria-label="Категории лидерборда"></div>
+      <div class="leaderboard-list-wrap" data-neon-scroll>
+        <div id="leaderboardList" class="leaderboard-list empty" aria-live="polite">Откройте категорию, чтобы увидеть топ игроков</div>
+      </div>
+      <p id="leaderboardStatus" class="status"></p>
+    </div>
+  </aside>
+
   <aside id="globalChatPanel" class="global-chat-panel" aria-label="Глобальный чат" aria-hidden="true">
     <div class="global-chat-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="game-chat-panel global-chat-card">
