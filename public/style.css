@@ -16523,7 +16523,9 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 }
 
 .profile-command-card .profile-hero strong {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
   max-width: min(560px, 100%);
   padding: 0 6px 5px 0;
   margin: 0 -6px -5px 0;
@@ -16536,6 +16538,20 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   white-space: nowrap;
 }
 
+.profile-command-card .profile-hero strong .player-name-text {
+  display: inline-block;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-command-card .profile-hero strong .dev-badge {
+  flex: 0 0 auto;
+}
+
 .profile-command-card .profile-hero > div:last-child {
   gap: 5px;
 }
@@ -16546,18 +16562,6 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 
 .public-profile-card .profile-command-card .profile-hero strong {
   max-width: 100%;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.public-profile-card .profile-command-card .profile-hero strong .player-name-text {
-  display: inline;
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
 }
 
 .profile-command-card .profile-hero span:not(.profile-kicker):not(.profile-meta-row span) {
@@ -16754,11 +16758,6 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
     align-items: center;
   }
 
-  .profile-command-card .profile-hero strong {
-    white-space: normal;
-  }
-
-
   :is(.site-menu-card, .public-profile-card) .profile-xp-card {
     grid-template-columns: 1fr;
   }
@@ -16787,19 +16786,8 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   }
 }
 
-/* Keep the current player's own nickname readable instead of shortening it with an ellipsis. */
+/* Keep the current player's own nickname on a single line with badges. */
 #accountProfileView .profile-command-card .profile-hero strong#profileName {
   max-width: 100%;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-#accountProfileView .profile-command-card .profile-hero strong#profileName .player-name-text {
-  display: inline;
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
+  white-space: nowrap;
 }
