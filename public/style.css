@@ -2762,6 +2762,10 @@ html[lang="ru"] .language-switcher span:first-child {
   font-size: clamp(1.1rem, 4vw, 2rem);
 }
 
+.public-profile-card .account-profile-view {
+  margin-top: 5px;
+}
+
 .host-modal-list {
   max-height: min(420px, 54vh);
   margin: 18px 0;
@@ -16521,9 +16525,11 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 .profile-command-card .profile-hero strong {
   display: block;
   max-width: min(560px, 100%);
+  padding: 0 6px 5px 0;
+  margin: 0 -6px -5px 0;
   overflow: hidden;
   font-size: clamp(1.72rem, 3.3vw, 2.85rem);
-  line-height: 0.95;
+  line-height: 1.08;
   letter-spacing: -0.065em;
   text-overflow: ellipsis;
   text-shadow: 0 12px 42px rgba(0, 0, 0, 0.55), 0 0 28px rgba(var(--accent-rgb), 0.32);
