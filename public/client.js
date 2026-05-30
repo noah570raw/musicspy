@@ -2711,10 +2711,17 @@ function applyProfile(profileData = { user: null, guest: true }) {
   $("accountProfileView")?.classList.toggle("hidden", !user || state.authFormMode !== "profile");
   $("profileEditor")?.classList.add("hidden");
   $("logoutBtn")?.classList.toggle("hidden", !user);
-  if ($("profileName")) $("profileName").innerHTML = nameWithDevBadge(user || { displayName }, "Игрок", { showBadge: true });
-  if ($("profileLogin")) {
-    const login = `@${escapeHtml(user?.username || "")}`;
-    $("profileLogin").innerHTML = user ? (hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : login) : t("гость без регистрации");
+  const accountProfileCard = $("accountProfileCard");
+  if (accountProfileCard && user) {
+    accountProfileCard.innerHTML = profileCommandCardMarkup(user, {
+      commandClass: "public-profile-command-card",
+      avatarId: "profileAvatar",
+      nameId: "profileName",
+      loginId: "profileLogin",
+      avatarAlt: "Аватар профиля"
+    });
+  } else if (accountProfileCard) {
+    accountProfileCard.innerHTML = "";
   }
   if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
   if ($("profileUsername")) $("profileUsername").value = user?.username ? `@${user.username}` : "";
@@ -5697,6 +5704,36 @@ function viewGlobalChatPlayerProfile(accountId) {
   });
 }
 
+function profileCommandCardMarkup(user = {}, options = {}) {
+  const {
+    commandClass = "",
+    avatarId = "",
+    nameId = "",
+    loginId = "",
+    nameClass = "",
+    avatarAlt = "Аватар игрока"
+  } = options;
+  const displayName = user?.displayName || user?.username || "Игрок";
+  const login = user?.username ? `@${user.username}` : "без аккаунт-тега";
+  const idAttr = (id) => id ? ` id="${escapeAttribute(id)}"` : "";
+  const classAttr = (base, extra = "") => `${base}${extra ? ` ${extra}` : ""}`;
+  const cardClass = classAttr("profile-command-card", commandClass);
+  const nameClasses = classAttr("", nameClass).trim();
+  return `
+    <div class="${escapeAttribute(cardClass)}">
+      <span class="profile-orbit profile-orbit-one" aria-hidden="true"></span>
+      <span class="profile-orbit profile-orbit-two" aria-hidden="true"></span>
+      <div class="profile-banner public-profile-banner"></div>
+      <div class="profile-hero">
+        <div${idAttr(avatarId)} class="profile-avatar profile-avatar-large">${user?.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="${escapeAttribute(avatarAlt)}">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
+        <div class="profile-identity-copy">
+          <strong${idAttr(nameId)}${nameClasses ? ` class="${escapeAttribute(nameClasses)}"` : ""}>${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
+          <span${idAttr(loginId)}>${hasDevRole(user) ? devBadgeMarkup(escapeHtml(login), { showBadge: true }) : escapeHtml(login)}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
 function profileStatsMarkup(user = {}) {
   const stats = user.stats || {};
   const infiniteStats = isInfiniteStatsUser(user);
@@ -5733,21 +5770,8 @@ function showPublicProfileModal(user = {}, options = {}) {
   const modal = $("publicProfileModal");
   const content = $("publicProfileContent");
   if (!modal || !content) return;
-  const displayName = user.displayName || user.username || "Игрок";
-  const login = user.username ? `@${user.username}` : "без аккаунт-тега";
   content.innerHTML = `
-    <div class="profile-command-card public-profile-command-card">
-      <span class="profile-orbit profile-orbit-one" aria-hidden="true"></span>
-      <span class="profile-orbit profile-orbit-two" aria-hidden="true"></span>
-      <div class="profile-banner public-profile-banner"></div>
-      <div class="profile-hero">
-        <div class="profile-avatar profile-avatar-large">${user.avatar ? `<img src="${escapeAttribute(user.avatar)}" alt="Аватар игрока">` : escapeHtml((displayName || "?").slice(0, 1).toUpperCase())}</div>
-        <div class="profile-identity-copy">
-          <strong class="public-profile-name">${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
-          <span>${hasDevRole(user) ? devBadgeMarkup(login, { showBadge: true }) : escapeHtml(login)}</span>
-        </div>
-      </div>
-    </div>
+    ${profileCommandCardMarkup(user, { commandClass: "public-profile-command-card", nameClass: "public-profile-name" })}
     <div class="profile-section-heading">
       <div>
         <strong>Статистика профиля</strong>
