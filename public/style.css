@@ -16791,3 +16791,55 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   max-width: 100%;
   white-space: nowrap;
 }
+
+/* Nicknames must stay readable: never collapse player names into "...".
+   Compact cards may wrap the name, but they should not hide characters like
+   "noah570" -> "noah..." or "yaros" -> "ya". */
+.player-name-text,
+.dev-name-glow {
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.account-toggle strong,
+.lobby-player-info strong,
+.vote-card-name,
+.profile-command-card .profile-hero strong,
+body[data-screen="results"] .vote-flow b {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.account-toggle strong,
+.lobby-player-info strong,
+.vote-card-name,
+.profile-command-card .profile-hero strong {
+  flex-wrap: wrap;
+}
+
+.lobby-player-info strong .dev-name-glow,
+.lobby-player-info strong .player-name-text,
+.account-toggle strong .player-name-text,
+.account-toggle strong .dev-name-glow,
+.profile-command-card .profile-hero strong .player-name-text {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.vote-card-topline {
+  grid-template-columns: auto minmax(8ch, 1fr) auto;
+  gap: 10px;
+}
+
+.vote-card-count {
+  min-width: 50px;
+}
+
