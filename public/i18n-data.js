@@ -12,6 +12,7 @@ const EN_TRANSLATIONS = {
   "О сайте": "About",
   "Тема интерфейса": "Interface theme",
   "Собери свою собственную цветовую гамму сайта, выбери свои любимые цвета, настрой все под свой вкус": "Create your own site color palette, choose your favorite colors, and tune everything to your taste",
+  "Настрой лимиты производительности и эффектов сайта под свой компьютер, включай Streamer Mode если ведешь стрим": "Tune the site's performance and effects limits for your computer, and enable Streamer Mode when you're streaming",
   "Настрой визуальный интерфейс сайта под себя": "Customize the site visual interface for yourself",
   "Первый цвет": "First color",
   "Основной цвет кнопок, свечения и важных деталей вне экрана игры.": "Main color for buttons, glow, and important details outside game screens.",
