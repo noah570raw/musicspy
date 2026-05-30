@@ -5598,20 +5598,11 @@ function showPublicProfileModal(user = {}) {
     </div>
     <div class="profile-section-heading">
       <div>
-        <span>Performance board</span>
         <strong>Статистика профиля</strong>
       </div>
       <i aria-hidden="true"></i>
     </div>
     <div class="profile-stats-grid">${profileStatsMarkup(user)}</div>
-    <div class="profile-section-heading compact">
-      <div>
-        <span>Equipped style</span>
-        <strong>Активная коллекция</strong>
-      </div>
-      <i aria-hidden="true"></i>
-    </div>
-    <div class="profile-cosmetic-showcase">${profileCosmeticsMarkup(user, "У игрока пока нет активных косметических предметов.")}</div>
   `;
   if (window.CosmeticsRenderer) {
     console.log(`[CC] received equipped:${JSON.stringify(user?.equippedCosmetics || user?.economy?.equipped || {})}`);
