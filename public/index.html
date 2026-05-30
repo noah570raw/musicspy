@@ -627,6 +627,16 @@
     </div>
   </div>
 
+  <div id="gameHistoryModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="gameHistoryTitle">
+    <div class="auth-modal-card host-players-card game-history-card">
+      <button class="modal-close" type="button" onclick="hideGameHistoryModal()" aria-label="Закрыть историю игр">×</button>
+      <p class="eyebrow">последние матчи</p>
+      <h2 id="gameHistoryTitle">История игр</h2>
+      <div id="gameHistoryContent" class="game-history-list empty">История игр пока пуста</div>
+      <p id="gameHistoryStatus" class="status"></p>
+    </div>
+  </div>
+
 
   <div id="hostPlayersModal" class="auth-modal host-players-modal hidden" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="hostPlayersTitle">
     <div class="auth-modal-card host-players-card">
@@ -1002,6 +1012,7 @@
             <div class="lobby-code-row">
               <button id="copyCode" class="code-pill secret-value" data-sound="copyCode" onclick="copyRoomCode()">-----</button>
               <button id="toggleInviteSecrets" class="icon-button secret-toggle" onclick="toggleInviteSecrets()" aria-label="Показать код комнаты и QR" aria-pressed="false" title="Показать код комнаты и QR">👁️</button>
+              <button id="regenRoomCodeBtn" class="icon-button secret-toggle room-code-refresh hidden" type="button" onclick="regenerateRoomCode()" aria-label="Сгенерировать новый код комнаты" title="Сгенерировать новый код комнаты">🔁</button>
             </div>
             <div class="lobby-stat-grid" aria-label="Статус комнаты">
               <div class="lobby-stat-card">
@@ -1058,6 +1069,7 @@
             </div>
             <button id="readyBtn" class="secondary lobby-ready-button" onclick="toggleReady()">не готов</button>
             <button id="startBtn" class="primary lobby-start-button" onclick="startGame()">НАЧАТЬ ИГРУ</button>
+            <button id="resetReadyBtn" class="secondary lobby-reset-ready-button hidden" onclick="resetReadyForAll()">Сбросить готовность</button>
             <button id="forceStartBtn" class="danger lobby-force-start-button hidden" onclick="forceStartGame()">FORCE START</button>
           </div>
 
