@@ -16406,8 +16406,8 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 .profile-command-card {
   position: relative;
   isolation: isolate;
-  min-height: clamp(210px, 27vh, 280px);
-  padding: clamp(14px, 1.8vw, 20px);
+  min-height: clamp(142px, 18vh, 188px);
+  padding: clamp(13px, 1.6vw, 18px);
   overflow: hidden;
   border: 1px solid rgba(var(--accent-rgb), 0.28);
   border-radius: 32px;
@@ -16433,21 +16433,6 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   pointer-events: none;
 }
 
-.profile-command-card::after {
-  content: "MS-PLAYER";
-  position: absolute;
-  right: clamp(14px, 2vw, 22px);
-  top: clamp(12px, 1.6vw, 18px);
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  background: rgba(2, 6, 23, 0.32);
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 0.66rem;
-  font-weight: 950;
-  letter-spacing: 0.16em;
-}
-
 .profile-orbit {
   position: absolute;
   border-radius: 999px;
@@ -16457,10 +16442,10 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 }
 
 .profile-orbit-one {
-  right: -58px;
-  bottom: -72px;
-  width: 190px;
-  height: 190px;
+  right: -72px;
+  bottom: -86px;
+  width: 170px;
+  height: 170px;
   border: 1px solid rgba(var(--accent-rgb), 0.36);
   box-shadow: inset 0 0 42px rgba(var(--accent-rgb), 0.16), 0 0 48px rgba(var(--accent-rgb), 0.1);
 }
@@ -16494,20 +16479,18 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 }
 
 .profile-command-card .profile-hero {
-  position: absolute;
-  left: clamp(14px, 2vw, 24px);
-  right: clamp(14px, 2vw, 24px);
-  bottom: clamp(14px, 2vw, 24px);
-  align-items: end;
-  gap: clamp(13px, 1.8vw, 20px);
-  padding: 0;
-  border: 0;
-  background: transparent;
+  position: relative;
+  min-height: 100%;
+  align-items: center;
+  gap: clamp(12px, 1.6vw, 18px);
+  padding: clamp(10px, 1.3vw, 14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.12);
 }
 
 .profile-command-card .profile-avatar-large {
-  width: clamp(5.2rem, 10vw, 7.2rem);
-  height: clamp(5.2rem, 10vw, 7.2rem);
+  width: clamp(4.8rem, 7vw, 6.2rem);
+  height: clamp(4.8rem, 7vw, 6.2rem);
   flex: 0 0 auto;
   border: 2px solid rgba(255, 255, 255, 0.72);
   background:
@@ -16523,8 +16506,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 .profile-identity-copy {
   display: grid;
   min-width: 0;
-  gap: 5px;
-  padding-bottom: 5px;
+  gap: 4px;
 }
 
 .profile-kicker {
@@ -16539,7 +16521,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   display: block;
   max-width: min(560px, 100%);
   overflow: hidden;
-  font-size: clamp(1.85rem, 4.2vw, 3.35rem);
+  font-size: clamp(1.72rem, 3.3vw, 2.85rem);
   line-height: 0.95;
   letter-spacing: -0.065em;
   text-overflow: ellipsis;
@@ -16711,15 +16693,14 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 }
 
 .site-menu-card .profile-editor-panel {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 2;
-  margin-top: 0;
+  margin-top: auto;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 22px;
   background: rgba(var(--surface-rgb), 0.72);
-  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px) saturate(135%);
 }
 
@@ -16739,7 +16720,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 
 @media (max-width: 760px) {
   .profile-command-card {
-    min-height: 300px;
+    min-height: 178px;
   }
 
   .profile-command-card .profile-hero {
@@ -16750,9 +16731,6 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
     white-space: normal;
   }
 
-  .profile-command-card::after {
-    display: none;
-  }
 
   .site-menu-card .profile-xp-card {
     grid-template-columns: 1fr;
