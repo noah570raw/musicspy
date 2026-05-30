@@ -164,7 +164,8 @@ const INTERFACE_THEMES = [
   { id: "forest", label: "Forest Bass" },
   { id: "galaxy", label: "Galaxy Noir" },
   { id: "candy", label: "Candy Wave" },
-  { id: "midnight", label: "Midnight Gold" }
+  { id: "midnight", label: "Midnight Gold" },
+  { id: "ember", label: "Ember Bloom" }
 ];
 const ACCENT_COLORS = [
   { id: "red", label: "Красный", hex: "#ef4444", rgb: "239, 68, 68" },
@@ -1684,7 +1685,7 @@ function renderAppearanceControls() {
     themeGrid.innerHTML = INTERFACE_THEMES.map((theme) => `
       <button class="choice-pill appearance-theme-pill${theme.id === state.visualTheme ? " selected" : ""}" type="button" onclick="setVisualThemePreference('${theme.id}')">
         <span>${escapeHtml(theme.label)}</span>
-        <small>${theme.id === state.visualTheme ? "ACTIVE" : "THEME"}</small>
+        ${theme.id === state.visualTheme ? "<small>ACTIVE</small>" : ""}
       </button>
     `).join("");
   }
