@@ -6527,7 +6527,7 @@ function renderResultBreakdown(data, guessText) {
   $("resultBreakdown").innerHTML = `
     <div class="breakdown-card">
       <span>${t("Итог")}</span>
-      <strong class="breakdown-result-text">${data.civiliansWin ? t("Мирные вычислили шпиона") : resultVictoryLabel(data)}</strong>
+      <strong>${data.civiliansWin ? t("Мирные вычислили шпиона") : data.spyGuess?.correct ? t("Шпион угадал тему") : t("Шпион не попал под подозрение")}</strong>
       <small>${guessText} · ${guessResult}</small>
     </div>
     <div class="breakdown-card">
