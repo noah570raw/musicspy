@@ -458,6 +458,93 @@ function xpBoosterState(user, now = Date.now()) {
   };
 }
 
+
+const LEADERBOARD_CATEGORIES = [
+  { id: "games", icon: "🎮", label: "Игр сыграно" },
+  { id: "winrate", icon: "🏆", label: "Общий винрейт" },
+  { id: "spyWins", icon: "🕵️", label: "Побед за шпиона" },
+  { id: "civilianWins", icon: "🛡️", label: "Побед за мирных" },
+  { id: "winStreak", icon: "🔥", label: "Серия побед" },
+  { id: "level", icon: "⭐", label: "Уровень" }
+];
+
+function percentLabel(part, total) {
+  const safeTotal = Number(total || 0);
+  if (!safeTotal) return "0%";
+  return `${Math.round((Number(part || 0) / safeTotal) * 100)}%`;
+}
+
+function leaderboardMetric(user, categoryId) {
+  const stats = { ...defaultStats(), ...(user?.stats || {}) };
+  const economy = normalizeEconomy(user?.economy || {});
+  switch (categoryId) {
+    case "games":
+      return { score: Number(stats.games || 0), tie: Number(stats.wins || 0), value: String(Number(stats.games || 0)), meta: `${Number(stats.wins || 0)} побед` };
+    case "winrate": {
+      const games = Number(stats.games || 0);
+      const wins = Number(stats.wins || 0);
+      return { score: games ? wins / games : 0, tie: wins, value: percentLabel(wins, games), meta: `${wins}/${games} побед` };
+    }
+    case "spyWins": {
+      const wins = Number(stats.spyWins || 0);
+      const games = Number(stats.spyGames || 0);
+      return { score: wins, tie: games ? wins / games : 0, value: `${wins}/${games}`, meta: percentLabel(wins, games) };
+    }
+    case "civilianWins": {
+      const wins = Number(stats.civilianWins || 0);
+      const games = Number(stats.civilianGames || 0);
+      return { score: wins, tie: games ? wins / games : 0, value: `${wins}/${games}`, meta: percentLabel(wins, games) };
+    }
+    case "winStreak": {
+      const best = Number(stats.bestWinStreak || 0);
+      const current = Number(stats.winStreak || 0);
+      return { score: best, tie: current, value: `${best}`, meta: `текущая: ${current}` };
+    }
+    case "level":
+      return { score: Number(economy.level || 1), tie: Number(economy.xp || 0), value: `LVL ${Number(economy.level || 1)}`, meta: `${Number(economy.xp || 0).toLocaleString("ru-RU")} XP` };
+    default:
+      return { score: 0, tie: 0, value: "0", meta: "" };
+  }
+}
+
+function publicLeaderboardEntry(user, categoryId, rank) {
+  const metric = leaderboardMetric(user, categoryId);
+  return {
+    rank,
+    accountId: user.id,
+    username: user.username,
+    displayName: user.displayName || user.username || "Игрок",
+    avatar: user.avatar || "",
+    roles: publicRoles(user),
+    permissions: { dev: hasRole(user, DEV_ROLE) },
+    score: metric.score,
+    value: metric.value,
+    meta: metric.meta
+  };
+}
+
+function buildLeaderboard(categoryId = "games", limit = 10) {
+  const category = LEADERBOARD_CATEGORIES.find((entry) => entry.id === categoryId) || LEADERBOARD_CATEGORIES[0];
+  const maxEntries = Math.max(1, Math.min(25, Math.floor(Number(limit || 10))));
+  const rankedUsers = (usersStore.users || [])
+    .filter(Boolean)
+    .map((user) => {
+      ensureUserProgress(user);
+      return { user, metric: leaderboardMetric(user, category.id) };
+    })
+    .filter(({ metric, user }) => metric.score > 0 || category.id === "level" || Number(user?.stats?.games || 0) > 0)
+    .sort((a, b) => (b.metric.score - a.metric.score)
+      || (b.metric.tie - a.metric.tie)
+      || String(a.user.displayName || a.user.username || "").localeCompare(String(b.user.displayName || b.user.username || ""), "ru"))
+    .slice(0, maxEntries);
+
+  return {
+    categories: LEADERBOARD_CATEGORIES,
+    activeCategory: category.id,
+    entries: rankedUsers.map(({ user }, index) => publicLeaderboardEntry(user, category.id, index + 1))
+  };
+}
+
 function dailyRewardState(user, now = Date.now()) {
   const economy = ensureUserProgress(user);
   const lastClaimAt = economy?.lastDailyRewardAt || null;
@@ -2612,6 +2699,10 @@ io.on("connection", (socket) => {
     cb({ success: true, messages: globalChatMessages });
   });
 
+  socket.on("leaderboard:get", ({ category = "games", limit = 10 } = {}, cb = () => {}) => {
+    cb({ success: true, ...buildLeaderboard(category, limit) });
+  });
+
   socket.on("globalChat:send", ({ name, text } = {}, cb = () => {}) => {
     if (!socket.data.user) return cb({ error: "Войдите в аккаунт, чтобы писать в чат" });
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
@@ -3818,5 +3909,8 @@ module.exports = {
   buildEconomyRewardsForGame,
   normalizeTrackSubmission,
   extractFirstYouTubeVideoId,
-  resolveYouTubeSearchUrl
+  resolveYouTubeSearchUrl,
+  LEADERBOARD_CATEGORIES,
+  leaderboardMetric,
+  buildLeaderboard
 };

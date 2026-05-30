@@ -686,3 +686,27 @@ test("finished lobbies are no longer treated as active game sessions", () => {
   lobby.started = false;
   assert.equal(hasActiveGameSession(lobby), false);
 });
+
+test("leaderboardMetric formats profile stat categories", () => {
+  const { leaderboardMetric } = require("../server");
+  const user = {
+    stats: {
+      games: 8,
+      wins: 6,
+      spyGames: 3,
+      spyWins: 2,
+      civilianGames: 5,
+      civilianWins: 4,
+      winStreak: 2,
+      bestWinStreak: 5
+    },
+    economy: { level: 7, xp: 6400 }
+  };
+
+  assert.deepEqual(leaderboardMetric(user, "games"), { score: 8, tie: 6, value: "8", meta: "6 побед" });
+  assert.deepEqual(leaderboardMetric(user, "winrate"), { score: 0.75, tie: 6, value: "75%", meta: "6/8 побед" });
+  assert.deepEqual(leaderboardMetric(user, "spyWins"), { score: 2, tie: 2 / 3, value: "2/3", meta: "67%" });
+  assert.deepEqual(leaderboardMetric(user, "civilianWins"), { score: 4, tie: 0.8, value: "4/5", meta: "80%" });
+  assert.deepEqual(leaderboardMetric(user, "winStreak"), { score: 5, tie: 2, value: "5", meta: "текущая: 2" });
+  assert.deepEqual(leaderboardMetric(user, "level"), { score: 7, tie: 6400, value: "LVL 7", meta: "6 400 XP" });
+});

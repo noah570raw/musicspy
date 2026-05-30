@@ -41,6 +41,17 @@ const state = {
   chatMessages: [],
   globalChatMessages: [],
   globalChatOpen: false,
+  leaderboardOpen: false,
+  leaderboardCategory: "games",
+  leaderboardCategories: [
+    { id: "games", icon: "🎮", label: "Игр сыграно" },
+    { id: "winrate", icon: "🏆", label: "Общий винрейт" },
+    { id: "spyWins", icon: "🕵️", label: "Побед за шпиона" },
+    { id: "civilianWins", icon: "🛡️", label: "Побед за мирных" },
+    { id: "winStreak", icon: "🔥", label: "Серия побед" },
+    { id: "level", icon: "⭐", label: "Уровень" }
+  ],
+  leaderboardEntries: [],
   siteOnlineCount: 0,
   siteVolume: DEFAULT_SITE_VOLUME,
   musicEnabled: true,
@@ -743,6 +754,8 @@ function setLanguage(lang) {
   updateLobbyRenameControls();
   if (state.lobby) renderLobby(state.lobby);
   renderGlobalChat();
+  renderLeaderboardCategories();
+  if (state.leaderboardOpen) requestLeaderboard(state.leaderboardCategory);
   if (state.phase === "game") {
     renderOrder();
     renderHostControls();
@@ -5029,6 +5042,112 @@ function chatMessagesMarkup(list, { gameChat = false, globalChat = false } = {})
 }
 
 
+
+function leaderboardCategoryLabel(categoryId = state.leaderboardCategory) {
+  const category = state.leaderboardCategories.find((entry) => entry.id === categoryId) || state.leaderboardCategories[0];
+  return category?.label || "Лидерборд";
+}
+
+function setLeaderboardStatus(message = "", isError = false) {
+  const status = $("leaderboardStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("error", Boolean(isError));
+}
+
+function renderLeaderboardCategories(categories = state.leaderboardCategories) {
+  const box = $("leaderboardCategories");
+  if (!box) return;
+  const list = Array.isArray(categories) && categories.length ? categories : state.leaderboardCategories;
+  state.leaderboardCategories = list;
+  box.innerHTML = list.map((category) => `
+    <button class="leaderboard-category ${category.id === state.leaderboardCategory ? "active" : ""}" type="button" onclick="selectLeaderboardCategory('${escapeAttribute(category.id)}')" aria-pressed="${category.id === state.leaderboardCategory}">
+      <span aria-hidden="true">${escapeHtml(category.icon || "•")}</span>
+      <small>${escapeHtml(category.label || "Категория")}</small>
+    </button>
+  `).join("");
+}
+
+function renderLeaderboard(entries = state.leaderboardEntries) {
+  const box = $("leaderboardList");
+  if (!box) return;
+  const list = Array.isArray(entries) ? entries : [];
+  state.leaderboardEntries = list;
+  const pill = $("leaderboardStatusPill");
+  if (pill) pill.innerHTML = `<i aria-hidden="true"></i> ${escapeHtml(leaderboardCategoryLabel())}`;
+  box.classList.toggle("empty", !list.length);
+  if (!list.length) {
+    box.innerHTML = `<div class="leaderboard-empty">Пока нет игроков в этой категории</div>`;
+    return;
+  }
+  box.innerHTML = list.map((entry) => {
+    const displayName = entry.displayName || entry.username || "Игрок";
+    const avatar = entry.avatar
+      ? `<img src="${escapeAttribute(entry.avatar)}" alt="Аватар ${escapeAttribute(displayName)}">`
+      : `<span>${escapeHtml(displayName.slice(0, 1).toUpperCase() || "?")}</span>`;
+    return `
+      <article class="leaderboard-row rank-${Number(entry.rank || 0)}">
+        <strong class="leaderboard-rank">#${Number(entry.rank || 0)}</strong>
+        <button class="leaderboard-player" type="button" onclick="viewLeaderboardPlayerProfile('${escapeAttribute(entry.accountId || "")}')">
+          <span class="leaderboard-avatar">${avatar}</span>
+          <span class="leaderboard-player-meta">
+            <b>${nameWithDevBadge({ name: displayName, roles: entry.roles, permissions: entry.permissions }, "Игрок", { showBadge: true })}</b>
+            <small>${entry.username ? `@${escapeHtml(entry.username)}` : "профиль игрока"}</small>
+          </span>
+        </button>
+        <span class="leaderboard-score">
+          <b>${escapeHtml(String(entry.value || "0"))}</b>
+          <small>${escapeHtml(String(entry.meta || ""))}</small>
+        </span>
+      </article>
+    `;
+  }).join("");
+}
+
+function requestLeaderboard(category = state.leaderboardCategory) {
+  state.leaderboardCategory = category;
+  renderLeaderboardCategories();
+  setLeaderboardStatus("Загружаем топ игроков…");
+  socket.emit("leaderboard:get", { category, limit: 10 }, (res) => {
+    if (res?.error) {
+      setLeaderboardStatus(res.error, true);
+      renderLeaderboard([]);
+      return;
+    }
+    if (Array.isArray(res?.categories)) state.leaderboardCategories = res.categories;
+    state.leaderboardCategory = res?.activeCategory || category;
+    renderLeaderboardCategories(state.leaderboardCategories);
+    renderLeaderboard(res?.entries || []);
+    setLeaderboardStatus((res?.entries || []).length ? "Нажми на игрока, чтобы открыть профиль" : "Сыграйте матчи, чтобы попасть в топ");
+  });
+}
+
+function toggleLeaderboard(force) {
+  state.leaderboardOpen = typeof force === "boolean" ? force : !state.leaderboardOpen;
+  const panel = $("leaderboardPanel");
+  const toggle = $("leaderboardToggle");
+  document.body.classList.toggle("leaderboard-open", state.leaderboardOpen);
+  if (panel) panel.setAttribute("aria-hidden", String(!state.leaderboardOpen));
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", String(state.leaderboardOpen));
+    toggle.setAttribute("aria-label", state.leaderboardOpen ? "Закрыть лидерборд" : "Открыть лидерборд");
+  }
+  if (state.leaderboardOpen) requestLeaderboard(state.leaderboardCategory);
+}
+
+function selectLeaderboardCategory(category) {
+  if (!category) return;
+  requestLeaderboard(category);
+}
+
+function viewLeaderboardPlayerProfile(accountId) {
+  if (!accountId) return setLeaderboardStatus("Профиль игрока недоступен", true);
+  socket.emit("profile:view", { accountId }, (res) => {
+    if (res?.error || !res?.user) return setLeaderboardStatus(res?.error || "Профиль игрока недоступен", true);
+    showPublicProfileModal(res.user);
+  });
+}
+
 function renderSiteOnlineCount(count = state.siteOnlineCount) {
   const value = Math.max(0, Number(count) || 0);
   state.siteOnlineCount = value;
@@ -5096,6 +5215,7 @@ function handleGlobalChatKeydown(event) {
   if (event.key === "Escape") {
     event.preventDefault();
     toggleGlobalChat(false);
+    toggleLeaderboard(false);
     return;
   }
   if (event.key !== "Enter" || event.shiftKey) return;
@@ -6175,6 +6295,8 @@ window.addEventListener("DOMContentLoaded", () => {
   renderReactions();
   initChatScrollbarFeedback();
   renderGlobalChat();
+  renderLeaderboardCategories();
+  renderLeaderboard();
   initCustomSelects();
   initFriendsSystem();
   if ($("promoCodeInput")) {
@@ -6277,6 +6399,7 @@ socket.on("returnedToLobby", ({ lobby } = {}) => {
 });
 socket.on("profile:updated", ({ profile }) => {
   applyProfile(profile);
+  if (state.leaderboardOpen) requestLeaderboard(state.leaderboardCategory);
 });
 socket.on("social:state", (data) => {
   applySocialState(data || {});
