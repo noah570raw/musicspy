@@ -194,10 +194,10 @@ const SHOP_CATALOG = [
   { id: "dev_chat_mint_echo", category: "chatEffect", name: "DEV Mint Echo", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#bbf7d0,#34d399,#065f46)" },
   { id: "dev_chat_viridian_lux", category: "chatEffect", name: "DEV Viridian Lux", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#22c55e,#86efac,#10b981,#22c55e)" },
 
-  { id: "dev_lobby_emerald_grid", category: "lobbyEffect", name: "DEV Emerald Grid", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#052e16,#10b981,#6ee7b7)" },
-  { id: "dev_lobby_jade_hall", category: "lobbyEffect", name: "DEV Jade Hall", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#14532d,#22c55e,#bbf7d0)" },
-  { id: "dev_lobby_mint_realm", category: "lobbyEffect", name: "DEV Mint Realm", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#99f6e4,#34d399,#064e3b)" },
-  { id: "dev_lobby_viridian_prestige", category: "lobbyEffect", name: "DEV Viridian Prestige", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#16a34a,#22c55e,#86efac,#16a34a)" },
+  { id: "dev_lobby_emerald_grid", category: "lobbyEffect", name: "DEV Emerald Grid", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#02150a,#047857,#0f766e)" },
+  { id: "dev_lobby_jade_hall", category: "lobbyEffect", name: "DEV Jade Hall", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#052e16,#166534,#4d7c0f)" },
+  { id: "dev_lobby_mint_realm", category: "lobbyEffect", name: "DEV Mint Realm", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#0f766e,#047857,#022c22)" },
+  { id: "dev_lobby_viridian_prestige", category: "lobbyEffect", name: "DEV Viridian Prestige", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#052e16,#15803d,#365314,#052e16)" },
   { id: "title_perfect_manipulator", category: "playerTitle", name: "Perfect Manipulator", rarity: "mythic", price: 0, achievementOnly: true, hidden: true, preview: "linear-gradient(90deg,#facc15,#ef4444,#020617)" },
 ];
 

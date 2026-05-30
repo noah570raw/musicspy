@@ -394,6 +394,7 @@ const EN_TRANSLATIONS = {
   "Шпиона поймали, но он угадал тему и спасся.": "The spy was caught, but guessed the theme and escaped.",
   "Мирные победили": "Civilians win",
   "Шпион победил": "Spy wins",
+  "Шпионы победили": "Spies win",
   "шпион не называл тему": "the spy did not name the theme",
   "угадал тему": "guessed the theme",
   "не угадал тему": "did not guess the theme",

@@ -6162,13 +6162,32 @@ function resultFunnyNomination(data) {
   return data?.civiliansWin ? "Детективы танцпола" : "";
 }
 
+function resultSpyCount(data = state.latestResult) {
+  if (Array.isArray(data?.spies) && data.spies.length) return data.spies.length;
+  if (Array.isArray(data?.spyNames) && data.spyNames.length) return data.spyNames.length;
+  if (Array.isArray(state.spyIds) && state.spyIds.length) return state.spyIds.length;
+  return Number(state.settings?.spyCount || 1);
+}
+
+function resultWinnersLabel(data = state.latestResult) {
+  if (data?.civiliansWin) return t("Мирные");
+  return resultSpyCount(data) > 1 ? t("Шпионы") : t("Шпион");
+}
+
+function resultVictoryLabel(data = state.latestResult) {
+  if (data?.civiliansWin) return t("Мирные победили");
+  return resultSpyCount(data) > 1 ? t("Шпионы победили") : t("Шпион победил");
+}
+
 function resultSnapshot(data = state.latestResult) {
   const spyNames = data?.spyNames?.length ? data.spyNames.join(", ") : (data?.spyName || "—");
-  const winners = data?.civiliansWin ? "Мирные" : "Шпион";
+  const winners = resultWinnersLabel(data);
+  const victory = resultVictoryLabel(data);
   const bestTrack = resultBestTrack(data);
   return {
     code: state.currentCode || data?.code || "-----",
     winners,
+    victory,
     spies: spyNames,
     theme: data?.theme || "—",
     bestTrack: bestTrack?.playerName ? `${bestTrack.playerName}${bestTrack.reactionCount ? ` · ${bestTrack.reactionCount} реакций` : ""}` : "—",
@@ -6183,7 +6202,7 @@ function renderSharePreview(data = state.latestResult) {
   box.innerHTML = `
     <div class="share-card-mini">
       <span class="share-card-room">Music Spy · ${escapeHtml(snap.code)}</span>
-      <strong>${escapeHtml(snap.winners)} победили</strong>
+      <strong>${escapeHtml(snap.victory)}</strong>
     </div>
   `;
 }
@@ -6243,7 +6262,7 @@ function drawShareCard(data = state.latestResult) {
   ctx.font = "800 34px Inter, sans-serif";
   ctx.fillText(`Комната ${snap.code}`, 90, 205);
   ctx.font = "900 86px Inter, sans-serif";
-  ctx.fillText(`${snap.winners} победили`, 90, 360);
+  ctx.fillText(snap.victory, 90, 360);
   const rows = [
     ["Победители", snap.winners],
     ["Тема", `«${translateTheme(snap.theme)}»`]
@@ -6439,7 +6458,7 @@ function renderResults(rawData = {}) {
   const suspectedNames = (data.breakdown?.suspectedNames || []).join(", ");
   const spyNames = data.spyNames?.length ? data.spyNames.join(", ") : data.spyName;
   const guessText = t("финальное голосование завершено");
-  const winnerLabel = data.civiliansWin ? t("Мирные победили") : t("Шпион победил");
+  const winnerLabel = resultVictoryLabel(data);
   $("resultTitle").textContent = winnerLabel;
   const reward = myMatchReward(data);
   const expReward = myExpReward(data);
@@ -6508,7 +6527,7 @@ function renderResultBreakdown(data, guessText) {
   $("resultBreakdown").innerHTML = `
     <div class="breakdown-card">
       <span>${t("Итог")}</span>
-      <strong>${data.civiliansWin ? t("Мирные вычислили шпиона") : data.spyGuess?.correct ? t("Шпион угадал тему") : t("Шпион не попал под подозрение")}</strong>
+      <strong class="breakdown-result-text">${data.civiliansWin ? t("Мирные вычислили шпиона") : resultVictoryLabel(data)}</strong>
       <small>${guessText} · ${guessResult}</small>
     </div>
     <div class="breakdown-card">
