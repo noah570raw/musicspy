@@ -2759,11 +2759,11 @@ html[lang="ru"] .language-switcher span:first-child {
 
 .public-profile-card #publicProfileTitle {
   margin-top: -15px;
-  font-size: clamp(1.1rem, 4vw, 2rem);
+  font-size: clamp(1.375rem, 5vw, 2.5rem);
 }
 
 .public-profile-card .account-profile-view {
-  margin-top: 5px;
+  margin-top: 10px;
 }
 
 .host-modal-list {
@@ -16538,6 +16538,26 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
 
 .profile-command-card .profile-hero > div:last-child {
   gap: 5px;
+}
+
+.public-profile-card .profile-identity-copy {
+  width: 100%;
+}
+
+.public-profile-card .profile-command-card .profile-hero strong {
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.public-profile-card .profile-command-card .profile-hero strong .player-name-text {
+  display: inline;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .profile-command-card .profile-hero span:not(.profile-kicker):not(.profile-meta-row span) {
