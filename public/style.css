@@ -8678,6 +8678,33 @@ body,
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28), 0 0 22px rgba(var(--accent-rgb), 0.12);
 }
 
+.friend-profile-trigger {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.friend-profile-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, #fff);
+  outline-offset: 3px;
+}
+
+.friend-profile-trigger:hover .friend-name,
+.friend-profile-trigger:focus-visible .friend-name {
+  color: color-mix(in srgb, var(--accent) 72%, #fff);
+}
+
+.friend-name-trigger {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+
 .friend-avatar {
   position: relative;
   display: inline-grid;
@@ -16544,6 +16571,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   width: 100%;
 }
 
+#accountProfileView .profile-command-card .profile-hero strong,
 .public-profile-card .profile-command-card .profile-hero strong {
   max-width: 100%;
   overflow: visible;
@@ -16552,6 +16580,7 @@ body[data-screen]:not([data-screen="menu"]) .leaderboard-panel {
   overflow-wrap: anywhere;
 }
 
+#accountProfileView .profile-command-card .profile-hero strong .player-name-text,
 .public-profile-card .profile-command-card .profile-hero strong .player-name-text {
   display: inline;
   max-width: none;
