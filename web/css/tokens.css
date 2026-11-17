@@ -1,0 +1,67 @@
+/* MusicSpy design tokens. See DESIGN.md.
+   Colour comes only from the cover art (fx.js builds the backdrop and --tint-hi).
+   The interface itself is monochrome. */
+:root {
+  --base: 24, 22, 21;
+  --ink: #f4f1ec;
+  --ink-2: rgba(244, 241, 236, 0.78);
+  --ink-3: rgba(244, 241, 236, 0.58);
+  --line: rgba(244, 241, 236, 0.12);
+  --fill: rgba(244, 241, 236, 0.09);
+  --fill-2: rgba(244, 241, 236, 0.17);
+  --panel: rgba(0, 0, 0, 0.28);
+  --sheet: rgb(30, 28, 27);
+
+  --keep: #74d6a4;
+  --keep-bg: #e5f5eb;
+  --keep-ink: #0d3822;
+  --del: #f2858a;
+  --del-bg: #f8e5e5;
+  --del-ink: #5a191c;
+
+  --tint-hi: 244, 241, 236;
+
+  --font: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --m-in: 150ms;
+  --m-out: 120ms;
+  --m-press: 90ms;
+
+  --r-cover: 6px;
+  --r-opt: 9px;
+  --r-sm: 10px;
+  --r-btn: 12px;
+  --r-big: 14px;
+  --r-panel: 18px;
+
+  --gutter: clamp(16px, 3vw, 40px);
+  color-scheme: dark;
+}
+
+/* ---------- motion ---------- */
+:root {
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-io: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* ---------- themes: the site re-skins itself for the chosen game (theme.js) ----------
+   --accent: the game's own colour for primary actions, labels and the build transition.
+   --font-accent: Spy's dossier labels use a mono face; everything else stays Onest. */
+:root {
+  --accent: 244, 241, 236;
+  --accent-ink: 24, 22, 21;
+  --font-accent: var(--font);
+  --stamp: 226, 104, 92;
+}
+html[data-theme="spy"] {
+  --base: 13, 18, 20;
+  --accent: 240, 186, 96;
+  --accent-ink: 40, 26, 8;
+  --font-accent: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+html[data-theme="k5"] {
+  --base: 26, 21, 19;
+  --accent: 116, 214, 164;
+  --accent-ink: 13, 56, 34;
+}

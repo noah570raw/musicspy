@@ -49,6 +49,19 @@ Music Spy is designed as a fast, simple and accessible web experience that works
 ### Ecosystem
 - Discord Bot Integration
 
+## Local development (redesign branch)
+
+Two modes on one server: **Spy** and **Keep 5 Delete 5**. The new interface lives in `web/` (design rules in `DESIGN.md`); the old one stays reachable at `/old` until the redesign ships.
+
+```bash
+npm install
+npm start        # http://localhost:3000 with real Deezer previews
+npm run mock     # same, with offline test tracks instead of Deezer
+npm test
+```
+
+Without `DATABASE_URL` the server runs in local mode: accounts go to `data/users.json` (git-ignored) and nothing touches Postgres. Do not point a local server at the live database: the server writes its whole user list back, so two servers on one database overwrite each other. Google / Discord sign-in needs the OAuth variables; guests and username + password accounts work without them.
+
 ## 🌍 Live Project
 
 🌐 Website:  

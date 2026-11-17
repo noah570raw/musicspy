@@ -10,6 +10,17 @@ const DiscordStrategy = require("passport-discord").Strategy;
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const { registerSocialAssetRoutes } = require("./lib/social-assets");
 const {
+  extractFirstYouTubeVideoId,
+  normalizeTrackSubmission,
+  resolveYouTubeSearchUrl
+} = require("./lib/legacy/track-links");
+const k5d5 = require("./lib/k5d5/game");
+const { registerK5d5Sockets } = require("./lib/k5d5/sockets");
+const { registerMusicRoutes } = require("./lib/music/routes");
+const MOCK_DEEZER = process.env.MOCK_DEEZER === "1";
+const deezer = MOCK_DEEZER ? require("./lib/music/mock-deezer") : require("./lib/music/deezer");
+const {
+  LOCAL_MODE,
   EMPTY_USERS_STORE,
   friendshipKey,
   getOrCreateUser,
@@ -45,11 +56,38 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Socket hardening: every handler gets a plain-object payload and a callable ack, and a throw inside a
+// handler is caught instead of crashing the process (e.g. a client sending null or an extra payload).
+const ACK_ONLY_EVENTS = new Set(["globalChat:get", "economy:get", "xpBooster:get", "xpBooster:activate", "dailyReward:get", "dailyReward:claim", "social:get", "getOpenLobbies"]);
+const SYSTEM_EVENTS = new Set(["disconnect", "disconnecting", "error"]);
+io.use((socket, next) => {
+  const on = socket.on.bind(socket);
+  socket.on = (event, handler) => {
+    if (typeof handler !== "function" || SYSTEM_EVENTS.has(event)) return on(event, handler);
+    return on(event, (...args) => {
+      const ack = typeof args[args.length - 1] === "function" ? args[args.length - 1] : () => {};
+      const payload = args[0] && typeof args[0] === "object" && !Array.isArray(args[0]) ? args[0] : {};
+      const fail = (error) => {
+        console.error(`[socket] ${event} failed`, error);
+        try { ack({ error: "Something went wrong", ok: false }); } catch { /* ack already used */ }
+      };
+      try {
+        const result = ACK_ONLY_EVENTS.has(event) ? handler(ack) : handler(payload, ack);
+        if (result && typeof result.catch === "function") result.catch(fail);
+      } catch (error) {
+        fail(error);
+      }
+    });
+  };
+  next();
+});
+
 app.set("trust proxy", 1);
 registerSocialAssetRoutes(app);
 
 const sessionMiddleware = session({
-  store: new PgSession({ pool, createTableIfMissing: true }),
+  // Local mode (no DATABASE_URL): the default in-memory session store.
+  ...(pool ? { store: new PgSession({ pool, createTableIfMissing: true }) } : {}),
   secret: process.env.SESSION_SECRET || "fallback-secret",
   resave: false,
   saveUninitialized: false,
@@ -63,8 +101,16 @@ const sessionMiddleware = session({
 app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static("public"));
+// New interface (web/) first; the old one (public/) stays reachable at /old during the redesign,
+// and its absolute asset paths (/client.js, /style.css, ...) fall through to public/.
+const WEB_DIR = path.join(__dirname, "web");
+const LEGACY_DIR = path.join(__dirname, "public");
+app.use(express.static(WEB_DIR, { index: "index.html" }));
+app.get(["/old", "/old/"], (req, res) => res.sendFile(path.join(LEGACY_DIR, "index.html")));
+app.use(express.static(LEGACY_DIR, { index: false }));
+registerMusicRoutes(app, { deezer, mock: MOCK_DEEZER });
 const SPY_GUESS_SECONDS = 60;
+const SPY_TRACK_START_DELAY_MS = 1500; // everyone loads the preview, then it starts at the same moment
 const DECOY_GUESS_SECONDS = 3;
 const HOST_TIMER_STEP_SECONDS = 15;
 const HOST_MIN_TIMER_SECONDS = 5;
@@ -78,8 +124,8 @@ const MAX_DIRECT_MESSAGES = 5000;
 const MAX_DIRECT_MESSAGE_LENGTH = 600;
 const MAX_LOBBY_NAME_LENGTH = 32;
 const MIN_LOBBY_PLAYERS = 3;
-const DEFAULT_MAX_PLAYERS = 9;
-const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8, 9];
+const DEFAULT_MAX_PLAYERS = 8;
+const ALLOWED_MAX_PLAYERS = [3, 4, 5, 6, 7, 8];
 const RECONNECT_GRACE_MS = 60_000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const DEV_USERNAMES = new Set(["noah570raw"]);
@@ -210,45 +256,47 @@ const ACHIEVEMENTS = [
 ];
 
 
+// Spy themes. The civilians see the theme; the spy has to blend in without it.
+// Old Russian list (pre-redesign) lives in git history on main.
 const THEMES = [
-  "ру андер ск",
-  "англ андер ск",
-  "ру реп новая школа",
-  "олдскул хип хоп",
-  "бразил фонк тайп",
-  "дрилл",
-  "мемфис фонк тайп",
-  "ру хайперпоп",
-  "англ хайперпоп",
-  "дрейн",
-  "классика рока 90-х",
-  "ремиксы",
-  "кринж",
-  "хит прошлого лета",
-  "чилловый приятный тречок",
-  "едм электронщина",
-  "мемы/музыка из мемов",
-  "ностальгия",
-  "дотерский трек",
-  "молодой исполнитель >18",
-  "хиты 2021",
-  "легендарные треки",
-  "трепахолик",
-  "тикток музло",
-  "умерший исполнитель",
-  "худший трек в истории мира"
+  "Russian underground rap",
+  "English-language underground rap",
+  "Russian new-school rap",
+  "Old-school hip-hop",
+  "Brazilian phonk",
+  "Drill",
+  "Memphis phonk",
+  "Russian hyperpop",
+  "English-language hyperpop",
+  "Drain",
+  "90s rock classics",
+  "Remixes",
+  "Cringe",
+  "Last summer's hit",
+  "Chill track",
+  "EDM",
+  "Meme songs",
+  "Nostalgia",
+  "Gamer anthem",
+  "Teen artist",
+  "Hits of 2021",
+  "Legendary tracks",
+  "Trap banger",
+  "TikTok hits",
+  "Late artist",
+  "Worst song ever"
 ];
 
 const SIMILAR_THEME_GROUPS = [
-  ["ру андер ск", "англ андер ск", "ру реп новая школа", "дрилл", "трепахолик"],
-  ["бразил фонк тайп", "мемфис фонк тайп", "дрилл", "трепахолик", "едм электронщина"],
-  ["ру хайперпоп", "англ хайперпоп", "дрейн", "тикток музло", "едм электронщина"],
-  ["классика рока 90-х", "олдскул хип хоп", "ностальгия", "легендарные треки", "хиты 2021"],
-  ["ремиксы", "едм электронщина", "тикток музло", "мемы/музыка из мемов", "хит прошлого лета"],
-  ["кринж", "мемы/музыка из мемов", "дотерский трек", "худший трек в истории мира", "тикток музло"],
-  ["хит прошлого лета", "хиты 2021", "тикток музло", "легендарные треки", "ностальгия"],
-  ["чилловый приятный тречок", "ностальгия", "дрейн", "англ хайперпоп", "легендарные треки"],
-  ["молодой исполнитель >18", "умерший исполнитель", "легендарные треки", "ру реп новая школа", "олдскул хип хоп"]
+  ["Russian underground rap", "English-language underground rap", "Russian new-school rap", "Drill", "Trap banger"],
+  ["Brazilian phonk", "Memphis phonk", "Drill", "Trap banger", "EDM"],
+  ["Russian hyperpop", "English-language hyperpop", "Drain", "TikTok hits", "EDM"],
+  ["90s rock classics", "Old-school hip-hop", "Nostalgia", "Legendary tracks", "Hits of 2021"],
+  ["Remixes", "EDM", "TikTok hits", "Meme songs", "Last summer's hit"],
+  ["Cringe", "Meme songs", "Gamer anthem", "Worst song ever", "TikTok hits"],
+  ["Last summer's hit", "Hits of 2021", "TikTok hits", "Legendary tracks", "Nostalgia"],
+  ["Chill track", "Nostalgia", "Drain", "English-language hyperpop", "Legendary tracks"],
+  ["Teen artist", "Late artist", "Legendary tracks", "Russian new-school rap", "Old-school hip-hop"]
 ];
 
 
@@ -736,9 +784,9 @@ function normalizeShopItemName(value) {
 
 function validateAccountTag(value, currentUserId = "") {
   const username = normalizeUsername(value);
-  if (username.length < 3) return { error: "Тег должен быть от 3 символов: латиница, цифры, _ или -" };
+  if (username.length < 3) return { error: "Tag needs 3+ characters: latin letters, digits, _ or -" };
   const owner = usersStore.users.find((user) => user.username === username);
-  if (owner && owner.id !== currentUserId) return { error: "Такой тег уже занят" };
+  if (owner && owner.id !== currentUserId) return { error: "That tag is taken" };
   return { username };
 }
 
@@ -761,7 +809,7 @@ function getPendingFriendRequest(senderId, receiverId) {
 
 function publicSocialUser(user, viewerId = "") {
   const status = getUserPresence(user?.id);
-  const nickname = user?.displayName || user?.username || "Игрок";
+  const nickname = user?.displayName || user?.username || "Player";
   return {
     id: user.id,
     username: user.username,
@@ -779,21 +827,29 @@ function publicSocialUser(user, viewerId = "") {
 }
 
 function getUserPresence(userId) {
-  if (!userId || !userSockets.has(userId)) return { online: false, activity: "Не в сети", lobby: null };
+  if (!userId || !userSockets.has(userId)) return { online: false, activity: "Offline", lobby: null };
   for (const lobby of Object.values(lobbies)) {
     const player = lobby.players.find((item) => item.accountId === userId && !item.disconnected);
     if (!player) continue;
     const lobbyInfo = {
       code: lobby.code,
+      mode: "spy",
       players: lobby.players.filter((item) => !item.disconnected).length,
       maxPlayers: lobby.settings?.maxPlayers || DEFAULT_MAX_PLAYERS,
       canJoin: lobby.isOpen !== false && lobby.phase === "lobby"
     };
     return lobby.phase === "playing" || lobby.phase === "voting" || lobby.phase === "spyGuess"
-      ? { online: true, activity: "Играет", lobby: lobbyInfo }
-      : { online: true, activity: "В лобби", lobby: lobbyInfo };
+      ? { online: true, activity: "Playing", lobby: lobbyInfo }
+      : { online: true, activity: "In a lobby", lobby: lobbyInfo };
   }
-  return { online: true, activity: "В меню", lobby: null };
+  const k5 = k5RoomForAccount(userId);
+  if (k5) {
+    const lobbyInfo = { code: k5.room.code, mode: "k5", players: k5.room.players.size, maxPlayers: 8, canJoin: true };
+    return k5.room.phase === "playing" || k5.room.phase === "loading"
+      ? { online: true, activity: "Playing", lobby: lobbyInfo }
+      : { online: true, activity: "In a lobby", lobby: lobbyInfo };
+  }
+  return { online: true, activity: "Online", lobby: null };
 }
 
 function getSocialState(userId) {
@@ -845,10 +901,10 @@ function createFriendRequest(senderId, receiverId) {
   ensureSocialCollections();
   const sender = findUserById(senderId);
   const receiver = findUserById(receiverId);
-  if (!sender || !receiver) return { error: "Пользователь не найден" };
-  if (senderId === receiverId) return { error: "Нельзя добавить самого себя" };
-  if (usersAreFriends(senderId, receiverId)) return { error: "Вы уже друзья" };
-  if (getPendingFriendRequest(senderId, receiverId)) return { error: "Заявка уже отправлена" };
+  if (!sender || !receiver) return { error: "User not found" };
+  if (senderId === receiverId) return { error: "You cannot add yourself" };
+  if (usersAreFriends(senderId, receiverId)) return { error: "You are already friends" };
+  if (getPendingFriendRequest(senderId, receiverId)) return { error: "Request already sent" };
   const reverse = getPendingFriendRequest(receiverId, senderId);
   if (reverse) {
     reverse.status = "accepted";
@@ -857,7 +913,7 @@ function createFriendRequest(senderId, receiverId) {
     saveUsersStore();
     emitSocialForUserAndFriends(senderId);
     emitSocialForUserAndFriends(receiverId);
-    io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:accepted", message: `${sender.displayName || sender.username} принял заявку` });
+    io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:accepted", message: `${sender.displayName || sender.username} accepted your request` });
     return { success: true, accepted: true };
   }
   const request = { id: crypto.randomUUID(), senderId, receiverId, status: "pending", createdAt: new Date().toISOString() };
@@ -866,14 +922,14 @@ function createFriendRequest(senderId, receiverId) {
   console.info(`[db] friend request insert confirmed sender=${senderId} receiver=${receiverId}`);
   emitSocialState(senderId);
   emitSocialState(receiverId);
-  io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:request", message: `Новая заявка от ${sender.displayName || sender.username}` });
+  io.to(`user:${receiverId}`).emit("social:notification", { type: "friend:request", message: `Friend request from ${sender.displayName || sender.username}` });
   return { success: true, request };
 }
 
 function acceptFriendRequest(receiverId, requestId) {
   ensureSocialCollections();
   const request = usersStore.friendRequests.find((item) => item.id === requestId && item.receiverId === receiverId && item.status === "pending");
-  if (!request) return { error: "Заявка не найдена" };
+  if (!request) return { error: "Request not found" };
   request.status = "accepted";
   request.respondedAt = new Date().toISOString();
   addFriendship(request.senderId, request.receiverId);
@@ -882,14 +938,14 @@ function acceptFriendRequest(receiverId, requestId) {
   emitSocialForUserAndFriends(request.senderId);
   emitSocialForUserAndFriends(request.receiverId);
   const receiver = findUserById(receiverId);
-  io.to(`user:${request.senderId}`).emit("social:notification", { type: "friend:accepted", message: `${receiver?.displayName || receiver?.username || "Игрок"} принял заявку` });
+  io.to(`user:${request.senderId}`).emit("social:notification", { type: "friend:accepted", message: `${receiver?.displayName || receiver?.username || "Player"} accepted your request` });
   return { success: true };
 }
 
 function declineFriendRequest(receiverId, requestId) {
   ensureSocialCollections();
   const request = usersStore.friendRequests.find((item) => item.id === requestId && item.receiverId === receiverId && item.status === "pending");
-  if (!request) return { error: "Заявка не найдена" };
+  if (!request) return { error: "Request not found" };
   request.status = "declined";
   request.respondedAt = new Date().toISOString();
   saveUsersStore();
@@ -902,7 +958,7 @@ function declineFriendRequest(receiverId, requestId) {
 function removeFriend(userId, friendId) {
   const user = findUserById(userId);
   const friend = findUserById(friendId);
-  if (!user || !friend || !usersAreFriends(userId, friendId)) return { error: "Друг не найден" };
+  if (!user || !friend || !usersAreFriends(userId, friendId)) return { error: "Friend not found" };
   const key = friendshipKey(userId, friendId);
   usersStore.friendships = (usersStore.friendships || []).filter((friendship) => friendship.id !== key && friendshipKey(friendship.userAId, friendship.userBId) !== key);
   user.friends = friendIdsForUser(userId);
@@ -980,7 +1036,7 @@ function unregisterAuthenticatedSocket(socket) {
   emitSocialForUserAndFriends(userId);
 }
 
-function sanitizeDisplayName(value, fallback = "Игрок") {
+function sanitizeDisplayName(value, fallback = "Player") {
   return normalizeName(String(value || fallback).replace(/[#@]/g, " "));
 }
 
@@ -1210,7 +1266,7 @@ function normalizeReconnectToken(token) {
 
 function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
   const user = socket.data.user;
-  const baseName = user ? (user.displayName || user.username) : (rawName || "Гость");
+  const baseName = user ? (user.displayName || user.username) : (rawName || "Guest");
   const name = lobby ? makeUniqueName(lobby, baseName) : normalizeName(baseName);
   const equippedCosmetics = user?.economy?.equipped && typeof user.economy.equipped === "object"
     ? { ...user.economy.equipped }
@@ -1302,7 +1358,7 @@ function deleteUserAccount(userId) {
 
 const GAME_MODES = {
   classic: {
-    label: "Классика",
+    label: "Classic",
     rounds: 3,
     listenTime: 30,
     spyMode: "auto",
@@ -1313,7 +1369,7 @@ const GAME_MODES = {
     maxPlayers: DEFAULT_MAX_PLAYERS
   },
   blitz: {
-    label: "Блиц",
+    label: "Blitz",
     rounds: 1,
     listenTime: 15,
     spyMode: "auto",
@@ -1346,7 +1402,7 @@ function generateCode() {
     for (let i = 0; i < 5; i += 1) {
       code += chars[Math.floor(Math.random() * chars.length)];
     }
-  } while (lobbies[code]);
+  } while (lobbies[code] || k5d5.hasRoom(code));
 
   return code;
 }
@@ -1370,7 +1426,8 @@ function normalizeSettings(input = {}) {
   const modePreset = GAME_MODES[requestedMode];
   const next = { ...DEFAULT_SETTINGS, gameMode: requestedMode, ...modePreset };
   next.rounds = clampNumber(input.rounds, [1, 2, 3, 4, 5], next.rounds);
-  next.listenTime = clampNumber(input.listenTime, [15, 30, 45, 60], next.listenTime);
+  // Deezer previews are 30 seconds long, so 15 or 30 seconds per track.
+  next.listenTime = clampNumber(input.listenTime, [15, 30], next.listenTime);
   next.spyMode = input.spyMode === undefined ? next.spyMode : (input.spyMode === "manual" ? "manual" : "auto");
   next.spyCount = clampNumber(input.spyCount, [1, 2, 3], next.spyCount || DEFAULT_SETTINGS.spyCount);
   next.anonymousVoting = input.anonymousVoting === undefined ? next.anonymousVoting : Boolean(input.anonymousVoting);
@@ -1381,16 +1438,16 @@ function normalizeSettings(input = {}) {
 }
 
 function defaultLobbyName(hostName) {
-  return `Лобби ${normalizeName(hostName || "хоста")}`.slice(0, MAX_LOBBY_NAME_LENGTH);
+  return `${normalizeName(hostName || "Host")}'s room`.slice(0, MAX_LOBBY_NAME_LENGTH);
 }
 
-function normalizeLobbyName(name, fallback = "Музыкальное лобби") {
+function normalizeLobbyName(name, fallback = "Music room") {
   const normalized = String(name || "")
     .replace(/[#@]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, MAX_LOBBY_NAME_LENGTH);
-  return normalized || String(fallback || "Музыкальное лобби").slice(0, MAX_LOBBY_NAME_LENGTH);
+  return normalized || String(fallback || "Music room").slice(0, MAX_LOBBY_NAME_LENGTH);
 }
 
 function getSpyCount(lobby) {
@@ -1465,7 +1522,7 @@ function getSkipVoteState(lobby) {
     voterIds,
     voters: voterIds.map((playerId) => {
       const player = lobby.players.find((item) => item.id === playerId);
-      return { id: playerId, name: player?.name || "Игрок", avatar: player?.avatar || "" };
+      return { id: playerId, name: player?.name || "Player", avatar: player?.avatar || "" };
     }),
     completed: Boolean(lobby.skipCompleted)
   };
@@ -1481,8 +1538,8 @@ function completeSkipVote(lobby) {
   lobby.skipCompleted = true;
   clearTimer(lobby.code);
   io.to(lobby.code).emit("skipVoteUpdate", getSkipVoteState(lobby));
-  io.to(lobby.code).emit("trackSkipped", { message: "Все игроки пропустили трек" });
-  io.to(lobby.code).emit("stopTrack", { skipped: true, message: "Все игроки пропустили трек" });
+  io.to(lobby.code).emit("trackSkipped", { message: "Everyone skipped the track" });
+  io.to(lobby.code).emit("stopTrack", { skipped: true, message: "Everyone skipped the track" });
   advanceTurn(lobby.code);
   return true;
 }
@@ -1528,9 +1585,9 @@ function buildVoteDetails(lobby) {
     const target = lobby.players.find((player) => player.id === targetId);
     return {
       voterId,
-      voterName: voter?.name || "Игрок",
+      voterName: voter?.name || "Player",
       targetId,
-      targetName: target?.name || "Игрок",
+      targetName: target?.name || "Player",
       hitSpy: lobby.spies.includes(targetId)
     };
   });
@@ -1542,7 +1599,7 @@ function buildFinalBreakdown(lobby, suspected = [], finalVotes = {}) {
   const topVoteCount = sortedVotes[0]?.[1] || 0;
   const topVoted = sortedVotes
     .filter(([, count]) => count === topVoteCount && count > 0)
-    .map(([id]) => lobby.players.find((player) => player.id === id)?.name || "Игрок");
+    .map(([id]) => lobby.players.find((player) => player.id === id)?.name || "Player");
 
   const reactionTotals = {};
   let mostReactedTrack = null;
@@ -1572,7 +1629,7 @@ function buildFinalBreakdown(lobby, suspected = [], finalVotes = {}) {
     reactionTotals,
     mostReactedTrack,
     mostSuspiciousTrack,
-    suspectedNames: suspected.map((id) => lobby.players.find((player) => player.id === id)?.name || "Игрок")
+    suspectedNames: suspected.map((id) => lobby.players.find((player) => player.id === id)?.name || "Player")
   };
 }
 
@@ -1716,10 +1773,10 @@ function sendPrivateGameStart(lobby, socket) {
 function reconnectPlayerToGame(socket, { code, reconnectToken } = {}) {
   const lobby = lobbies[normalizeCode(code)];
   const canRestoreEndedResult = lobby?.phase === "ended" && lobby.finalResult;
-  if (!lobby || (!hasActiveGameSession(lobby) && !canRestoreEndedResult)) return { error: "Активная игра не найдена" };
+  if (!lobby || (!hasActiveGameSession(lobby) && !canRestoreEndedResult)) return { error: "No active game found" };
   const normalizedToken = normalizeReconnectToken(reconnectToken);
   const player = lobby.players.find((item) => item.reconnectToken === normalizedToken);
-  if (!player) return { error: "Не удалось восстановить игрока" };
+  if (!player) return { error: "Could not restore your player" };
 
   const oldId = player.id;
   socket.join(lobby.code);
@@ -1806,7 +1863,7 @@ function redirectToOAuth(provider, req, res) {
   const config = oauthConfig(provider, req);
   const returnTo = req.query.returnTo || "/";
   if (!config.clientId || !config.clientSecret) {
-    return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Sign-in with ${oauthProviderLabel(provider)} is not set up`));
   }
 
   const state = createOAuthState(provider, returnTo);
@@ -1824,12 +1881,12 @@ async function handleOAuthCallback(provider, req, res) {
   const stateEntry = consumeOAuthState(req.query.state, provider);
   const returnTo = stateEntry?.returnTo || "/";
   if (!stateEntry || !req.query.code) {
-    return res.redirect(buildOAuthErrorRedirect(returnTo, "OAuth-сессия устарела. Попробуй еще раз."));
+    return res.redirect(buildOAuthErrorRedirect(returnTo, "The sign-in session expired. Try again."));
   }
 
   const config = oauthConfig(provider, req);
   if (!config.clientId || !config.clientSecret) {
-    return res.redirect(buildOAuthErrorRedirect(returnTo, `Вход через ${oauthProviderLabel(provider)} не настроен`));
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Sign-in with ${oauthProviderLabel(provider)} is not set up`));
   }
 
   try {
@@ -1849,7 +1906,7 @@ async function handleOAuthCallback(provider, req, res) {
     return res.redirect(buildOAuthSuccessRedirect(returnTo, session));
   } catch (error) {
     console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
-    return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+    return res.redirect(buildOAuthErrorRedirect(returnTo, `Could not sign in with ${oauthProviderLabel(provider)}`));
   }
 }
 
@@ -1857,7 +1914,7 @@ function startPassportOAuth(provider, req, res, next) {
   const clientId = provider === "google" ? process.env.GOOGLE_CLIENT_ID : process.env.DISCORD_CLIENT_ID;
   const clientSecret = provider === "google" ? process.env.GOOGLE_CLIENT_SECRET : process.env.DISCORD_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    return res.redirect(buildOAuthErrorRedirect(req.query.returnTo || "/", `Вход через ${oauthProviderLabel(provider)} не настроен`));
+    return res.redirect(buildOAuthErrorRedirect(req.query.returnTo || "/", `Sign-in with ${oauthProviderLabel(provider)} is not set up`));
   }
   req.session.oauthReturnTo = String(req.query.returnTo || "/").startsWith("/") ? String(req.query.returnTo || "/") : "/";
   return passport.authenticate(provider, provider === "google" ? { scope: ["profile", "email"] } : undefined)(req, res, next);
@@ -1868,13 +1925,13 @@ function finishPassportOAuth(provider, req, res, next) {
   return passport.authenticate(provider, (error, user) => {
     if (error || !user) {
       console.error(`${oauthProviderLabel(provider)} OAuth failed`, error);
-      return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+      return res.redirect(buildOAuthErrorRedirect(returnTo, `Could not sign in with ${oauthProviderLabel(provider)}`));
     }
 
     return req.logIn(user, (loginError) => {
       if (loginError) {
         console.error(`${oauthProviderLabel(provider)} session login failed`, loginError);
-        return res.redirect(buildOAuthErrorRedirect(returnTo, `Не удалось войти через ${oauthProviderLabel(provider)}`));
+        return res.redirect(buildOAuthErrorRedirect(returnTo, `Could not sign in with ${oauthProviderLabel(provider)}`));
       }
 
       const existingIndex = usersStore.users.findIndex((item) => item.id === user.id);
@@ -1890,7 +1947,7 @@ app.get("/auth/google", (req, res, next) => startPassportOAuth("google", req, re
 app.get("/auth/google/callback", (req, res, next) => finishPassportOAuth("google", req, res, next));
 app.get("/auth/discord", (req, res, next) => startPassportOAuth("discord", req, res, next));
 app.get("/auth/discord/callback", (req, res, next) => finishPassportOAuth("discord", req, res, next));
-// Internal bot API — генерация кода комнаты
+// Internal bot API: room code for the Discord bot
 app.post('/api/bot/create-room', (req, res) => {
   const secret = req.headers['x-bot-secret'];
   if (secret !== process.env.BOT_SECRET) {
@@ -1907,6 +1964,7 @@ function emitLobbyUpdate(code) {
   io.to(code).emit("lobbyUpdate", payload);
   logServerCosmetics("players:update", payload.players);
   io.to(code).emit("players:update", { players: payload.players });
+  emitSpyState(code);
   for (const player of lobby.players || []) {
     if (player.accountId) emitSocialForUserAndFriends(player.accountId);
   }
@@ -1931,7 +1989,7 @@ function handlePlayerDeparture(lobby, socket, { leaveRoom = true } = {}) {
   if (lobby.phase === "playing" && lobby.players.length < 3) {
     clearTimer(code);
     resetLobbyToWaiting(lobby);
-    io.to(code).emit("gameCancelled", { reason: "Игрок вышел — нужно минимум 3 участника" });
+    io.to(code).emit("gameCancelled", { reason: "A player left. Spy needs at least 3 players" });
   } else if (lobby.phase === "playing") {
     if (!completeSkipVote(lobby)) startTurn(code);
   } else if (lobby.phase === "voting" && Object.keys(lobby.votes).length >= lobby.players.length) {
@@ -1980,6 +2038,7 @@ function emitGameState(code) {
     chatMessages: lobby.chatMessages || [],
     finalComments: lobby.finalComments || []
   });
+  emitSpyState(code);
 }
 
 function publicVotes(lobby) {
@@ -1990,8 +2049,117 @@ function publicVotes(lobby) {
   return totals;
 }
 
+// ---------- spy:state — one snapshot per player for the new interface ----------
+// Sent alongside the old events (lobbyUpdate, gameState, ...), so the old client at /old keeps working.
+// Private data stays private: the theme only reaches civilians, the spy list only reaches spies.
+function publicSpyTrack(track) {
+  if (!track) return null;
+  return {
+    id: track.id,
+    source: track.source || "",
+    deezerId: track.deezerId || null,
+    title: track.title || "",
+    artist: track.artist || "",
+    album: track.album || "",
+    cover: track.cover || "",
+    preview: track.preview || "",
+    url: track.url || "",
+    startsAt: track.startsAt || null,
+    pausedAt: track.pausedAt || null,
+    playerId: track.playerId,
+    playerName: track.playerName,
+    round: track.round,
+    turnNumber: track.turnNumber,
+    reactions: track.reactions || {}
+  };
+}
+
+function spyViewFor(lobby, playerId) {
+  const started = lobby.phase !== "lobby";
+  const isSpy = (lobby.spies || []).includes(playerId);
+  const inGame = lobby.players.some((player) => player.id === playerId);
+  const currentPlayerId = lobby.phase === "playing" ? (lobby.order[lobby.currentTurnIndex] || null) : null;
+  const anonymousNow = lobby.settings.anonymousVoting && lobby.phase === "voting";
+  const isGuesser = lobby.phase === "spyGuess" && lobby.spyGuessTargetId === playerId;
+  return {
+    mode: "spy",
+    code: lobby.code,
+    serverNow: Date.now(),
+    meId: playerId,
+    inGame,
+    hostId: lobby.host,
+    isHost: lobby.host === playerId,
+    name: lobby.name,
+    isOpen: lobby.isOpen !== false,
+    phase: lobby.phase,
+    settings: lobby.settings,
+    minPlayers: MIN_LOBBY_PLAYERS,
+    maxPlayers: lobby.settings.maxPlayers || DEFAULT_SETTINGS.maxPlayers,
+    players: lobby.players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      avatar: player.avatar || "",
+      accountId: player.accountId || null,
+      guest: Boolean(player.guest),
+      ready: Boolean(player.ready),
+      away: Boolean(player.disconnected)
+    })),
+    chat: lobby.chatMessages || [],
+    role: started && inGame ? (isSpy ? "spy" : "civilian") : null,
+    theme: started && !isSpy ? (lobby.theme || null) : null,
+    spyIds: isSpy ? [...lobby.spies] : [],
+    spyCount: (lobby.spies || []).length,
+    round: lobby.round,
+    totalRounds: lobby.settings.rounds,
+    order: lobby.order || [],
+    currentPlayerId,
+    turnNumber: lobby.currentTurnIndex + 1,
+    turnsInRound: (lobby.order || []).length,
+    turnStage: lobby.turnStage,
+    timeLeft: lobby.timeLeft,
+    listenTime: lobby.settings.listenTime,
+    submittedThisTurn: Boolean(lobby.submittedThisTurn),
+    // lastTrack outlives its turn on the server; only show it while it belongs to the current turn
+    track: lobby.phase === "playing" && lobby.submittedThisTurn && lobby.lastTrack?.playerId === currentPlayerId
+      ? publicSpyTrack(lobby.lastTrack)
+      : null,
+    trackHistory: (lobby.trackHistory || []).map(publicSpyTrack),
+    reactions: countReactions(lobby.currentTrackReactions),
+    myReaction: (lobby.currentTrackReactions || {})[playerId] || null,
+    skipVote: getSkipVoteState(lobby),
+    vote: lobby.phase === "voting" ? {
+      round: lobby.voteRound,
+      candidates: lobby.voteCandidates || [],
+      totals: anonymousNow ? {} : publicVotes(lobby),
+      votedIds: Object.keys(lobby.votes || {}),
+      myVote: (lobby.votes || {})[playerId] || null,
+      anonymous: Boolean(lobby.settings.anonymousVoting),
+      timeLeft: lobby.voteTimeLeft,
+      votingTime: lobby.settings.votingTime
+    } : null,
+    guess: lobby.phase === "spyGuess" ? {
+      isMe: isGuesser,
+      mode: isGuesser ? lobby.spyGuessMode : null,
+      options: isGuesser && lobby.spyGuessMode === "spy" ? (lobby.spyGuessOptions || []).map(({ id, text }) => ({ id, text })) : [],
+      accusedNames: (lobby.suspected || []).map((id) => lobby.players.find((player) => player.id === id)?.name || "Player"),
+      timeLeft: lobby.spyGuessTimeLeft,
+      sent: Boolean(lobby.spyGuess)
+    } : null,
+    result: lobby.phase === "ended" ? lobby.finalResult || null : null,
+    finalComments: lobby.finalComments || []
+  };
+}
+
+function emitSpyState(code) {
+  const lobby = lobbies[code];
+  if (!lobby) return;
+  for (const player of lobby.players) {
+    io.to(player.id).emit("spy:state", spyViewFor(lobby, player.id));
+  }
+}
+
 function normalizeName(name) {
-  return String(name || "").trim().slice(0, 18) || "Без имени";
+  return String(name || "").trim().slice(0, 18) || "No name";
 }
 
 function makeUniqueName(lobby, rawName, excludeId = null) {
@@ -2062,6 +2230,7 @@ function pauseTurnTimer(lobby) {
   clearTimer(lobby.code);
   lobby.pausedTurnStage = "listening";
   lobby.turnStage = "paused";
+  if (lobby.lastTrack) lobby.lastTrack.pausedAt = Date.now();
   emitTurnTimer(lobby);
   emitGameState(lobby.code);
   return true;
@@ -2072,6 +2241,11 @@ function resumeTurnTimer(lobby) {
   if (!lobby.submittedThisTurn || !lobby.lastTrack || !Number.isFinite(lobby.timeLeft)) return false;
   lobby.turnStage = lobby.pausedTurnStage || "listening";
   lobby.pausedTurnStage = null;
+  if (lobby.lastTrack?.startsAt && lobby.lastTrack.pausedAt) {
+    // shift the shared start so every client resumes the preview where it stopped
+    lobby.lastTrack.startsAt += Date.now() - lobby.lastTrack.pausedAt;
+  }
+  if (lobby.lastTrack) lobby.lastTrack.pausedAt = null;
   emitTurnTimer(lobby);
   emitGameState(lobby.code);
   runListeningCountdown(lobby.code);
@@ -2241,7 +2415,7 @@ function startSpyGuess(code, suspected, voteTotals) {
       spies: caughtSpy && isGuesser ? lobby.spies : [],
       guesserId: isGuesser ? guesserId : null,
       guesserRole: caughtSpy ? (isGuesser ? "spy" : "hidden") : (isGuesser ? "decoy" : "hidden"),
-      accusedNames: suspected.map((id) => lobby.players.find((item) => item.id === id)?.name || "Игрок"),
+      accusedNames: suspected.map((id) => lobby.players.find((item) => item.id === id)?.name || "Player"),
       prefillTheme: !caughtSpy && isGuesser ? lobby.theme : "",
       guessOptions: caughtSpy && isGuesser ? lobby.spyGuessOptions.map(({ id, text }) => ({ id, text })) : [],
       suspected,
@@ -2265,7 +2439,7 @@ function startSpyGuess(code, suspected, voteTotals) {
       if (currentLobby.spyGuessTimeLeft <= 0) {
         clearTimer(code);
         const player = currentLobby.players.find((item) => item.id === currentLobby.spyGuessTargetId);
-        const pendingGuess = { text: currentLobby.theme, playerId: player?.id || "", playerName: player?.name || "Игрок", skipped: false, decoy: true, correct: false };
+        const pendingGuess = { text: currentLobby.theme, playerId: player?.id || "", playerName: player?.name || "Player", skipped: false, decoy: true, correct: false };
         currentLobby.spyGuess = pendingGuess;
         io.to(code).emit("decoyGuessAutoSubmitted", { guess: pendingGuess });
         timers[code] = setTimeout(() => {
@@ -2543,7 +2717,7 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     spies: lobby.spies,
     spy: lobby.spies[0] || null,
     spyNames: spyPlayers.map((player) => player.name),
-    spyName: spyPlayers.map((player) => player.name).join(", ") || "Шпион",
+    spyName: spyPlayers.map((player) => player.name).join(", ") || "Spy",
     votes: finalVotes,
     suspected,
     caughtSpy,
@@ -2669,7 +2843,7 @@ function publicOpenLobbies(allLobbies = lobbies) {
       return {
         code: lobby.code,
         name: lobby.name || defaultLobbyName(hostPlayer?.name),
-        hostName: hostPlayer?.name || "Хост",
+        hostName: hostPlayer?.name || "Host",
         playerCount: lobby.players.length,
         gameMode: settings.gameMode || "classic",
         modeLabel: mode.label,
@@ -2737,6 +2911,115 @@ function emitSiteOnlineCount() {
   io.emit("siteOnline:update", { count: currentSiteOnlineCount() });
 }
 
+// ---------- Keep 5 Delete 5 mode ----------
+function k5AccountForSocket(socket) {
+  const user = socket.data.user;
+  if (!user) return null;
+  return { accountId: user.id, name: user.displayName || user.username, avatar: user.avatar || "" };
+}
+
+// Stats for signed-in players when a K5D5 game reaches its results. Stored in users.stats (JSONB),
+// so no schema change: k5Games, k5Tracks, k5AgreeSum / k5AgreeGames (average match with the others, %).
+function recordK5d5Results(room) {
+  const g = room.game;
+  if (!g || g.statsRecorded) return;
+  g.statsRecorded = true;
+  let changed = false;
+  for (const member of g.roster) {
+    if (!member.accountId) continue;
+    const user = findUserById(member.accountId);
+    if (!user) continue;
+    const mine = g.choices[member.id] || [];
+    const others = g.participants.filter((id) => id !== member.id);
+    let agree = 0;
+    let total = 0;
+    for (const otherId of others) {
+      const theirs = g.choices[otherId] || [];
+      mine.forEach((choice, i) => {
+        if (!choice || !theirs[i]) return;
+        total += 1;
+        if (choice.c === theirs[i].c) agree += 1;
+      });
+    }
+    const stats = { ...defaultStats(), ...(user.stats || {}) };
+    stats.k5Games = Number(stats.k5Games || 0) + 1;
+    stats.k5Tracks = Number(stats.k5Tracks || 0) + mine.length;
+    if (total) {
+      stats.k5AgreeSum = Number(stats.k5AgreeSum || 0) + Math.round((agree / total) * 100);
+      stats.k5AgreeGames = Number(stats.k5AgreeGames || 0) + 1;
+    }
+    user.stats = stats;
+    user.updatedAt = new Date().toISOString();
+    changed = true;
+  }
+  if (changed) saveUsersStore();
+}
+
+registerK5d5Sockets(io, {
+  game: k5d5,
+  deezer,
+  isCodeTaken: (code) => Boolean(lobbies[code]),
+  getAccount: k5AccountForSocket,
+  onFinish: recordK5d5Results,
+  onPresence: (socket) => {
+    if (socket.data.user?.id) emitSocialForUserAndFriends(socket.data.user.id);
+  }
+});
+
+function k5RoomForAccount(userId) {
+  for (const room of k5d5.rooms.values()) {
+    for (const player of room.players.values()) {
+      if (player.accountId === userId && player.connected) return { room, player };
+    }
+  }
+  return null;
+}
+
+// Which mode a room code belongs to (the home screen's "Join" box works for both games).
+function lookupRoom(code) {
+  const normalized = normalizeCode(code);
+  const spyLobby = lobbies[normalized];
+  if (spyLobby) {
+    return {
+      success: true,
+      mode: "spy",
+      code: normalized,
+      phase: spyLobby.phase,
+      players: spyLobby.players.length,
+      maxPlayers: spyLobby.settings.maxPlayers || DEFAULT_MAX_PLAYERS
+    };
+  }
+  const room = k5d5.findRoom(normalized);
+  if (room) return { success: true, mode: "k5", code: normalized, phase: room.phase, players: room.players.size, maxPlayers: 8 };
+  return { error: "Room not found. Check the code" };
+}
+
+function socketIsHostOf(socket, mode, code) {
+  if (mode === "spy") return lobbies[code]?.host === socket.id;
+  if (mode === "k5") {
+    const link = socket.data.k5;
+    const room = k5d5.findRoom(code);
+    return Boolean(link && room && link.code === code && room.hostId === link.pid);
+  }
+  return false;
+}
+
+io.on("connection", (socket) => {
+  socket.on("room:lookup", ({ code } = {}, cb = () => {}) => cb(lookupRoom(code)));
+
+  // "Switch game": the host has already created the new room; everyone else in the old room follows.
+  socket.on("room:announceMove", ({ fromMode, fromCode, toMode, toCode } = {}, cb = () => {}) => {
+    const from = normalizeCode(fromCode);
+    const to = normalizeCode(toCode);
+    if (!socketIsHostOf(socket, fromMode, from)) return cb({ error: "Only the host can switch the game" });
+    const target = lookupRoom(to);
+    if (target.error || target.mode !== toMode) return cb({ error: "The new room is gone" });
+    const channel = fromMode === "spy" ? from : `k5:${from}`;
+    socket.to(channel).emit("room:moved", { mode: toMode, code: to });
+    cb({ success: true });
+  });
+});
+
 io.on("connection", (socket) => {
   socket.data.user = null;
 
@@ -2753,9 +3036,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("globalChat:send", ({ name, text } = {}, cb = () => {}) => {
-    if (!socket.data.user) return cb({ error: "Войдите в аккаунт, чтобы писать в чат" });
+    if (!socket.data.user) return cb({ error: "Sign in to use the chat" });
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
-    if (!messageText) return cb({ error: "Напиши сообщение" });
+    if (!messageText) return cb({ error: "Write a message" });
 
     const identity = globalChatIdentity(socket, name);
     const message = {
@@ -2774,7 +3057,7 @@ io.on("connection", (socket) => {
       const sessionUser = findUserByToken(accessToken || token) || socket.request.user || null;
       if (!sessionUser) {
         console.warn("[auth] access restore failed: token missing or expired");
-        return cb({ error: "Сессия не найдена" });
+        return cb({ error: "Session not found" });
       }
       const user = await refreshUserFromDatabase(sessionUser);
       registerAuthenticatedSocket(socket, user);
@@ -2782,20 +3065,20 @@ io.on("connection", (socket) => {
       cb({ success: true, profile: profileForSocket(socket), social: getSocialState(user.id) });
     } catch (error) {
       console.error("[auth] access restore failed", error);
-      cb({ error: "Сессия не найдена" });
+      cb({ error: "Session not found" });
     }
   });
 
   socket.on("auth:refresh", async ({ refreshToken } = {}, cb = () => {}) => {
     try {
       const refreshed = refreshSession(refreshToken);
-      if (!refreshed) return cb({ error: "Сессия истекла" });
+      if (!refreshed) return cb({ error: "Session expired" });
       const user = await refreshUserFromDatabase(refreshed.user);
       registerAuthenticatedSocket(socket, user);
       cb({ success: true, ...refreshed.tokens, token: refreshed.tokens.accessToken, profile: profileForSocket(socket), social: getSocialState(user.id) });
     } catch (error) {
       console.error("[auth] refresh failed", error);
-      cb({ error: "Сессия истекла" });
+      cb({ error: "Session expired" });
     }
   });
 
@@ -2810,15 +3093,15 @@ io.on("connection", (socket) => {
       }
     }
     unregisterAuthenticatedSocket(socket);
-    cb({ success: true, profile: profileForSocket(socket), name: normalizeName(name || "Гость") });
+    cb({ success: true, profile: profileForSocket(socket), name: normalizeName(name || "Guest") });
   });
 
   socket.on("auth:register", async ({ username, password, displayName } = {}, cb = () => {}) => {
     const normalizedUsername = normalizeUsername(username);
-    if (normalizedUsername.length < 3) return cb({ error: "Логин должен быть от 3 символов: латиница, цифры, _ или -" });
-    if (!validatePassword(password)) return cb({ error: "Пароль должен быть от 6 до 72 символов" });
+    if (normalizedUsername.length < 3) return cb({ error: "Username needs 3+ characters: latin letters, digits, _ or -" });
+    if (!validatePassword(password)) return cb({ error: "Password must be 6 to 72 characters" });
     if (usersStore.users.some((user) => user.username === normalizedUsername)) {
-      return cb({ error: "Такой логин уже занят" });
+      return cb({ error: "That username is taken" });
     }
 
     const { salt, hash } = hashPassword(password);
@@ -2849,7 +3132,7 @@ io.on("connection", (socket) => {
   socket.on("auth:login", ({ username, password } = {}, cb = () => {}) => {
     const normalizedUsername = normalizeUsername(username);
     const user = usersStore.users.find((item) => item.username === normalizedUsername);
-    if (!user || !verifyPassword(password, user)) return cb({ error: "Неверный логин или пароль" });
+    if (!user || !verifyPassword(password, user)) return cb({ error: "Wrong username or password" });
     registerAuthenticatedSocket(socket, user);
     const tokens = createSession(user);
     cb({ success: true, ...tokens, token: tokens.accessToken, profile: profileForSocket(socket) });
@@ -2869,7 +3152,7 @@ io.on("connection", (socket) => {
 
   socket.on("profile:update", async ({ displayName, username, avatar } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы менять профиль" });
+    if (!user) return cb({ error: "Sign in to edit your profile" });
     try {
       const requestedUsername = String(username ?? (user.username || "")).trim();
       const tagResult = validateAccountTag(requestedUsername, user.id);
@@ -2891,13 +3174,13 @@ io.on("connection", (socket) => {
       emitSocialForUserAndFriends(user.id);
       cb({ success: true, profile: profileForSocket(socket) });
     } catch (error) {
-      cb({ error: error.message || "Не удалось обновить профиль" });
+      cb({ error: error.message || "Could not update the profile" });
     }
   });
 
   socket.on("account:delete", ({ refreshToken } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы удалить его" });
+    if (!user) return cb({ error: "Sign in to delete your account" });
     const userId = user.id;
     if (refreshToken) revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
     const affectedFriendIds = friendIdsFor(userId);
@@ -2912,7 +3195,7 @@ io.on("connection", (socket) => {
 
   socket.on("settings:update", ({ settings } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы сохранять настройки" });
+    if (!user) return cb({ error: "Sign in to save settings" });
     const safeSettings = settings && typeof settings === "object" ? settings : {};
     user.settings = {
       ...(user.settings || {}),
@@ -3091,7 +3374,7 @@ io.on("connection", (socket) => {
       return cb({ success: true, output: [`${categoryId} (${names.length}):`, ...names] });
     }
     const target = findUserByNicknameOrUsername(parsed.username);
-    if (!target) return cb({ error: "Пользователь не найден" });
+    if (!target) return cb({ error: "User not found" });
     ensureUserProgress(target);
     if (parsed.type === "setLevel") {
       target.economy.xp = totalXpForLevel(Math.max(1, Math.min(999, Math.floor(parsed.level))));
@@ -3170,7 +3453,7 @@ io.on("connection", (socket) => {
 
   socket.on("social:get", (cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть друзей" });
+    if (!user) return cb({ error: "Sign in to see friends" });
     cb({ success: true, ...getSocialState(user.id) });
   });
 
@@ -3207,11 +3490,11 @@ io.on("connection", (socket) => {
   socket.on("profile:view", async ({ accountId, username } = {}, cb = () => {}) => {
     const requestedUsername = String(username || "").trim().replace(/^@+/, "").toLowerCase();
     const userId = String(accountId || "").trim();
-    if (!userId && !requestedUsername) return cb({ error: "Профиль игрока недоступен" });
+    if (!userId && !requestedUsername) return cb({ error: "Player profile is not available" });
     const user = requestedUsername
       ? findUserByNicknameOrUsername(requestedUsername)
       : (findUserById(userId) || await getUser(userId));
-    if (!user) return cb({ error: "Профиль игрока не найден" });
+    if (!user) return cb({ error: "Player profile not found" });
     cb({ success: true, user: publicUser(user) });
   });
 
@@ -3221,58 +3504,61 @@ io.on("connection", (socket) => {
     if (liveResult) return cb({ success: true, result: liveResult });
     try {
       const result = await loadGameResult(normalizedCode);
-      if (!result) return cb({ error: "Результаты игры не найдены" });
+      if (!result) return cb({ error: "Game results not found" });
       cb({ success: true, result });
     } catch (error) {
-      cb({ error: "Не удалось загрузить результаты игры" });
+      cb({ error: "Could not load the game results" });
     }
   });
 
   socket.on("friend:request", ({ nickname, accountId } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы добавлять друзей" });
+    if (!user) return cb({ error: "Sign in to add friends" });
     const receiver = accountId ? findUserById(String(accountId || "").trim()) : findUserByNicknameOrUsername(nickname);
-    if (!receiver) return cb({ error: "Пользователь не найден" });
+    if (!receiver) return cb({ error: "User not found" });
     const result = createFriendRequest(user.id, receiver.id);
     cb(result.success ? { success: true } : result);
   });
 
   socket.on("friend:accept", ({ requestId } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт" });
+    if (!user) return cb({ error: "Sign in first" });
     cb(acceptFriendRequest(user.id, String(requestId || "")));
   });
 
   socket.on("friend:decline", ({ requestId } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт" });
+    if (!user) return cb({ error: "Sign in first" });
     cb(declineFriendRequest(user.id, String(requestId || "")));
   });
 
   socket.on("friend:remove", ({ friendId } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт" });
+    if (!user) return cb({ error: "Sign in first" });
     cb(removeFriend(user.id, String(friendId || "")));
   });
 
   socket.on("friend:lobby:invite", ({ friendId, code } = {}, cb = () => {}) => {
     const user = socket.data.user;
     const targetId = String(friendId || "");
-    if (!user) return cb({ error: "Войди в аккаунт" });
-    if (!usersAreFriends(user.id, targetId)) return cb({ error: "Вы не друзья" });
+    if (!user) return cb({ error: "Sign in first" });
+    if (!usersAreFriends(user.id, targetId)) return cb({ error: "You are not friends" });
     const lobbyCode = normalizeCode(code);
-    if (!lobbyCode || !lobbies[lobbyCode] || !lobbies[lobbyCode].players.some((player) => player.accountId === user.id || player.id === socket.id)) {
-      return cb({ error: "Ты не в лобби" });
+    const inSpyRoom = Boolean(lobbies[lobbyCode]?.players.some((player) => player.accountId === user.id || player.id === socket.id));
+    const k5Room = k5d5.findRoom(lobbyCode);
+    const inK5Room = Boolean(k5Room && [...k5Room.players.values()].some((player) => player.accountId === user.id));
+    if (!lobbyCode || (!inSpyRoom && !inK5Room)) {
+      return cb({ error: "You are not in a room" });
     }
-    io.to(`user:${targetId}`).emit("social:notification", { type: "lobby:invite", code: lobbyCode, message: `${user.displayName || user.username} зовет в лобби ${lobbyCode}` });
+    io.to(`user:${targetId}`).emit("social:notification", { type: "lobby:invite", code: lobbyCode, message: `${user.displayName || user.username} invites you to room ${lobbyCode}` });
     cb({ success: true });
   });
 
   socket.on("dm:history", ({ friendId } = {}, cb = () => {}) => {
     const user = socket.data.user;
     const targetId = String(friendId || "");
-    if (!user) return cb({ error: "Войди в аккаунт" });
-    if (!usersAreFriends(user.id, targetId)) return cb({ error: "Вы не друзья" });
+    if (!user) return cb({ error: "Sign in first" });
+    if (!usersAreFriends(user.id, targetId)) return cb({ error: "You are not friends" });
     const changed = markDirectRead(user.id, targetId);
     if (changed) {
       emitSocialState(user.id);
@@ -3285,9 +3571,9 @@ io.on("connection", (socket) => {
     const user = socket.data.user;
     const targetId = String(friendId || "");
     const body = String(text || "").trim().slice(0, MAX_DIRECT_MESSAGE_LENGTH);
-    if (!user) return cb({ error: "Войди в аккаунт" });
-    if (!body) return cb({ error: "Напиши сообщение" });
-    if (!usersAreFriends(user.id, targetId)) return cb({ error: "Вы не друзья" });
+    if (!user) return cb({ error: "Sign in first" });
+    if (!body) return cb({ error: "Write a message" });
+    if (!usersAreFriends(user.id, targetId)) return cb({ error: "You are not friends" });
     const receiverOnline = userSockets.has(targetId);
     const message = {
       id: crypto.randomUUID(),
@@ -3307,7 +3593,7 @@ io.on("connection", (socket) => {
     cb({ success: true, message: senderPayload });
     io.to(`user:${user.id}`).emit("dm:message", { friendId: targetId, message: senderPayload });
     io.to(`user:${targetId}`).emit("dm:message", { friendId: user.id, message: receiverPayload });
-    io.to(`user:${targetId}`).emit("social:notification", { type: "dm:new", friendId: user.id, message: `Новое сообщение от ${user.displayName || user.username}` });
+    io.to(`user:${targetId}`).emit("social:notification", { type: "dm:new", friendId: user.id, message: `New message from ${user.displayName || user.username}` });
     emitSocialState(targetId);
   });
 
@@ -3333,12 +3619,12 @@ io.on("connection", (socket) => {
   socket.on("joinLobby", ({ code, name, reconnectToken }, cb = () => {}) => {
     const roomCode = normalizeCode(code);
     const lobby = lobbies[roomCode];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
     if (lobby.players.some((player) => player.id === socket.id)) {
       return cb({ success: true, code: roomCode, playerId: socket.id });
     }
-    if (lobby.players.length >= (lobby.settings.maxPlayers || DEFAULT_MAX_PLAYERS)) return cb({ error: "Комната заполнена" });
+    if (lobby.players.length >= (lobby.settings.maxPlayers || DEFAULT_MAX_PLAYERS)) return cb({ error: "Room is full" });
 
     socket.join(roomCode);
     lobby.players.push(playerFromSocket(socket, name, lobby, reconnectToken));
@@ -3349,9 +3635,9 @@ io.on("connection", (socket) => {
 
   socket.on("leaveLobby", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
-    if (hasActiveGameSession(lobby)) return cb({ error: "Во время игры выйти можно только закрыв вкладку" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "You are not in this room" });
+    if (hasActiveGameSession(lobby)) return cb({ error: "You cannot leave during a game" });
 
     handlePlayerDeparture(lobby, socket);
     cb({ success: true });
@@ -3359,13 +3645,13 @@ io.on("connection", (socket) => {
 
   socket.on("updateSettings", ({ code, settings }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Настройки может менять только хост" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can change settings" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
 
     const nextSettings = normalizeSettings({ ...lobby.settings, ...settings });
     if (nextSettings.maxPlayers < lobby.players.length) {
-      return cb({ error: `В лобби уже ${lobby.players.length} игроков — выбери лимит выше` });
+      return cb({ error: `There are already ${lobby.players.length} players. Pick a higher limit` });
     }
 
     lobby.settings = nextSettings;
@@ -3375,9 +3661,9 @@ io.on("connection", (socket) => {
 
   socket.on("updateLobbyMeta", ({ code, name, isOpen }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Название и открытость меняет только хост" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can change the room name" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
 
     if (name !== undefined) {
       lobby.name = normalizeLobbyName(name, defaultLobbyName(lobby.players.find((player) => player.id === lobby.host)?.name));
@@ -3392,10 +3678,10 @@ io.on("connection", (socket) => {
 
   socket.on("setReady", ({ code, ready }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
     const player = lobby.players.find((item) => item.id === socket.id);
-    if (!player) return cb({ error: "Ты не в этой комнате" });
+    if (!player) return cb({ error: "You are not in this room" });
     player.ready = Boolean(ready);
     cb({ success: true, ready: player.ready });
     emitLobbyUpdate(lobby.code);
@@ -3403,12 +3689,12 @@ io.on("connection", (socket) => {
 
   socket.on("updateName", ({ code, name }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
     const player = lobby.players.find((item) => item.id === socket.id);
-    if (!player) return cb({ error: "Ты не в этой комнате" });
+    if (!player) return cb({ error: "You are not in this room" });
     if (!player.guest || socket.data.user) {
-      return cb({ error: "Ник аккаунта меняется только в профиле" });
+      return cb({ error: "Change your account name in the profile" });
     }
     player.name = makeUniqueName(lobby, name, socket.id);
     cb({ success: true, name: player.name });
@@ -3417,12 +3703,12 @@ io.on("connection", (socket) => {
 
   socket.on("startGame", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Начать игру может только хост" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
-    if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Нужно минимум 3 игрока" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can start the game" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
+    if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Spy needs at least 3 players" });
     if (lobby.players.some((player) => !player.ready)) {
-      return cb({ error: "Все игроки должны нажать «Готов»" });
+      return cb({ error: "Everyone has to press Ready" });
     }
 
     startLobbyGame(lobby);
@@ -3431,10 +3717,10 @@ io.on("connection", (socket) => {
 
   socket.on("forceStartGame", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "FORCE START доступен только хосту" });
-    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Игра уже началась" });
-    if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Нужно минимум 3 игрока" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can force start" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The game has already started" });
+    if (lobby.players.length < MIN_LOBBY_PLAYERS) return cb({ error: "Spy needs at least 3 players" });
 
     markAllPlayersReady(lobby);
     startLobbyGame(lobby);
@@ -3444,14 +3730,14 @@ io.on("connection", (socket) => {
 
   socket.on("hostSkipTurn", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост может пропустить ход" });
-    if (lobby.phase !== "playing") return cb({ error: "Сейчас нет активного хода" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can skip a turn" });
+    if (lobby.phase !== "playing") return cb({ error: "There is no active turn" });
 
     const skippedPlayerId = lobby.order[lobby.currentTurnIndex];
     const skippedPlayer = lobby.players.find((player) => player.id === skippedPlayerId);
     io.to(lobby.code).emit("hostAction", {
-      message: `Хост пропустил ход: ${skippedPlayer?.name || "игрок"}`
+      message: `The host skipped ${skippedPlayer?.name || "a player"}'s turn`
     });
     cb({ success: true });
     advanceTurn(lobby.code);
@@ -3460,45 +3746,45 @@ io.on("connection", (socket) => {
 
   socket.on("hostTogglePause", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост может ставить ход на паузу" });
-    if (lobby.phase !== "playing") return cb({ error: "Пауза доступна только во время игры" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can pause" });
+    if (lobby.phase !== "playing") return cb({ error: "You can pause only during a game" });
 
     const paused = lobby.turnStage !== "paused";
     const ok = paused ? pauseTurnTimer(lobby) : resumeTurnTimer(lobby);
-    if (!ok) return cb({ error: paused ? "Поставить на паузу можно только во время прослушивания" : "Продолжить можно только после паузы" });
+    if (!ok) return cb({ error: paused ? "You can pause only while a track plays" : "Nothing is paused" });
 
-    io.to(lobby.code).emit("hostAction", { message: paused ? "Хост поставил прослушивание на паузу" : "Хост продолжил прослушивание" });
+    io.to(lobby.code).emit("hostAction", { message: paused ? "The host paused the track" : "The host resumed the track" });
     cb({ success: true, paused, timeLeft: lobby.timeLeft });
   });
 
   socket.on("hostAdjustTimer", ({ code, delta }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост может менять таймер" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can change the timer" });
     const normalizedDelta = Math.sign(Number(delta) || 0) * HOST_TIMER_STEP_SECONDS;
-    if (!normalizedDelta) return cb({ error: "Выбери изменение таймера" });
+    if (!normalizedDelta) return cb({ error: "Pick a timer change" });
     const timeLeft = adjustTurnTimer(lobby, normalizedDelta);
-    if (timeLeft === null) return cb({ error: "Таймер можно менять только во время прослушивания" });
+    if (timeLeft === null) return cb({ error: "The timer changes only while a track plays" });
 
-    io.to(lobby.code).emit("hostAction", { message: `Хост ${normalizedDelta > 0 ? "добавил" : "убрал"} 15 секунд` });
+    io.to(lobby.code).emit("hostAction", { message: `The host ${normalizedDelta > 0 ? "added" : "removed"} 15 seconds` });
     cb({ success: true, timeLeft });
   });
 
   socket.on("hostAdjustRounds", ({ code, delta }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост может менять раунды" });
-    if (lobby.phase !== "playing") return cb({ error: "Раунды можно менять только во время игры" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can change rounds" });
+    if (lobby.phase !== "playing") return cb({ error: "Rounds change only during a game" });
 
     const normalizedDelta = Math.sign(Number(delta) || 0);
-    if (!normalizedDelta) return cb({ error: "Выбери изменение раундов" });
+    if (!normalizedDelta) return cb({ error: "Pick a round change" });
     const minRounds = Math.max(1, lobby.round || 1);
     const nextRounds = Math.max(minRounds, Math.min(8, Number(lobby.settings.rounds || DEFAULT_SETTINGS.rounds) + normalizedDelta));
-    if (nextRounds === lobby.settings.rounds) return cb({ error: normalizedDelta < 0 ? "Нельзя убрать текущий или прошедший раунд" : "Достигнут максимум раундов" });
+    if (nextRounds === lobby.settings.rounds) return cb({ error: normalizedDelta < 0 ? "You cannot remove the current or a past round" : "That is the round limit" });
 
     lobby.settings.rounds = nextRounds;
-    io.to(lobby.code).emit("hostAction", { message: `Хост изменил число раундов: ${nextRounds}` });
+    io.to(lobby.code).emit("hostAction", { message: `The host set rounds to ${nextRounds}` });
     cb({ success: true, rounds: nextRounds });
     emitLobbyUpdate(lobby.code);
     emitGameState(lobby.code);
@@ -3506,40 +3792,40 @@ io.on("connection", (socket) => {
 
   socket.on("hostSetTurn", ({ code, playerId }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост может передать ход" });
-    if (lobby.phase !== "playing") return cb({ error: "Ход можно передать только во время игры" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can pass the turn" });
+    if (lobby.phase !== "playing") return cb({ error: "The turn passes only during a game" });
     const targetIndex = lobby.order.indexOf(playerId);
-    if (targetIndex === -1 || !lobby.players.some((player) => player.id === playerId)) return cb({ error: "Игрок не найден в очереди" });
+    if (targetIndex === -1 || !lobby.players.some((player) => player.id === playerId)) return cb({ error: "Player is not in the turn order" });
 
     const target = lobby.players.find((player) => player.id === playerId);
     lobby.currentTurnIndex = targetIndex;
     io.to(lobby.code).emit("stopTrack");
-    io.to(lobby.code).emit("hostAction", { message: `Хост передал ход: ${target?.name || "игрок"}` });
+    io.to(lobby.code).emit("hostAction", { message: `The host passed the turn to ${target?.name || "a player"}` });
     cb({ success: true });
     startTurn(lobby.code);
   });
 
   socket.on("hostStartVoting", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост может запустить голосование" });
-    if (lobby.phase !== "playing") return cb({ error: "Голосование можно запустить только во время игры" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can start the vote" });
+    if (lobby.phase !== "playing") return cb({ error: "The vote starts only during a game" });
 
     io.to(lobby.code).emit("stopTrack");
-    io.to(lobby.code).emit("hostAction", { message: "Хост досрочно запустил голосование" });
+    io.to(lobby.code).emit("hostAction", { message: "The host started the vote early" });
     cb({ success: true });
     startVoting(lobby.code);
   });
 
   socket.on("hostKickPlayer", ({ code, playerId }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Кикать игроков может только хост" });
-    if (playerId === socket.id) return cb({ error: "Хост не может кикнуть себя" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can remove players" });
+    if (playerId === socket.id) return cb({ error: "You cannot remove yourself" });
 
     const kickedPlayer = lobby.players.find((player) => player.id === playerId);
-    if (!kickedPlayer) return cb({ error: "Игрок не найден" });
+    if (!kickedPlayer) return cb({ error: "Player not found" });
 
     const wasCurrentTurn = lobby.phase === "playing" && lobby.order[lobby.currentTurnIndex] === playerId;
     removePlayerFromLobby(lobby, playerId);
@@ -3547,16 +3833,16 @@ io.on("connection", (socket) => {
     const kickedSocket = io.sockets.sockets.get(playerId);
     if (kickedSocket) {
       kickedSocket.leave(lobby.code);
-      kickedSocket.emit("kicked", { reason: "Хост удалил тебя из комнаты" });
+      kickedSocket.emit("kicked", { reason: "The host removed you from the room" });
     }
 
-    io.to(lobby.code).emit("hostAction", { message: `Хост кикнул игрока ${kickedPlayer.name}` });
+    io.to(lobby.code).emit("hostAction", { message: `The host removed ${kickedPlayer.name}` });
     cb({ success: true });
 
     if (lobby.phase === "playing" && lobby.players.length < 3) {
       clearTimer(lobby.code);
       resetLobbyToWaiting(lobby);
-      io.to(lobby.code).emit("gameCancelled", { reason: "Игрок кикнут — нужно минимум 3 участника" });
+      io.to(lobby.code).emit("gameCancelled", { reason: "A player was removed. Spy needs at least 3 players" });
     } else if (lobby.phase === "playing" && wasCurrentTurn) {
       startTurn(lobby.code);
     } else if (lobby.phase === "playing") {
@@ -3583,15 +3869,15 @@ io.on("connection", (socket) => {
 
   socket.on("chat:send", ({ code, text }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (!lobby) return cb({ error: "Room not found" });
     if (!["lobby", "playing", "voting", "spyGuess"].includes(lobby.phase)) {
-      return cb({ error: "Чат сейчас недоступен" });
+      return cb({ error: "Chat is closed right now" });
     }
     const player = lobby.players.find((item) => item.id === socket.id);
-    if (!player) return cb({ error: "Ты не в этой комнате" });
+    if (!player) return cb({ error: "You are not in this room" });
 
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
-    if (!messageText) return cb({ error: "Напиши сообщение" });
+    if (!messageText) return cb({ error: "Write a message" });
 
     const message = {
       id: `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
@@ -3606,19 +3892,20 @@ io.on("connection", (socket) => {
     console.log(`[CS] player equipped:${JSON.stringify(player.equippedCosmetics || {})}`);
     lobby.chatMessages = [...(lobby.chatMessages || []), message].slice(-MAX_CHAT_MESSAGES);
     io.to(lobby.code).emit("chat:update", { messages: lobby.chatMessages });
+    emitSpyState(lobby.code);
     cb({ success: true, message });
   });
 
 
   socket.on("finalComment:send", ({ code, text }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.phase !== "ended") return cb({ error: "Комментарии доступны после игры" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.phase !== "ended") return cb({ error: "Comments open after the game" });
     const player = lobby.players.find((item) => item.id === socket.id);
-    if (!player) return cb({ error: "Ты не в этой комнате" });
+    if (!player) return cb({ error: "You are not in this room" });
 
     const messageText = String(text || "").replace(/\s+/g, " ").trim().slice(0, MAX_FINAL_COMMENT_LENGTH);
-    if (!messageText) return cb({ error: "Напиши одну фразу" });
+    if (!messageText) return cb({ error: "Write one line" });
 
     const comment = {
       id: `${Date.now()}-${crypto.randomBytes(3).toString("hex")}`,
@@ -3638,34 +3925,59 @@ io.on("connection", (socket) => {
       saveGameResult(lobby.code, lobby.finalResult).catch((error) => console.error("[db] failed to update game result comments", error));
     }
     io.to(lobby.code).emit("finalComments:update", { comments: lobby.finalComments });
+    emitSpyState(lobby.code);
     cb({ success: true, comment, comments: lobby.finalComments });
   });
 
-  socket.on("playTrack", async ({ code, url }, cb = () => {}) => {
+  // A turn's track. New site: { code, trackId } — a Deezer track, played in sync for everyone from
+  // `startsAt`. Old site (/old): { code, url } — a YouTube/SoundCloud link (lib/legacy/track-links.js).
+  socket.on("playTrack", async ({ code, url, trackId }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    const submission = normalizeTrackSubmission(url);
-    if (!lobby || lobby.phase !== "playing") return cb({ error: "Сейчас нельзя отправить трек" });
-    if (lobby.order[lobby.currentTurnIndex] !== socket.id) return cb({ error: "Сейчас ход другого игрока" });
-    if (lobby.submittedThisTurn) return cb({ error: "Трек уже отправлен" });
-    if (!submission.valid) return cb({ error: "Вставь ссылку YouTube/SoundCloud или напиши исполнителя и трек" });
+    const useDeezer = trackId !== undefined && trackId !== null && trackId !== "";
+    const submission = useDeezer ? null : normalizeTrackSubmission(url);
+    if (!lobby || lobby.phase !== "playing") return cb({ error: "You cannot send a track now" });
+    if (lobby.order[lobby.currentTurnIndex] !== socket.id) return cb({ error: "It is another player's turn" });
+    if (lobby.submittedThisTurn) return cb({ error: "Track already sent" });
+    if (!useDeezer && !submission.valid) return cb({ error: "Paste a YouTube or SoundCloud link, or type artist and title" });
 
     lobby.submittedThisTurn = true;
-    if (submission.source === "library" && submission.searchQuery) {
+    const turnKey = `${lobby.round}:${lobby.currentTurnIndex}`;
+    let deezerTrack = null;
+    if (useDeezer) {
+      try {
+        deezerTrack = await deezer.getTrack(String(trackId).replace(/\D/g, ""));
+      } catch (error) {
+        console.warn("[deezer] track load failed", error.message);
+      }
+      const sameTurn = lobbies[lobby.code] === lobby && lobby.phase === "playing" && `${lobby.round}:${lobby.currentTurnIndex}` === turnKey;
+      if (!deezerTrack || !sameTurn) {
+        if (sameTurn) lobby.submittedThisTurn = false;
+        return cb({ error: deezerTrack ? "The turn has moved on" : "This track has no preview. Pick another one" });
+      }
+    } else if (submission.source === "library" && submission.searchQuery) {
       const resolvedUrl = await resolveYouTubeSearchUrl(submission.searchQuery);
       if (resolvedUrl) submission.url = resolvedUrl;
     }
-    const trackUrl = submission.url;
 
     const player = lobby.players.find((item) => item.id === socket.id);
     lobby.currentTrackReactions = {};
     resetSkipVotes(lobby);
     lobby.lastTrack = {
       id: `${lobby.round}-${lobby.currentTurnIndex + 1}-${Date.now()}`,
-      url: trackUrl,
-      searchQuery: submission.searchQuery || "",
-      source: submission.source,
+      url: deezerTrack ? `https://www.deezer.com/track/${deezerTrack.id}` : submission.url,
+      searchQuery: deezerTrack ? "" : (submission.searchQuery || ""),
+      source: deezerTrack ? "deezer" : submission.source,
+      ...(deezerTrack ? {
+        deezerId: deezerTrack.id,
+        title: deezerTrack.title,
+        artist: deezerTrack.artist,
+        album: deezerTrack.album,
+        cover: deezerTrack.cover,
+        preview: deezerTrack.preview,
+        startsAt: Date.now() + SPY_TRACK_START_DELAY_MS
+      } : {}),
       playerId: socket.id,
-      playerName: player?.name || "Игрок",
+      playerName: player?.name || "Player",
       round: lobby.round,
       turnNumber: lobby.currentTurnIndex + 1
     };
@@ -3679,16 +3991,16 @@ io.on("connection", (socket) => {
   socket.on("skipTrackVote", ({ code }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby || lobby.phase !== "playing" || !lobby.lastTrack || !["listening", "paused"].includes(lobby.turnStage)) {
-      return cb({ error: "Сейчас нельзя пропустить трек" });
+      return cb({ error: "You cannot skip now" });
     }
     if (!lobby.players.some((player) => player.id === socket.id && !player.disconnected)) {
-      return cb({ error: "Ты не в этой комнате" });
+      return cb({ error: "You are not in this room" });
     }
     if (lobby.lastTrack.playerId === socket.id) {
-      return cb({ error: "Нельзя пропускать свой трек" });
+      return cb({ error: "You cannot skip your own track" });
     }
     if (lobby.skipCompleted) {
-      return cb({ error: "Трек уже пропускается" });
+      return cb({ error: "The track is already being skipped" });
     }
 
     lobby.skipVotes = lobby.skipVotes || {};
@@ -3698,6 +4010,7 @@ io.on("connection", (socket) => {
 
     const skipState = getSkipVoteState(lobby);
     io.to(lobby.code).emit("skipVoteUpdate", skipState);
+    emitSpyState(lobby.code);
     cb({ success: true, skipVote: skipState });
     completeSkipVote(lobby);
   });
@@ -3705,16 +4018,16 @@ io.on("connection", (socket) => {
   socket.on("trackReaction", ({ code, reaction }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby || lobby.phase !== "playing" || !lobby.lastTrack) {
-      return cb({ error: "Сейчас не на что реагировать" });
+      return cb({ error: "Nothing to react to" });
     }
     if (!lobby.players.some((player) => player.id === socket.id)) {
-      return cb({ error: "Ты не в этой комнате" });
+      return cb({ error: "You are not in this room" });
     }
     if (!ALLOWED_REACTIONS.includes(reaction)) {
-      return cb({ error: "Такой реакции нет" });
+      return cb({ error: "Unknown reaction" });
     }
     if (lobby.lastTrack.playerId === socket.id) {
-      return cb({ error: "Нельзя ставить реакции на свой трек" });
+      return cb({ error: "You cannot react to your own track" });
     }
 
     if (lobby.currentTrackReactions[socket.id] === reaction) {
@@ -3731,15 +4044,16 @@ io.on("connection", (socket) => {
       reactionCounts,
       trackHistory: lobby.trackHistory
     });
+    emitSpyState(lobby.code);
     cb({ success: true, selectedReaction, reactionCounts });
   });
 
   socket.on("vote", ({ code, target }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby || lobby.phase !== "voting") return cb({ error: "Голосование еще не началось" });
-    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
-    if (!lobby.voteCandidates.includes(target)) return cb({ error: "Этот игрок не участвует в текущем голосовании" });
-    if (target === socket.id) return cb({ error: "Нельзя голосовать за себя" });
+    if (!lobby || lobby.phase !== "voting") return cb({ error: "The vote has not started" });
+    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "You are not in this room" });
+    if (!lobby.voteCandidates.includes(target)) return cb({ error: "That player is not in this vote" });
+    if (target === socket.id) return cb({ error: "You cannot vote for yourself" });
 
     lobby.votes[socket.id] = target;
     const voteTotals = publicVotes(lobby);
@@ -3750,6 +4064,7 @@ io.on("connection", (socket) => {
       anonymous: lobby.settings.anonymousVoting,
       voteRound: lobby.voteRound
     });
+    emitSpyState(lobby.code);
     cb({ success: true });
 
     if (Object.keys(lobby.votes).length >= lobby.players.length) {
@@ -3759,22 +4074,22 @@ io.on("connection", (socket) => {
 
   socket.on("submitSpyGuess", ({ code, guess, optionId }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby || lobby.phase !== "spyGuess") return cb({ error: "Сейчас нельзя угадывать тему" });
-    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "Ты не в этой комнате" });
-    if (!lobby.spies.includes(socket.id) || lobby.spyGuessTargetId !== socket.id) return cb({ error: "Тему угадывает только выбранный шпион" });
-    if (lobby.spyGuessMode !== "spy") return cb({ error: "Тема уже выбрана автоматически" });
+    if (!lobby || lobby.phase !== "spyGuess") return cb({ error: "You cannot guess now" });
+    if (!lobby.players.some((player) => player.id === socket.id)) return cb({ error: "You are not in this room" });
+    if (!lobby.spies.includes(socket.id) || lobby.spyGuessTargetId !== socket.id) return cb({ error: "Only the caught spy guesses the theme" });
+    if (lobby.spyGuessMode !== "spy") return cb({ error: "The theme was already picked" });
 
     const selectedOptionId = String(optionId || guess || "").trim();
     const selectedOption = (lobby.spyGuessOptions || []).find((option) => option.id === selectedOptionId);
-    if (!selectedOption) return cb({ error: "Выбери один из вариантов темы" });
-    if (lobby.spyGuess) return cb({ error: "Версия уже отправлена" });
+    if (!selectedOption) return cb({ error: "Pick one of the themes" });
+    if (lobby.spyGuess) return cb({ error: "Guess already sent" });
 
     clearTimer(lobby.code);
     const player = lobby.players.find((item) => item.id === socket.id);
     const spyGuess = {
       text: selectedOption.text,
       playerId: socket.id,
-      playerName: player?.name || "Шпион",
+      playerName: player?.name || "Spy",
       skipped: false,
       correct: Boolean(selectedOption.correct),
       optionId: selectedOption.id
@@ -3788,9 +4103,9 @@ io.on("connection", (socket) => {
 
   socket.on("hostResolveSpyGuess", ({ code, correct }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
-    if (lobby.host !== socket.id) return cb({ error: "Только хост решает, угадал ли шпион" });
-    if (lobby.phase !== "spyGuess" || !lobby.pendingSpyGuess) return cb({ error: "Нет версии шпиона на рассмотрении" });
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host decides the spy's guess" });
+    if (lobby.phase !== "spyGuess" || !lobby.pendingSpyGuess) return cb({ error: "There is no guess to decide" });
 
     const spyGuess = { ...lobby.pendingSpyGuess, correct: Boolean(correct), skipped: false };
     lobby.spyGuess = spyGuess;
@@ -3799,14 +4114,16 @@ io.on("connection", (socket) => {
     finishGame(lobby.code, lobby.suspected || [], lobby.finalVotes || null, spyGuess);
   });
 
-  socket.on("restartLobby", ({ code }, cb = () => {}) => {
+  // forAll (new interface, host only): reset the ended room for everyone so the next game can start.
+  // Without it (old interface) a player only returns to the lobby view locally, as before.
+  socket.on("restartLobby", ({ code, forAll } = {}, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
-    if (!lobby) return cb({ error: "Комната не найдена" });
+    if (!lobby) return cb({ error: "Room not found" });
     const isPlayer = lobby.players.some((player) => player.id === socket.id);
     const canReturnAfterGame = lobby.phase === "ended" && isPlayer;
-    if (lobby.host !== socket.id && !canReturnAfterGame) return cb({ error: "Вернуть игру в лобби может только хост" });
+    if (lobby.host !== socket.id && !canReturnAfterGame) return cb({ error: "Only the host can return to the lobby" });
 
-    if (lobby.phase === "ended" && isPlayer) {
+    if (lobby.phase === "ended" && isPlayer && !(forAll && lobby.host === socket.id)) {
       socket.emit("returnedToLobby", { lobby: publicLobby(lobby) });
       return cb({ success: true, localOnly: true, lobby: publicLobby(lobby) });
     }
@@ -3841,87 +4158,22 @@ io.on("connection", (socket) => {
 });
 
 
-const youtubeSearchCache = new Map();
-const YOUTUBE_SEARCH_CACHE_TTL_MS = 1000 * 60 * 30;
-
-function extractFirstYouTubeVideoId(html = "") {
-  const rendererMatch = html.match(/"videoRenderer"\s*:\s*\{[\s\S]{0,2400}?"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/);
-  if (rendererMatch) return rendererMatch[1];
-  const watchMatch = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
-  return watchMatch ? watchMatch[1] : "";
-}
-
-async function resolveYouTubeSearchUrl(query, { fetchImpl = globalThis.fetch } = {}) {
-  const normalizedQuery = String(query || "").trim().replace(/\s+/g, " ").slice(0, 120);
-  if (normalizedQuery.length < 2 || typeof fetchImpl !== "function") return "";
-  const cached = youtubeSearchCache.get(normalizedQuery.toLowerCase());
-  if (cached && Date.now() - cached.createdAt < YOUTUBE_SEARCH_CACHE_TTL_MS) return cached.url;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4500);
-  try {
-    const response = await fetchImpl(`https://www.youtube.com/results?search_query=${encodeURIComponent(normalizedQuery)}`, {
-      signal: controller.signal,
-      headers: {
-        "accept-language": "ru,en;q=0.9",
-        "user-agent": "Mozilla/5.0 (compatible; MusicSpyBot/1.0; +https://musicspy.online/)"
-      }
-    });
-    if (!response.ok) return "";
-    const html = await response.text();
-    const videoId = extractFirstYouTubeVideoId(html);
-    if (!videoId) return "";
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    youtubeSearchCache.set(normalizedQuery.toLowerCase(), { url, createdAt: Date.now() });
-    return url;
-  } catch (error) {
-    console.warn(`YouTube search failed for "${normalizedQuery}":`, error?.message || error);
-    return "";
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function normalizeTrackSubmission(input) {
-  const raw = String(input || "").trim().replace(/\s+/g, " ");
-  if (!raw) return { valid: false, url: "", searchQuery: "", source: "empty" };
-  if (isSupportedTrackUrl(raw)) return { valid: true, url: raw, searchQuery: "", source: "url" };
-  const looksLikeUnsupportedUrl = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
-  if (looksLikeUnsupportedUrl) return { valid: false, url: raw, searchQuery: "", source: "unsupported-url" };
-  const query = raw.slice(0, 120);
-  if (query.length < 2) return { valid: false, url: raw, searchQuery: "", source: "short-query" };
-  return {
-    valid: true,
-    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-    searchQuery: query,
-    source: "library"
-  };
-}
-
-function isSupportedTrackUrl(url) {
-  try {
-    const parsed = new URL(url);
-    return /(^|\.)youtube\.com$/i.test(parsed.hostname)
-      || /(^|\.)youtu\.be$/i.test(parsed.hostname)
-      || /(^|\.)soundcloud\.com$/i.test(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
+// YouTube / SoundCloud link support moved to lib/legacy/track-links.js (not offered on the new site).
 
 function pickTheme() {
   return THEMES[Math.floor(Math.random() * THEMES.length)];
 }
 
 app.get(/^\/(?!socket\.io|api\/|auth\/).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(WEB_DIR, "index.html"));
 });
 
-if (require.main === module) {
+// Started directly (node server.js) or through `npm run mock`, which sets MUSICSPY_START before requiring.
+if (require.main === module || process.env.MUSICSPY_START === "1") {
   initializePersistentState()
     .then(() => {
       server.listen(process.env.PORT || 3000, () => {
-        console.log("Music Spy server running; users store: PostgreSQL");
+        console.log(`MusicSpy running on http://localhost:${process.env.PORT || 3000}  (accounts: ${LOCAL_MODE ? "local file data/users.json, no database" : "PostgreSQL"}${MOCK_DEEZER ? ", test tracks instead of Deezer" : ""})`);
       });
     })
     .catch((error) => {

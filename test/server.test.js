@@ -231,7 +231,7 @@ test("normalizeSettings applies blitz preset and supports one-round games", () =
 
   assert.deepEqual(normalizeSettings({ gameMode: "blitz" }), {
     gameMode: "blitz",
-    label: "Блиц",
+    label: "Blitz",
     rounds: 1,
     listenTime: 15,
     spyMode: "auto",
@@ -239,7 +239,7 @@ test("normalizeSettings applies blitz preset and supports one-round games", () =
     anonymousVoting: true,
     votingTime: 30,
     runoffOnTie: false,
-    maxPlayers: 9
+    maxPlayers: 8
   });
 
   assert.equal(normalizeSettings({ rounds: 1 }).rounds, 1);
@@ -397,8 +397,8 @@ test("normalizeSettings clamps lobby max players to host choices", () => {
 
   assert.equal(normalizeSettings({ maxPlayers: 3 }).maxPlayers, 3);
   assert.equal(normalizeSettings({ maxPlayers: 6 }).maxPlayers, 6);
-  assert.equal(normalizeSettings({ maxPlayers: 9 }).maxPlayers, 9);
-  assert.equal(normalizeSettings({ maxPlayers: 10 }).maxPlayers, 9);
+  assert.equal(normalizeSettings({ maxPlayers: 8 }).maxPlayers, 8);
+  assert.equal(normalizeSettings({ maxPlayers: 9 }).maxPlayers, 8);
 });
 
 test("createLobbyState applies host settings before players can join", () => {
@@ -410,7 +410,7 @@ test("createLobbyState applies host settings before players can join", () => {
     settings: {
       gameMode: "blitz",
       rounds: 5,
-      listenTime: 60,
+      listenTime: 30,
       spyMode: "manual",
       spyCount: 2,
       anonymousVoting: false,
@@ -425,7 +425,7 @@ test("createLobbyState applies host settings before players can join", () => {
   assert.equal(lobby.phase, "lobby");
   assert.equal(lobby.settings.gameMode, "blitz");
   assert.equal(lobby.settings.rounds, 5);
-  assert.equal(lobby.settings.listenTime, 60);
+  assert.equal(lobby.settings.listenTime, 30);
   assert.equal(lobby.settings.spyMode, "manual");
   assert.equal(lobby.settings.spyCount, 2);
   assert.equal(lobby.settings.votingTime, 90);
@@ -474,7 +474,7 @@ test("publicOpenLobbies lists only waiting public rooms", () => {
     hostName: "Мотя",
     playerCount: 2,
     gameMode: "classic",
-    modeLabel: "Классика",
+    modeLabel: "Classic",
     rounds: 3,
     listenTime: 30,
     maxPlayers: 8,
