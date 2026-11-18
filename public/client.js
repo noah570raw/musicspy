@@ -75,6 +75,8 @@ const state = {
   latestResult: null,
   finalComments: [],
   returnedToLobbyAfterGame: false,
+  viewedPublicProfile: null,
+  gameHistoryReturnPath: "",
   backgroundFadeFrame: null,
   backgroundTrackIndex: 0,
   backgroundTrackFallbackStartedAt: 0,
@@ -277,6 +279,22 @@ function requestPublicProfileByUsername(username) {
   });
 }
 
+function requestGameHistoryByUsername(username) {
+  const cleanUsername = String(username || "").trim().replace(/^@+/, "");
+  if (!cleanUsername || !socket.connected) {
+    state.pendingRoute = { type: "gameHistory", username: cleanUsername };
+    return;
+  }
+  socket.emit("profile:view", { username: cleanUsername }, (res = {}) => {
+    if (res.error || !res.user) {
+      showScreen("menu");
+      return setStatus("menuError", res.error || "История игрока не найдена", true);
+    }
+    state.viewedPublicProfile = res.user;
+    openGameHistory(res.user.id, { updateRoute: false, returnPath: `/profile/@${encodeURIComponent(res.user.username || cleanUsername)}` });
+  });
+}
+
 function reconnectRouteGame(code) {
   const roomCode = normalizeRouteCode(code);
   if (!roomCode || !socket.connected) {
@@ -336,6 +354,18 @@ function handleCurrentRoute({ replace = false } = {}) {
       requestPublicProfileByUsername(parts[1]);
       return;
     }
+    if (parts[0] === "gamehistory") {
+      if (parts[1]) {
+        requestGameHistoryByUsername(parts[1]);
+        return;
+      }
+      if (!state.authResolved) {
+        state.pendingRoute = { type: "ownGameHistory" };
+        return;
+      }
+      openGameHistory(state.profile?.id || "", { updateRoute: false, returnPath: "/" });
+      return;
+    }
     updateBrowserRoute("/", { replace: true });
     showScreen("menu");
   } finally {
@@ -349,6 +379,8 @@ function flushPendingRoute() {
   if (!pending) return;
   if (pending.type === "result") requestResultByCode(pending.code);
   if (pending.type === "profile") requestPublicProfileByUsername(pending.username);
+  if (pending.type === "gameHistory") requestGameHistoryByUsername(pending.username);
+  if (pending.type === "ownGameHistory") openGameHistory(state.profile?.id || "", { updateRoute: false, returnPath: "/" });
   if (pending.type === "game") reconnectRouteGame(pending.code);
 }
 
@@ -2719,7 +2751,8 @@ function applyProfile(profileData = { user: null, guest: true }) {
       nameId: "profileName",
       loginId: "profileLogin",
       nameClass: "profile-display-name",
-      avatarAlt: "Аватар профиля"
+      avatarAlt: "Аватар профиля",
+      showHistoryButton: true
     });
   } else if (accountProfileCard) {
     accountProfileCard.innerHTML = "";
@@ -2759,6 +2792,7 @@ function applyProfile(profileData = { user: null, guest: true }) {
   restoreServerBackedSettings(user);
   attemptReconnectToGame();
   attemptAutoJoinFromInvite();
+  flushPendingRoute();
 }
 
 function isOAuthProfile(user) {
@@ -3707,9 +3741,10 @@ function deleteAccount() {
   const confirmation = window.prompt("Чтобы удалить аккаунт навсегда, напиши УДАЛИТЬ");
   if (confirmation !== "УДАЛИТЬ") return setAuthStatus("Удаление аккаунта отменено");
   const refreshToken = getStoredRefreshToken();
+  const accessToken = getStoredAuthToken();
   const button = $("deleteAccountBtn");
   if (button) button.disabled = true;
-  socket.emit("account:delete", { refreshToken }, (res) => {
+  socket.emit("account:delete", { refreshToken, accessToken, token: accessToken }, (res) => {
     if (button) button.disabled = false;
     if (res?.error) return setAuthStatus(res.error, true);
     clearStoredAuthToken();
@@ -3940,6 +3975,7 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
   const isHost = player.id === lobby.host;
   const isMe = player.id === socket.id;
   const isReady = Boolean(player.ready);
+  const canKick = lobby.host === socket.id && !isMe;
   const statusText = isReady ? t("готов") : t("не готов");
   const cardClass = ["lobby-player-card", isReady ? "is-ready" : "is-waiting", isHost ? "is-host" : "", isMe ? "is-me" : ""].filter(Boolean).join(" ");
   const playerId = escapeAttribute(player.id || "");
@@ -3957,6 +3993,7 @@ function lobbyPlayerCardMarkup(player, index, lobby) {
       <div class="lobby-player-badges">
         ${isHost ? `<em class="host-chip">HOST</em>` : ""}
         <em class="ready-chip">${escapeHtml(statusText)}</em>
+        ${canKick ? `<button class="ready-chip lobby-kick-chip" type="button" onclick="hostKickPlayer('${playerId}')">kick</button>` : ""}
       </div>
     </article>
   `;
@@ -4475,6 +4512,11 @@ function restartLobby() {
       return setStatus(statusId, res.error, true);
     }
     state.returnedToLobbyAfterGame = true;
+    if (res?.code) {
+      state.currentCode = res.code;
+      storeReconnectState(state.currentCode);
+      if ($("code")) $("code").value = state.currentCode;
+    }
     if (res?.lobby) renderLobby(res.lobby);
     resetEndgameLocalState();
     closeTransientOverlays();
@@ -4550,9 +4592,36 @@ function hostSetTurn(playerId) {
 
 function hostKickPlayer(playerId) {
   socket.emit("hostKickPlayer", { code: state.currentCode, playerId }, (res) => {
-    if (res?.error) return setStatus("gameStatus", res.error, true);
-    setStatus("gameStatus", "Игрок удален из комнаты");
+    const statusId = state.phase === "lobby" ? "lobbyStatus" : "gameStatus";
+    if (res?.error) return setStatus(statusId, res.error, true);
+    setStatus(statusId, "Игрок удален из комнаты");
     closeHostPlayersModal();
+  });
+}
+
+function regenerateRoomCode() {
+  if (!state.currentCode) return;
+  const button = $("regenRoomCodeBtn");
+  if (button) button.disabled = true;
+  socket.emit("regenerateRoomCode", { code: state.currentCode }, (res) => {
+    if (button) button.disabled = false;
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    state.currentCode = res.code || state.currentCode;
+    storeReconnectState(state.currentCode);
+    if ($("code")) $("code").value = state.currentCode;
+    updateInviteSecretsVisibility();
+    setStatus("lobbyStatus", `Новый код комнаты: ${state.currentCode}`);
+  });
+}
+
+function resetReadyForAll() {
+  if (!state.currentCode) return;
+  const button = $("resetReadyBtn");
+  if (button) button.disabled = true;
+  socket.emit("resetReady", { code: state.currentCode }, (res) => {
+    if (button) button.disabled = false;
+    if (res?.error) return setStatus("lobbyStatus", res.error, true);
+    setStatus("lobbyStatus", "Готовность всех игроков сброшена");
   });
 }
 
@@ -4997,6 +5066,17 @@ function renderLobby(lobby) {
     forceStartBtn.classList.toggle("hidden", !canForceStart);
     forceStartBtn.textContent = t("FORCE START");
   }
+  const resetReadyBtn = $("resetReadyBtn");
+  if (resetReadyBtn) {
+    const canResetReady = isHost && readyCount > 0;
+    resetReadyBtn.disabled = !canResetReady;
+    resetReadyBtn.classList.toggle("hidden", !isHost);
+  }
+  const regenRoomCodeBtn = $("regenRoomCodeBtn");
+  if (regenRoomCodeBtn) {
+    regenRoomCodeBtn.classList.toggle("hidden", !isHost);
+    regenRoomCodeBtn.disabled = !isHost || lobby.phase !== "lobby";
+  }
   const readyBtn = $("readyBtn");
   if (readyBtn) {
     readyBtn.textContent = state.ready ? t("готов") : t("не готов");
@@ -5309,7 +5389,7 @@ function getChatPlayerActionsState(playerId) {
 function lobbyPlayerProfileActionMarkup(message) {
   const player = lobbyPlayerById(message.playerId) || {};
   const nickname = player.name || message.playerName || "Игрок";
-  const avatar = playerAvatarMarkup({ avatar: player.avatar }, playerInitials(nickname));
+  const avatar = playerAvatarMarkup({ avatar: player.avatar || message.avatar || "" }, playerInitials(nickname));
   const triggerLabel = escapeAttribute(`Профиль ${nickname}`);
   return `
     <button class="chat-player-trigger" type="button" onclick="toggleChatPlayerActions(event)" aria-label="${triggerLabel}">
@@ -5342,9 +5422,16 @@ function globalChatPlayerNameMarkup(message) {
 function chatMessagesMarkup(list, { gameChat = false, globalChat = false } = {}) {
   return list.map((message) => {
     const isMine = message.playerId === socket.id;
-    const actionState = globalChat
-      ? chatActionState({ accountId: message.accountId })
+    const messageAccountId = String(message.accountId || "");
+    const actionState = globalChat || messageAccountId
+      ? chatActionState({ accountId: messageAccountId })
       : getChatPlayerActionsState(message.playerId);
+    const lobbyProfileAction = messageAccountId
+      ? `viewLobbyAccountProfile('${escapeAttribute(messageAccountId)}')`
+      : `viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')`;
+    const lobbyFriendAction = messageAccountId
+      ? `requestFriendFromLobbyAccount('${escapeAttribute(messageAccountId)}')`
+      : `requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')`;
     const playerActions = isMine || gameChat ? "" : (globalChat ? (message.accountId ? `
       <div class="chat-player-actions">
         <button type="button" onclick="viewGlobalChatPlayerProfile('${escapeAttribute(message.accountId || '')}')">Посмотреть профиль</button>
@@ -5352,8 +5439,8 @@ function chatMessagesMarkup(list, { gameChat = false, globalChat = false } = {})
       </div>
     ` : "") : `
       <div class="chat-player-actions">
-        <button type="button" onclick="viewLobbyPlayerProfile('${escapeAttribute(message.playerId || '')}')">Посмотреть профиль</button>
-        <button type="button" onclick="requestFriendFromLobbyChat('${escapeAttribute(message.playerId || '')}')" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
+        <button type="button" onclick="${lobbyProfileAction}">Посмотреть профиль</button>
+        <button type="button" onclick="${lobbyFriendAction}" ${actionState.addFriendDisabled}>${actionState.addFriendLabel}</button>
       </div>
     `);
     return `
@@ -5684,6 +5771,28 @@ function viewLobbyPlayerProfile(playerId) {
 
 document.addEventListener('click', closeChatPlayerActions);
 
+
+function requestFriendFromLobbyAccount(accountId) {
+  closeChatPlayerActions();
+  if (!state.profile) return setChatStatus('Войдите в аккаунт, чтобы добавлять друзей', true);
+  if (!accountId) return setChatStatus('Не удалось определить игрока', true);
+  if (isAccountAlreadyFriend(accountId)) return setChatStatus('Этот игрок уже у вас в друзьях');
+  socket.emit('friend:request', { accountId }, (res) => {
+    if (res?.error) return setChatStatus(res.error, true);
+    requestSocialState();
+    setChatStatus('Заявка отправлена');
+  });
+}
+
+function viewLobbyAccountProfile(accountId) {
+  closeChatPlayerActions();
+  if (!accountId) return setChatStatus('Профиль игрока недоступен', true);
+  socket.emit("profile:view", { accountId }, (res) => {
+    if (res?.error || !res?.user) return setChatStatus(res?.error || "Профиль игрока недоступен", true);
+    showPublicProfileModal(res.user);
+  });
+}
+
 function requestFriendFromGlobalChat(accountId) {
   closeChatPlayerActions();
   if (!state.profile) return setGlobalChatStatus('Войдите в аккаунт, чтобы добавлять друзей', true);
@@ -5712,7 +5821,8 @@ function profileCommandCardMarkup(user = {}, options = {}) {
     nameId = "",
     loginId = "",
     nameClass = "",
-    avatarAlt = "Аватар игрока"
+    avatarAlt = "Аватар игрока",
+    showHistoryButton = false
   } = options;
   const displayName = user?.displayName || user?.username || "Игрок";
   const login = user?.username ? `@${user.username}` : "без аккаунт-тега";
@@ -5731,6 +5841,7 @@ function profileCommandCardMarkup(user = {}, options = {}) {
           <strong${idAttr(nameId)}${nameClasses ? ` class="${escapeAttribute(nameClasses)}"` : ""}>${nameWithDevBadge(user, "Игрок", { showBadge: true })}</strong>
           <span${idAttr(loginId)}>${hasDevRole(user) ? devBadgeMarkup(escapeHtml(login), { showBadge: true }) : escapeHtml(login)}</span>
         </div>
+        ${showHistoryButton ? `<button class="profile-history-button" type="button" onclick="openGameHistory('${escapeAttribute(user.id || '')}')">История игр</button>` : ""}
       </div>
     </div>`;
 }
@@ -5767,12 +5878,95 @@ function profileStatsMarkup(user = {}) {
     </div>`;
 }
 
+
+function formatGameHistoryDate(value = "") {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "дата неизвестна";
+  return date.toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function historyGameMarkup(game = {}) {
+  const code = escapeAttribute(game.code || "");
+  const role = game.role === "spy" ? "Шпион" : "Мирный";
+  const outcome = game.won ? "Победа" : "Поражение";
+  const theme = game.theme ? translateTheme(game.theme) : "тема скрыта";
+  return `
+    <button class="game-history-row" type="button" onclick="openHistoryGameResult('${code}')">
+      <span class="game-history-outcome ${game.won ? "won" : "lost"}">${escapeHtml(outcome)}</span>
+      <strong>${escapeHtml(theme)}</strong>
+      <small>${escapeHtml(formatGameHistoryDate(game.endedAt))} · ${escapeHtml(role)} · ${Number(game.playerCount || 0)} игроков</small>
+      <em>#${escapeHtml(game.code || "-----")}</em>
+    </button>`;
+}
+
+function openGameHistory(accountId = "", options = {}) {
+  const modal = $("gameHistoryModal");
+  const content = $("gameHistoryContent");
+  const status = $("gameHistoryStatus");
+  const title = $("gameHistoryTitle");
+  const subtitle = $("gameHistorySubtitle");
+  if (!modal || !content) return;
+  const accountKey = String(accountId || "");
+  const profile = accountKey === String(state.profile?.id || "") ? state.profile : (accountKey === String(state.viewedPublicProfile?.id || "") ? state.viewedPublicProfile : null);
+  if (!profile && !accountKey) {
+    showAuthModal("choice");
+    return setStatus("gameHistoryStatus", "Войдите в аккаунт, чтобы открыть свою историю игр", true);
+  }
+  const recentGames = Array.isArray(profile?.recentGames) ? profile.recentGames : [];
+  const isOwnHistory = profile && String(profile.id || "") === String(state.profile?.id || "");
+  const username = String(profile?.username || "").replace(/^@+/, "");
+  if (!state.gameHistoryReturnPath) state.gameHistoryReturnPath = options.returnPath || `${window.location.pathname}${window.location.search}`;
+  if (title) title.textContent = isOwnHistory ? "История игр" : `История @${username || profile?.displayName || "игрока"}`;
+  if (subtitle) subtitle.textContent = recentGames.length
+    ? "Победы, роли и быстрый переход к результатам сыгранных партий."
+    : "Здесь появятся последние завершенные партии этого профиля.";
+  content.classList.toggle("empty", !recentGames.length);
+  content.innerHTML = recentGames.length
+    ? recentGames.slice(0, 5).map(historyGameMarkup).join("")
+    : "История игр пока пуста";
+  if (status) status.textContent = recentGames.length ? "Нажми на матч, чтобы открыть финальные результаты." : "Сыграй матч, чтобы он появился здесь.";
+  modal.classList.remove("hidden");
+  if (options.updateRoute !== false) {
+    const historyPath = isOwnHistory || !username ? "/gamehistory" : `/gamehistory/@${encodeURIComponent(username)}`;
+    updateBrowserRoute(historyPath);
+  }
+}
+
+function hideGameHistoryModal(options = {}) {
+  const modal = $("gameHistoryModal");
+  if (modal) modal.classList.add("hidden");
+  if (options.updateRoute !== false && window.location.pathname.startsWith("/gamehistory")) {
+    updateBrowserRoute(state.gameHistoryReturnPath || pathForCurrentScreen());
+  }
+  state.gameHistoryReturnPath = "";
+}
+
+function openHistoryGameResult(code = "") {
+  const roomCode = normalizeRoomCodeInput(code);
+  if (!roomCode) return setStatus("gameHistoryStatus", "Не удалось открыть результаты", true);
+  const status = $("gameHistoryStatus");
+  if (status) status.textContent = "Загружаем результаты...";
+  socket.emit("result:get", { code: roomCode }, (res = {}) => {
+    if (res?.error || !res?.result) {
+      if (status) status.textContent = res?.error || "Результаты игры не найдены";
+      return;
+    }
+    hideGameHistoryModal();
+    hidePublicProfileModal();
+    state.currentCode = res.result.code || roomCode;
+    state.latestResult = res.result;
+    showScreen("results");
+    renderResults(res.result);
+  });
+}
+
 function showPublicProfileModal(user = {}, options = {}) {
   const modal = $("publicProfileModal");
   const content = $("publicProfileContent");
   if (!modal || !content) return;
+  state.viewedPublicProfile = user;
   content.innerHTML = `
-    ${profileCommandCardMarkup(user, { commandClass: "public-profile-command-card", nameClass: "profile-display-name public-profile-name" })}
+    ${profileCommandCardMarkup(user, { commandClass: "public-profile-command-card", nameClass: "profile-display-name public-profile-name", showHistoryButton: true })}
     <div class="profile-section-heading">
       <div>
         <strong>Статистика профиля</strong>

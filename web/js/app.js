@@ -289,6 +289,12 @@
       MS.theme.apply(controller.mode);
       MS.music.setContext('lobby');
     },
+    // the server moved the room to a new code (Spy: back to the lobby after a game)
+    codeChanged(controller) {
+      if (controller !== current) return;
+      saveRoom();
+      history.replaceState(null, '', `/?room=${controller.code}`);
+    },
     dropRoom(message) {
       if (current) current.destroy();
       current = null;

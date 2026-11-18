@@ -135,6 +135,8 @@ const DEV_VINYL_BALANCE = 999_999_999;
 const DAILY_REWARD_STREAK_AMOUNTS = [300, 350, 400, 450, 500, 650, 700];
 const DAILY_REWARD_AMOUNT = DAILY_REWARD_STREAK_AMOUNTS[0];
 const DAILY_REWARD_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DAILY_FIRST_MATCH_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const RECENT_GAME_HISTORY_LIMIT = 5;
 const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
 const XP_BOOSTER_DURATION_MS = 60 * 60 * 1000;
 const XP_BOOSTER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -415,9 +417,11 @@ function defaultEconomy() {
     achievements: {},
     transactions: [],
     lastDailyRewardAt: null,
+    lastDailyMatchAt: null,
     dailyRewardStreak: 0,
     xpBoosterActiveUntil: null,
-    xpBoosterCooldownUntil: null
+    xpBoosterCooldownUntil: null,
+    recentGames: []
   };
 }
 
@@ -679,7 +683,8 @@ function publicUser(user) {
     economy: publicEconomy(user),
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) },
-    settings: { ...(user.settings || {}) }
+    settings: { ...(user.settings || {}) },
+    recentGames: Array.isArray(user.economy?.recentGames) ? user.economy.recentGames.slice(0, RECENT_GAME_HISTORY_LIMIT) : (Array.isArray(user.recentGames) ? user.recentGames.slice(0, RECENT_GAME_HISTORY_LIMIT) : [])
   };
 }
 
@@ -2526,15 +2531,16 @@ function hasFriendInLobby(userId, players = []) {
   return players.some((player) => player.accountId && player.accountId !== userId && usersAreFriends(userId, player.accountId));
 }
 
-function sameUtcDay(a, b) {
-  if (!a || !b) return false;
-  return String(a).slice(0, 10) === String(b).slice(0, 10);
+function hasRecentDailyFirstMatch(lastMatchAt, nowIso) {
+  const lastTime = Date.parse(lastMatchAt || "");
+  const nowTime = Date.parse(nowIso || "");
+  if (!Number.isFinite(lastTime) || !Number.isFinite(nowTime)) return false;
+  return nowTime - lastTime < DAILY_FIRST_MATCH_INTERVAL_MS;
 }
 
 function buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected) {
   const now = new Date().toISOString();
   const rewards = [];
-  const activePlayerIds = new Set(lobby.players.map((player) => player.id));
   const spyVoteCounts = Object.fromEntries(lobby.spies.map((spyId) => [spyId, Number(finalVotes?.[spyId] || 0)]));
   const perfectSpyIds = lobby.spies.filter((spyId) => !civiliansWin && (spyVoteCounts[spyId] || 0) === 0);
   const correctVoters = new Set(Object.entries(lobby.votes || {}).filter(([, targetId]) => lobby.spies.includes(targetId)).map(([voterId]) => voterId));
@@ -2558,10 +2564,9 @@ function buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected) 
     if (!isSpy && civiliansWin) add(100, "Победа мирных", "civilian_win");
     if (isSpy && !civiliansWin) add(perfectSpyIds.includes(player.id) ? 500 : 300, perfectSpyIds.includes(player.id) ? "Идеальная победа шпиона" : "Победа шпиона", perfectSpyIds.includes(player.id) ? "perfect_spy_win" : "spy_win");
     if (!isSpy && correctVoters.has(player.id)) add(75, "Верное обвинение", "correct_accusation");
-    if (activePlayerIds.has(player.id)) add(50, "Выжил до финала", "survive_match");
     if (won && Number(user.stats.winStreak || 0) > 1) add(Math.min(150, Number(user.stats.winStreak || 0) * 25), "Серия побед", "win_streak");
     if (!isSpy && civiliansWin && lobby.spies.every((spyId) => Number(finalVotes?.[spyId] || 0) > 0)) add(50, "Чистая командная работа", "flawless_civilians");
-    if (!sameUtcDay(user.economy.lastDailyMatchAt, now)) add(100, "Первый матч дня", "daily_first_match");
+    if (!hasRecentDailyFirstMatch(user.economy.lastDailyMatchAt, now)) add(100, "Первый матч за 24 часа", "daily_first_match");
     if (longMatch) add(35, "Длинная партия", "long_match");
     if (friendMatchAccountIds.has(user.id)) add(25, "Игра с друзьями", "social_friend");
 
@@ -2656,6 +2661,39 @@ function awardMatchExpRewards(lobby, civiliansWin, finalVotes = {}) {
   return rewards;
 }
 
+
+function appendRecentGameHistory(lobby, finalResult) {
+  if (!lobby || !finalResult) return false;
+  const endedAt = finalResult.endedAt || new Date().toISOString();
+  let changed = false;
+  for (const player of lobby.players || []) {
+    if (!player.accountId) continue;
+    const user = findUserById(player.accountId);
+    if (!user) continue;
+    ensureUserProgress(user);
+    const isSpy = (lobby.spies || []).includes(player.id);
+    const won = isSpy ? !finalResult.civiliansWin : finalResult.civiliansWin;
+    const entry = {
+      code: finalResult.code,
+      matchId: finalResult.matchId || lobby.matchId || null,
+      endedAt,
+      theme: finalResult.theme || "",
+      role: isSpy ? "spy" : "civilian",
+      won: Boolean(won),
+      civiliansWin: Boolean(finalResult.civiliansWin),
+      playerName: player.name || "Игрок",
+      playerCount: (lobby.players || []).length,
+      spyNames: finalResult.spyNames || []
+    };
+    const previous = Array.isArray(user.economy.recentGames) ? user.economy.recentGames : (Array.isArray(user.recentGames) ? user.recentGames : []);
+    user.economy.recentGames = [entry, ...previous.filter((item) => item?.matchId !== entry.matchId && item?.code !== entry.code)].slice(0, RECENT_GAME_HISTORY_LIMIT);
+    delete user.recentGames;
+    user.updatedAt = new Date().toISOString();
+    changed = true;
+  }
+  return changed;
+}
+
 function updateUserProgressForGame(lobby, civiliansWin, finalVotes = {}, suspected = []) {
   let changed = false;
   const playerByAccount = new Map(lobby.players.filter((player) => player.accountId).map((player) => [player.accountId, player]));
@@ -2735,6 +2773,13 @@ function finishGame(code, suspected = [], voteTotals = null, spyGuess = null) {
     endedAt: new Date().toISOString()
   };
   lobby.finalResult = finalResult;
+  if (appendRecentGameHistory(lobby, finalResult)) {
+    saveUsersStore();
+    for (const player of lobby.players) {
+      const user = usersStore.users.find((item) => item.id === player.accountId);
+      if (user) io.to(player.id).emit("profile:updated", { profile: { user: publicUser(user), guest: false } });
+    }
+  }
   saveGameResult(lobby.code, finalResult).catch((error) => console.error("[db] failed to save game result", error));
   io.to(code).emit("gameEnd", finalResult);
   emitLobbyUpdate(code);
@@ -2777,6 +2822,12 @@ function resetLobbyToWaiting(lobby) {
 function markAllPlayersReady(lobby) {
   for (const player of lobby.players || []) {
     player.ready = true;
+  }
+}
+
+function resetAllPlayersReady(lobby) {
+  for (const player of lobby.players || []) {
+    player.ready = false;
   }
 }
 
@@ -2831,6 +2882,19 @@ function startLobbyGame(lobby) {
   startTurn(lobby.code);
 }
 
+
+
+function rotateLobbyCode(lobby) {
+  if (!lobby?.code) return lobby?.code || "";
+  const oldCode = lobby.code;
+  const newCode = generateCode();
+  delete lobbies[oldCode];
+  lobby.code = newCode;
+  lobbies[newCode] = lobby;
+  io.in(oldCode).socketsJoin(newCode);
+  io.in(oldCode).socketsLeave(oldCode);
+  return newCode;
+}
 
 function publicOpenLobbies(allLobbies = lobbies) {
   return Object.values(allLobbies)
@@ -3178,15 +3242,17 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("account:delete", ({ refreshToken } = {}, cb = () => {}) => {
+  socket.on("account:delete", async ({ refreshToken, accessToken, token } = {}, cb = () => {}) => {
     const user = socket.data.user;
     if (!user) return cb({ error: "Sign in to delete your account" });
     const userId = user.id;
     if (refreshToken) revokeRefreshToken(user, refreshToken, { save: saveUsersStore });
+    if (accessToken || token) revokeSessionToken(user, accessToken || token, { save: saveUsersStore });
+    user.sessions = [];
     const affectedFriendIds = friendIdsFor(userId);
     removeAccountFromActiveLobbies(userId);
     unregisterAuthenticatedSocket(socket);
-    socket.request.logout?.(() => {});
+    await clearSocketPassportSession(socket);
     const deleted = deleteUserAccount(userId);
     if (deleted) saveUsersStore();
     for (const friendId of affectedFriendIds) emitSocialForUserAndFriends(friendId);
@@ -3676,6 +3742,30 @@ io.on("connection", (socket) => {
     emitLobbyUpdate(lobby.code);
   });
 
+
+  socket.on("regenerateRoomCode", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can change the room code" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "The code can only be changed in the lobby" });
+
+    const oldCode = lobby.code;
+    const newCode = rotateLobbyCode(lobby);
+    cb({ success: true, code: newCode, oldCode });
+    emitLobbyUpdate(newCode);
+  });
+
+  socket.on("resetReady", ({ code }, cb = () => {}) => {
+    const lobby = lobbies[normalizeCode(code)];
+    if (!lobby) return cb({ error: "Room not found" });
+    if (lobby.host !== socket.id) return cb({ error: "Only the host can reset ready" });
+    if (lobby.started || lobby.phase !== "lobby") return cb({ error: "Ready can only be reset in the lobby" });
+
+    resetAllPlayersReady(lobby);
+    cb({ success: true });
+    emitLobbyUpdate(lobby.code);
+  });
+
   socket.on("setReady", ({ code, ready }, cb = () => {}) => {
     const lobby = lobbies[normalizeCode(code)];
     if (!lobby) return cb({ error: "Room not found" });
@@ -3882,7 +3972,9 @@ io.on("connection", (socket) => {
     const message = {
       id: `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
       playerId: socket.id,
+      accountId: player.accountId || null,
       playerName: player.name,
+      avatar: player.avatar || "",
       roles: player.roles || [],
       permissions: player.permissions || {},
       equippedCosmetics: { ...(player.equippedCosmetics || {}) },
@@ -4123,14 +4215,11 @@ io.on("connection", (socket) => {
     const canReturnAfterGame = lobby.phase === "ended" && isPlayer;
     if (lobby.host !== socket.id && !canReturnAfterGame) return cb({ error: "Only the host can return to the lobby" });
 
-    if (lobby.phase === "ended" && isPlayer && !(forAll && lobby.host === socket.id)) {
-      socket.emit("returnedToLobby", { lobby: publicLobby(lobby) });
-      return cb({ success: true, localOnly: true, lobby: publicLobby(lobby) });
-    }
-
+    const oldCode = lobby.code;
     clearTimer(lobby.code);
     resetLobbyToWaiting(lobby);
-    cb({ success: true });
+    if (canReturnAfterGame) rotateLobbyCode(lobby);
+    cb({ success: true, code: lobby.code, oldCode, lobby: publicLobby(lobby) });
     emitLobbyUpdate(lobby.code);
   });
 

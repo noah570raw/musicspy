@@ -45,7 +45,12 @@
   MS.socket.on('spy:state', (s) => {
     if (!s) return;
     if (!session) { pending = s; return; }
-    if (s.code !== session.code) return;
+    if (s.code !== session.code) {
+      // the room got a new code (back to the lobby after a game): follow it if this is our seat
+      if (!state || s.meId !== state.meId) return;
+      session.code = s.code;
+      MS.app.codeChanged(C);
+    }
     MS.setServerNow(s.serverNow);
     prevPhase = state ? state.phase : null;
     state = s;
@@ -680,7 +685,7 @@
         case 'vote': call('vote', { target: el.dataset.id }); break;
         case 'guess': call('submitSpyGuess', { optionId: el.dataset.id }); break;
         case 'preview': MS.audio.preview(el.dataset.src, el.dataset.key, el); break;
-        case 'restart': MS.audio.stop(); call('restartLobby', { forAll: true }); break;
+        case 'restart': MS.audio.stop(); call('restartLobby'); break;
         default: break;
       }
     },
