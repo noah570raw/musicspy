@@ -12,7 +12,6 @@
   let trackKey = '';
   let choosing = false;
   let timerInterval = null;
-  const ui = { searchType: 'album', searchQ: '', results: null, searching: false, searchSeq: 0, searchTimer: null };
 
   const app = () => $('#app');
   const serverNow = () => MS.now();
@@ -115,7 +114,7 @@
               <div class="room-info"><span>Room</span><b data-code></b>
                 <button class="btn small" data-act="copyLink">${MS.icon.link}Copy invite link</button>
                 <button class="btn small quiet" data-act="openFriends">Invite friends</button>
-                ${state.isHost ? `<button class="btn small quiet" data-act="switchGame">${MS.icon.swap}Switch to Spy</button>` : ''}
+                ${state.isHost ? `<button class="btn small quiet" data-act="switchGame">${MS.icon.swap}Switch game</button>` : ''}
               </div>
               <ul id="playerList" class="people"></ul>
             </footer>
@@ -149,108 +148,15 @@
     document.title = `Keep ${h} Delete ${h} · ${state.code}`;
   }
 
-  // ---------- music picker ----------
+  // ---------- music picker (picker.js) ----------
   function openPicker() {
-    const el = MS.sheet.open('k5picker', {
-      title: 'Pick the music',
-      cls: 'tall',
-      body: `
-        <div class="sheet-search">
-          <div style="display:grid;gap:12px">
-            <div class="tabs" role="tablist">
-              <button data-k5="tab" data-v="album" role="tab">Album</button>
-              <button data-k5="tab" data-v="artist" role="tab">Whole discography</button>
-            </div>
-            <form id="k5SearchForm" class="search"><input id="k5SearchInput" type="search" autocomplete="off" spellcheck="false" aria-label="Search"><button class="btn">Search</button></form>
-          </div>
-          <div id="k5Results" class="results-grid"></div>
-        </div>`,
+    MS.picker.open({
+      current: () => ({
+        selected: state && state.source ? `${state.source.type}:${state.source.id}` : '',
+        loadingId: state && state.sourceLoading ? state.sourceLoading.id : '',
+      }),
+      onPick: async (type, id) => MS.okOf(await act('setSource', { type, id })),
     });
-    const input = $('#k5SearchInput');
-    input.value = ui.searchQ;
-    $('#k5SearchForm').addEventListener('submit', (e) => { e.preventDefault(); runSearch(input.value); });
-    input.addEventListener('input', () => {
-      clearTimeout(ui.searchTimer);
-      ui.searchTimer = setTimeout(() => runSearch(input.value), 380);
-    });
-    el.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-k5]');
-      if (!b) return;
-      if (b.dataset.k5 === 'tab') {
-        ui.searchType = b.dataset.v;
-        renderTabs();
-        runSearch(input.value);
-      } else if (b.dataset.k5 === 'pickSource') {
-        b.classList.add('loading');
-        const r = await act('setSource', { type: b.dataset.type, id: b.dataset.id });
-        if (MS.okOf(r)) MS.sheet.close('k5picker');
-        else b.classList.remove('loading');
-      }
-    });
-    renderTabs();
-    renderSearchResults();
-    setTimeout(() => input.focus(), 60);
-  }
-
-  function renderTabs() {
-    $$('[data-k5="tab"]').forEach((b) => {
-      b.classList.toggle('active', b.dataset.v === ui.searchType);
-      b.setAttribute('aria-selected', b.dataset.v === ui.searchType ? 'true' : 'false');
-    });
-    const input = $('#k5SearchInput');
-    if (input) input.placeholder = ui.searchType === 'album' ? 'Album title or artist' : 'Artist name';
-  }
-
-  async function runSearch(q) {
-    q = String(q || '').trim();
-    ui.searchQ = q;
-    const seq = ++ui.searchSeq;
-    if (!q) {
-      ui.results = null;
-      ui.searching = false;
-      renderSearchResults();
-      return;
-    }
-    ui.searching = true;
-    renderSearchResults();
-    let r;
-    try {
-      const res = await fetch(`/api/search?type=${ui.searchType}&q=${encodeURIComponent(q)}`);
-      r = await res.json();
-    } catch {
-      r = { ok: false, error: 'Search is not answering. Try again' };
-    }
-    if (seq !== ui.searchSeq) return;
-    ui.searching = false;
-    if (!r.ok) {
-      ui.results = [];
-      MS.toast(r.error);
-    } else ui.results = r.items;
-    renderSearchResults();
-  }
-
-  function renderSearchResults() {
-    const box = $('#k5Results');
-    if (!box) return;
-    if (ui.searching) {
-      box.innerHTML = Array.from({ length: 6 }, () => '<div class="result ghost"><i></i><span><b></b><small></small></span></div>').join('');
-      return;
-    }
-    if (ui.results === null) {
-      box.innerHTML = `<p class="hint">${ui.searchType === 'album' ? 'The game deals random tracks from the album.' : 'Tracks come from every album, EP and single of the artist, without repeats.'}</p>`;
-      return;
-    }
-    if (!ui.results.length) {
-      box.innerHTML = '<p class="hint">Nothing found. Try another spelling.</p>';
-      return;
-    }
-    const selectedId = state && state.source ? `${state.source.type}:${state.source.id}` : '';
-    const loadingId = state && state.sourceLoading ? String(state.sourceLoading.id) : '';
-    box.innerHTML = ui.results.map((it) => `
-      <button class="result ${`${ui.searchType}:${it.id}` === selectedId ? 'selected' : ''} ${String(it.id) === loadingId ? 'loading' : ''} ${ui.searchType === 'artist' ? 'round' : ''}" data-k5="pickSource" data-type="${ui.searchType}" data-id="${esc(it.id)}">
-        <img src="${esc(it.cover)}" alt="" loading="lazy">
-        <span><b>${esc(it.title)}</b><small>${esc(it.subtitle)}</small>${it.meta ? `<small class="meta">${esc(it.meta)}</small>` : ''}</span>
-      </button>`).join('');
   }
 
   // ---------- lobby ----------
@@ -679,7 +585,7 @@
     session = null;
     state = null;
     skeletonKey = '';
-    MS.sheet.close('k5picker', true);
+    MS.picker.close(true);
   }
 
   MS.modes = MS.modes || {};

@@ -80,15 +80,17 @@ html[data-theme="spy"] .btn.primary { background: rgb(var(--accent)); color: rgb
 /* the hero starts at a fixed height so the game switch stays put when the modes (of different heights) swap */
 .hub-hero { display: grid; gap: 18px; align-content: start; align-self: start; min-width: 0; padding-top: clamp(0px, calc((100dvh - 94px - 700px) / 2), 90px); }
 .mode-switch {
-  position: relative; display: grid; grid-template-columns: 1fr 1fr; width: max-content; padding: 4px;
+  position: relative; display: grid; grid-template-columns: repeat(3, 1fr); width: max-content; padding: 4px;
   border-radius: 14px; background: var(--panel);
 }
 .mode-switch button { position: relative; z-index: 1; border: 0; background: none; padding: 9px 20px; min-height: 40px; border-radius: 10px; font-weight: 700; color: var(--ink-2); transition: color 200ms; white-space: nowrap; }
 .mode-switch button[aria-selected="true"] { color: rgb(var(--accent-ink)); }
 html[data-theme="k5"] .mode-switch button[aria-selected="true"] { color: rgb(var(--base)); }
-.mode-thumb { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 10px; background: rgb(var(--accent)); transition: transform 380ms var(--ease-out-quint), background-color 360ms ease; }
+.mode-thumb { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 10px; background: rgb(var(--accent)); transition: transform 380ms var(--ease-out-quint), background-color 360ms ease; }
 html[data-theme="k5"] .mode-thumb { background: var(--ink); }
 .hub[data-mode="k5"] .mode-thumb { transform: translateX(100%); }
+.hub[data-mode="koth"] .mode-thumb { transform: translateX(200%); }
+.mode-switch .short { display: none; }
 @media (hover: hover) and (pointer: fine) { .mode-switch button[aria-selected="false"]:hover { color: var(--ink); } }
 
 .kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: var(--ink-2); font-size: 14px; }

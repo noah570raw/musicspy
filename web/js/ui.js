@@ -1,5 +1,6 @@
 'use strict';
-// Shared visuals and sheets: the Spy suspect line-up, the K5D5 cover fan, "How to play" and the
+// Shared visuals and sheets: the Spy suspect line-up, the K5D5 cover fan, the King of the Hill mini
+// bracket, "How to play" and the
 // "Coming soon" sheets behind features that return in the next stage (shop, leaderboard, ...).
 (() => {
   const MS = window.MS;
@@ -27,7 +28,7 @@
   };
 
   // ---------- screen build: parts assemble one by one when a screen first appears ----------
-  const BUILD_PARTS = '.bar, .lob-cover, .lob-source, .settings, .start, .lob-foot, .shelf.keep, .stage, .shelf.del, .turns, .played, .vote-head, .suspects, .vote-foot, .res-hero, .res-boards, #guessMain';
+  const BUILD_PARTS = '.bar, .lob-cover, .lob-source, .settings, .start, .lob-foot, .shelf.keep, .stage, .shelf.del, .turns, .played, .vote-head, .suspects, .vote-foot, .res-hero, .res-boards, #guessMain, .duel-head, .duel-card, .duel-foot';
   MS.ui.build = (screen) => {
     if (!screen) return;
     [...screen.querySelectorAll(BUILD_PARTS)].forEach((el, i) => {
@@ -44,6 +45,20 @@
     const list = items.slice(0, 6);
     if (!list.length) return '<div class="cover-fan empty" aria-hidden="true">' + Array.from({ length: 5 }, (_, i) => `<span class="fan-card ph" style="--i:${i}"></span>`).join('') + '</div>';
     return `<div class="cover-fan" aria-hidden="true">${list.map((a, i) => `<span class="fan-card" style="--i:${i}"><img src="${esc(a.cover)}" alt=""></span>`).join('')}</div>`;
+  };
+
+  // ---------- King of the Hill: four covers meet in pairs, two go up, one is crowned ----------
+  MS.ui.hill = (items = []) => {
+    const list = items.slice(0, 4);
+    const cover = (a, cls = '') => (a ? `<span class="hill-card ${cls}"><img src="${esc(a.cover)}" alt=""></span>` : `<span class="hill-card ph ${cls}"></span>`);
+    const pick = (i) => list[i] || null;
+    // the winners are made up: covers 0 and 3 go up, 0 takes the crown
+    return `
+      <div class="hill" aria-hidden="true">
+        <div class="hill-col" style="--c:0">${cover(pick(0))}${cover(pick(1), 'out')}${cover(pick(2), 'out')}${cover(pick(3))}</div>
+        <div class="hill-col" style="--c:1">${cover(pick(0))}${cover(pick(3), 'out')}</div>
+        <div class="hill-col king" style="--c:2">${cover(pick(0))}<span class="hill-crown">${MS.icon.crown || ''}</span></div>
+      </div>`;
   };
 
   // ---------- How to play ----------
@@ -66,6 +81,15 @@
         ['Compare taste', 'The results show everyone’s lists, how much you matched and which tracks split the room.'],
       ],
     },
+  };
+  HOW.koth = {
+    title: 'How to play King of the Hill',
+    steps: [
+      ['Pick the music', 'The host picks an album or a whole discography and the size of the bracket: 4, 8, 16 or 32 tracks.'],
+      ['One of two', 'Two tracks meet. Listen to both, switching whenever you like, and pick the better one. It goes up, the other is out.'],
+      ['Vote or go solo', 'Vote together on one bracket, where the majority wins and a tie ends in a draw or a concession. Or everyone runs their own bracket.'],
+      ['Crown the king', 'The last track standing is the king of the hill. In solo style you compare kings at the end.'],
+    ],
   };
   MS.ui.howTo = (mode) => {
     const h = HOW[mode] || HOW.spy;

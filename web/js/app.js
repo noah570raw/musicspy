@@ -1,13 +1,13 @@
 'use strict';
 // App shell: home screen, joining by code, restoring the room after a reload or a reconnect,
-// "Switch game" between the two modes, and the click handling shared by every screen.
+// "Switch game" between the modes, and the click handling shared by every screen.
 (() => {
   const MS = window.MS;
   const { $, esc } = MS;
   const ROOM_KEY = 'ms_room';
   const MODE_KEY = 'ms_mode';
 
-  let current = null; // active mode controller (MS.modes.k5 | MS.modes.spy)
+  let current = null; // active mode controller (MS.modes.spy | MS.modes.k5 | MS.modes.koth)
   let booted = false;
   let homeMessage = '';
   let busy = false;
@@ -15,8 +15,11 @@
   const MODES = {
     spy: { title: 'Spy', blurb: 'Everyone gets a theme except the spy. Play tracks that fit it and find who is faking.', meta: '3 to 8 players' },
     k5: { title: 'Keep 5 Delete 5', blurb: 'Listen to an album together. Keep half, delete half, no changing your mind.', meta: '1 to 8 players' },
+    koth: { title: 'King of the Hill', blurb: 'Tracks from one album fight in pairs until a single king is left.', meta: '1 to 8 players' },
   };
-  let selectedMode = MS.store.get(MODE_KEY) === 'k5' ? 'k5' : 'spy';
+  const modeOf = (v) => (MODES[v] ? v : 'spy');
+  const usesCovers = (mode) => mode === 'k5' || mode === 'koth';
+  let selectedMode = modeOf(MS.store.get(MODE_KEY));
 
   const urlRoom = () => MS.normCode(new URLSearchParams(location.search).get('room'));
   const inviteLink = (code) => `${location.origin}/?room=${code}`;
@@ -31,9 +34,11 @@
       if (!r || !r.ok || !r.items.length) return;
       featured = r.items;
       fanFront = Math.floor(Math.random() * featured.length);
-      if (!current && selectedMode === 'k5') {
+      if (!current && usesCovers(selectedMode)) {
         const fan = $('#fanSlot');
         if (fan) fan.innerHTML = MS.ui.coverFan(rotated());
+        const hill = $('#hillSlot');
+        if (hill) hill.innerHTML = MS.ui.hill(rotated());
         backdropForHome();
       }
     }).catch(() => {});
@@ -41,12 +46,13 @@
   const rotated = () => featured.slice(fanFront).concat(featured.slice(0, fanFront));
 
   function backdropForHome() {
-    if (selectedMode === 'k5' && featured.length) MS.setBackdrop(rotated()[0].cover);
+    if (usesCovers(selectedMode) && featured.length) MS.setBackdrop(rotated()[0].cover);
     else MS.setBackdrop('');
   }
 
   // Every few seconds the home backdrop moves on. K5: the front cover of the fan goes to the back and the
-  // backdrop takes the new cover's colours. Spy: a hard cut to the next surveillance-camera palette (fx.js).
+  // backdrop takes the new cover's colours. King of the Hill: the mini bracket is dealt again from the next
+  // covers. Spy: a hard cut to the next surveillance-camera palette (fx.js).
   function startFan() {
     clearInterval(fanTimer);
     fanTimer = setInterval(() => {
@@ -56,6 +62,18 @@
         return;
       }
       if (!featured.length) return;
+      if (selectedMode === 'koth') {
+        const hill = $('.hill');
+        if (!hill) return;
+        hill.classList.add('shuffle');
+        setTimeout(() => {
+          fanFront = (fanFront + 1) % featured.length;
+          const slot = $('#hillSlot');
+          if (slot) slot.innerHTML = MS.ui.hill(rotated());
+          backdropForHome();
+        }, 420);
+        return;
+      }
       const fan = $('.cover-fan');
       if (!fan) return;
       fan.classList.add('shuffle');
@@ -130,6 +148,19 @@
       </ol>`;
   }
 
+  function heroKoth() {
+    return `
+      <p class="kicker" data-build style="--b:2"><span>1 to 8 players</span></p>
+      <h1 class="hero-title koth-title" data-build style="--b:3">King of the Hill</h1>
+      <p class="hero-lead" data-build style="--b:4">Tracks from one album fight in pairs. Pick the better one every time until a single track is left on top.</p>
+      <div class="hero-visual hill-visual" data-build style="--b:5"><div id="hillSlot">${MS.ui.hill(rotated())}</div></div>
+      <ol class="steps" data-build style="--b:6">
+        <li><b class="step-num">01</b><span>Pick an album</span></li>
+        <li><b class="step-num">02</b><span>One of two</span></li>
+        <li><b class="step-num">03</b><span>Crown the king</span></li>
+      </ol>`;
+  }
+
   function playerCard() {
     const A = MS.account;
     const u = A.user;
@@ -184,7 +215,7 @@
     if (current) return;
     MS.chat.setSource(null);
     MS.music.setContext('menu');
-    document.title = selectedMode === 'k5' ? 'Keep 5 Delete 5 · MusicSpy' : 'Spy · MusicSpy';
+    document.title = `${MODES[selectedMode].title} · MusicSpy`;
     const invite = urlRoom();
     const mode = selectedMode;
     $('#app').innerHTML = `
@@ -194,12 +225,13 @@
           <section class="hub-hero">
             <div class="mode-switch" role="tablist" aria-label="Game" data-build style="--b:1">
               <button role="tab" data-act="pickMode" data-v="spy" aria-selected="${mode === 'spy'}">Spy</button>
-              <button role="tab" data-act="pickMode" data-v="k5" aria-selected="${mode === 'k5'}">Keep 5 Delete 5</button>
+              <button role="tab" data-act="pickMode" data-v="k5" aria-selected="${mode === 'k5'}"><span class="long">Keep 5 Delete 5</span><span class="short">Keep 5</span></button>
+              <button role="tab" data-act="pickMode" data-v="koth" aria-selected="${mode === 'koth'}"><span class="long">King of the Hill</span><span class="short">King</span></button>
               <span class="mode-thumb" aria-hidden="true"></span>
             </div>
-            ${mode === 'spy' ? heroSpy() : heroK5()}
+            ${mode === 'spy' ? heroSpy() : mode === 'k5' ? heroK5() : heroKoth()}
             <div class="hero-cta" data-build style="--b:7">
-              <button class="btn primary big cta" data-act="create">Create ${mode === 'spy' ? 'Spy' : 'Keep 5 Delete 5'} room</button>
+              <button class="btn primary big cta" data-act="create">Create ${MODES[mode].title} room</button>
               <button class="btn quiet" data-act="howTo">How to play</button>
             </div>
           </section>
@@ -348,12 +380,27 @@
       await c.leave();
       if (current === c) appApi.dropRoom();
     },
-    // Host only: open a room of the other mode and bring everyone over.
-    async switchGame() {
+    // Host only: pick one of the other games.
+    switchGame() {
       if (!current || !current.isHost) return;
+      const others = Object.keys(MODES).filter((m) => m !== current.mode);
+      const el = MS.sheet.open('switchGame', {
+        title: 'Switch game',
+        cls: 'narrow',
+        body: `<div class="sheet-body"><p class="src-sub" style="margin:0">Everyone in the room moves with you.</p>
+          <div class="switch-list">${others.map((m) => `<button class="switch-opt" data-switch="${m}"><b>${esc(MODES[m].title)}</b><small>${esc(MODES[m].blurb)}</small></button>`).join('')}</div></div>`,
+      });
+      el.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-switch]');
+        if (!b) return;
+        MS.sheet.close('switchGame');
+        appApi.moveTo(b.dataset.switch);
+      });
+    },
+    // Host only: open a room of the target mode and bring everyone over.
+    async moveTo(target) {
+      if (!current || !current.isHost || !MODES[target] || target === current.mode) return;
       const from = { mode: current.mode, code: current.code };
-      const target = from.mode === 'spy' ? 'k5' : 'spy';
-      if (!confirm(`Switch this room to ${MODES[target].title}? Everyone moves with you.`)) return;
       const name = MS.account.displayName() || MS.account.guestName || 'Host';
       const old = current;
       const r = await MS.modes[target].create(name);
@@ -362,7 +409,7 @@
       // leave the old room quietly (the new controller is already current)
       if (old !== current) {
         if (from.mode === 'spy') await MS.emit('leaveLobby', { code: from.code });
-        else await MS.emit('k5:leave', {});
+        else await MS.emit(`${from.mode}:leave`, {});
       }
     },
   });
@@ -418,7 +465,7 @@
     if (!el || el.disabled || !el.closest('#app')) return;
     const act = el.dataset.act;
     switch (act) {
-      case 'pickMode': pickMode(el.dataset.v === 'k5' ? 'k5' : 'spy'); return;
+      case 'pickMode': pickMode(modeOf(el.dataset.v)); return;
       case 'nav': nav(el.dataset.v); return;
       case 'stub': MS.ui.stub(el.dataset.v); return;
       case 'howTo': MS.ui.howTo(current ? current.mode : selectedMode); return;

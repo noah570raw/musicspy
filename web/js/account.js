@@ -110,6 +110,11 @@
         ${tile(s.k5Games || 0, 'Games')}
         ${tile(s.k5Tracks || 0, 'Tracks judged')}
         ${tile(k5Avg, 'Average match')}
+      </div>
+      <p class="section-label">King of the Hill</p>
+      <div class="stats">
+        ${tile(s.kothGames || 0, 'Games')}
+        ${tile(s.kothDuels || 0, 'Duels judged')}
       </div>`;
   }
 

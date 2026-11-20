@@ -1,6 +1,6 @@
 'use strict';
 // Themes: the whole site re-skins itself for the chosen game.
-//   <html data-theme="spy" | "k5" | "home">  drives the CSS tokens (tokens.css) and the backdrop palette (fx.js).
+//   <html data-theme="spy" | "k5" | "koth" | "home">  drives the CSS tokens (tokens.css) and the backdrop palette (fx.js).
 // MS.theme.go(name, update) swaps the theme in place, without a page-refresh effect: the parts of the
 // current screen take themselves apart (.leaving, CSS), then the theme changes and update() renders the
 // new screen, whose [data-build] parts assemble one by one (.building, CSS). With reduced motion the swap is instant.
@@ -40,5 +40,6 @@
     },
   };
 
-  apply(MS.store.get('ms_mode') === 'k5' ? 'k5' : 'spy');
+  const saved = MS.store.get('ms_mode');
+  apply(['spy', 'k5', 'koth'].includes(saved) ? saved : 'spy');
 })();

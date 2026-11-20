@@ -169,7 +169,7 @@
               <div class="room-info"><span>Room</span><b>${esc(state.code)}</b>
                 <button class="btn small" data-act="copyLink">${MS.icon.link}Copy invite link</button>
                 <button class="btn small quiet" data-act="openFriends">Invite friends</button>
-                ${state.isHost ? `<button class="btn small quiet" data-act="switchGame">${MS.icon.swap}Switch to Keep 5 Delete 5</button>` : ''}
+                ${state.isHost ? `<button class="btn small quiet" data-act="switchGame">${MS.icon.swap}Switch game</button>` : ''}
               </div>
               <ul id="playerList" class="people"></ul>
             </footer>

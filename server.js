@@ -15,7 +15,8 @@ const {
   resolveYouTubeSearchUrl
 } = require("./lib/legacy/track-links");
 const k5d5 = require("./lib/k5d5/game");
-const { registerK5d5Sockets } = require("./lib/k5d5/sockets");
+const { registerRoomSockets } = require("./lib/k5d5/sockets");
+const koth = require("./lib/koth/game");
 const { registerMusicRoutes } = require("./lib/music/routes");
 const MOCK_DEEZER = process.env.MOCK_DEEZER === "1";
 const deezer = MOCK_DEEZER ? require("./lib/music/mock-deezer") : require("./lib/music/deezer");
@@ -849,7 +850,7 @@ function getUserPresence(userId) {
   }
   const k5 = k5RoomForAccount(userId);
   if (k5) {
-    const lobbyInfo = { code: k5.room.code, mode: "k5", players: k5.room.players.size, maxPlayers: 8, canJoin: true };
+    const lobbyInfo = { code: k5.room.code, mode: k5.mode, players: k5.room.players.size, maxPlayers: 8, canJoin: true };
     return k5.room.phase === "playing" || k5.room.phase === "loading"
       ? { online: true, activity: "Playing", lobby: lobbyInfo }
       : { online: true, activity: "In a lobby", lobby: lobbyInfo };
@@ -1407,7 +1408,7 @@ function generateCode() {
     for (let i = 0; i < 5; i += 1) {
       code += chars[Math.floor(Math.random() * chars.length)];
     }
-  } while (lobbies[code] || k5d5.hasRoom(code));
+  } while (lobbies[code] || k5d5.hasRoom(code) || koth.hasRoom(code));
 
   return code;
 }
@@ -3019,21 +3020,60 @@ function recordK5d5Results(room) {
   if (changed) saveUsersStore();
 }
 
-registerK5d5Sockets(io, {
+const roomPresence = (socket) => {
+  if (socket.data.user?.id) emitSocialForUserAndFriends(socket.data.user.id);
+};
+
+registerRoomSockets(io, {
   game: k5d5,
   deezer,
-  isCodeTaken: (code) => Boolean(lobbies[code]),
+  isCodeTaken: (code) => Boolean(lobbies[code]) || koth.hasRoom(code),
   getAccount: k5AccountForSocket,
   onFinish: recordK5d5Results,
-  onPresence: (socket) => {
-    if (socket.data.user?.id) emitSocialForUserAndFriends(socket.data.user.id);
-  }
+  onPresence: roomPresence
 });
 
+// ---------- King of the Hill mode ----------
+// Stats for signed-in players (users.stats JSONB, no schema change): kothGames, kothDuels (duels judged).
+function recordKothResults(room) {
+  const g = room.game;
+  if (!g || g.statsRecorded) return;
+  g.statsRecorded = true;
+  let changed = false;
+  for (const member of g.roster) {
+    if (!member.accountId) continue;
+    const user = findUserById(member.accountId);
+    if (!user) continue;
+    let duels = 0;
+    if (g.style === "solo") duels = g.solo[member.id]?.picks || 0;
+    else for (const round of g.rounds) for (const match of round.matches) if (match.votes?.[member.id]) duels += 1;
+    const stats = { ...defaultStats(), ...(user.stats || {}) };
+    stats.kothGames = Number(stats.kothGames || 0) + 1;
+    stats.kothDuels = Number(stats.kothDuels || 0) + duels;
+    user.stats = stats;
+    user.updatedAt = new Date().toISOString();
+    changed = true;
+  }
+  if (changed) saveUsersStore();
+}
+
+registerRoomSockets(io, {
+  prefix: "koth",
+  game: koth,
+  deezer,
+  isCodeTaken: (code) => Boolean(lobbies[code]) || k5d5.hasRoom(code),
+  getAccount: k5AccountForSocket,
+  onFinish: recordKothResults,
+  onPresence: roomPresence
+});
+
+// The K5D5 / King of the Hill room a signed-in player is connected to (friends see it as their activity).
 function k5RoomForAccount(userId) {
-  for (const room of k5d5.rooms.values()) {
-    for (const player of room.players.values()) {
-      if (player.accountId === userId && player.connected) return { room, player };
+  for (const [mode, game] of [["k5", k5d5], ["koth", koth]]) {
+    for (const room of game.rooms.values()) {
+      for (const player of room.players.values()) {
+        if (player.accountId === userId && player.connected) return { room, player, mode };
+      }
     }
   }
   return null;
@@ -3055,14 +3095,16 @@ function lookupRoom(code) {
   }
   const room = k5d5.findRoom(normalized);
   if (room) return { success: true, mode: "k5", code: normalized, phase: room.phase, players: room.players.size, maxPlayers: 8 };
+  const kothRoom = koth.findRoom(normalized);
+  if (kothRoom) return { success: true, mode: "koth", code: normalized, phase: kothRoom.phase, players: kothRoom.players.size, maxPlayers: 8 };
   return { error: "Room not found. Check the code" };
 }
 
 function socketIsHostOf(socket, mode, code) {
   if (mode === "spy") return lobbies[code]?.host === socket.id;
-  if (mode === "k5") {
-    const link = socket.data.k5;
-    const room = k5d5.findRoom(code);
+  if (mode === "k5" || mode === "koth") {
+    const link = socket.data[mode];
+    const room = (mode === "k5" ? k5d5 : koth).findRoom(code);
     return Boolean(link && room && link.code === code && room.hostId === link.pid);
   }
   return false;
@@ -3078,7 +3120,7 @@ io.on("connection", (socket) => {
     if (!socketIsHostOf(socket, fromMode, from)) return cb({ error: "Only the host can switch the game" });
     const target = lookupRoom(to);
     if (target.error || target.mode !== toMode) return cb({ error: "The new room is gone" });
-    const channel = fromMode === "spy" ? from : `k5:${from}`;
+    const channel = fromMode === "spy" ? from : `${fromMode}:${from}`;
     socket.to(channel).emit("room:moved", { mode: toMode, code: to });
     cb({ success: true });
   });
@@ -3612,7 +3654,8 @@ io.on("connection", (socket) => {
     const lobbyCode = normalizeCode(code);
     const inSpyRoom = Boolean(lobbies[lobbyCode]?.players.some((player) => player.accountId === user.id || player.id === socket.id));
     const k5Room = k5d5.findRoom(lobbyCode);
-    const inK5Room = Boolean(k5Room && [...k5Room.players.values()].some((player) => player.accountId === user.id));
+    const kothRoom = koth.findRoom(lobbyCode);
+    const inK5Room = [k5Room, kothRoom].some((room) => room && [...room.players.values()].some((player) => player.accountId === user.id));
     if (!lobbyCode || (!inSpyRoom && !inK5Room)) {
       return cb({ error: "You are not in a room" });
     }

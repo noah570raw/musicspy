@@ -65,3 +65,9 @@ html[data-theme="k5"] {
   --accent: 116, 214, 164;
   --accent-ink: 13, 56, 34;
 }
+/* King of the Hill: a cool night blue, so it reads apart from Spy's amber and K5's mint */
+html[data-theme="koth"] {
+  --base: 17, 20, 27;
+  --accent: 132, 178, 255;
+  --accent-ink: 11, 27, 58;
+}

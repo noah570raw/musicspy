@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "mock": "node -e \"process.env.MOCK_DEEZER='1'; process.env.MUSICSPY_START='1'; require('./server.js')\"",
-    "test": "node --check server.js && node --check lib/persistence.js && node --check lib/auth.js && node --check lib/k5d5/game.js && node --check lib/k5d5/sockets.js && node --check lib/music/deezer.js && node --check lib/music/routes.js && node --check web/js/core.js && node --check web/js/account.js && node --check web/js/chat.js && node --check web/js/k5.js && node --check web/js/spy.js && node --check web/js/app.js && node --test"
+    "test": "node --check server.js && node --check lib/persistence.js && node --check lib/auth.js && node --check lib/k5d5/game.js && node --check lib/k5d5/sockets.js && node --check lib/koth/game.js && node --check lib/music/deezer.js && node --check lib/music/routes.js && node --check web/js/core.js && node --check web/js/account.js && node --check web/js/chat.js && node --check web/js/picker.js && node --check web/js/k5.js && node --check web/js/koth.js && node --check web/js/ui.js && node --check web/js/spy.js && node --check web/js/app.js && node --test"
   },
   "keywords": [],
   "author": "",

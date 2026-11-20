@@ -1,7 +1,7 @@
 'use strict';
 // Live backdrop: a slowly shifting gradient built from the cover art colours (WebGL, no libraries).
 // window.MSFX.setCover(url) takes the palette from a cover; setCover('') returns to the theme palette.
-// window.MSFX.setTheme('home' | 'spy' | 'k5') picks the palette used when there is no cover;
+// window.MSFX.setTheme('home' | 'spy' | 'k5' | 'koth') picks the palette used when there is no cover;
 // the Spy theme also turns on a slow searchlight.
 // window.MSFX.cut() (Spy home): the next surveillance-camera palette; colours ease over like the K5 covers do
 // and the searchlight glides to a new spot. Any setCover/setTheme call ends the cuts.
@@ -16,6 +16,7 @@
     home: { bg: NEUTRAL, hi: NEUTRAL_HI, spot: 0 },
     spy: { bg: [[0.035, 0.06, 0.07], [0.05, 0.1, 0.11], [0.2, 0.13, 0.05], [0.04, 0.08, 0.1]], hi: [240, 186, 96], spot: 1 },
     k5: { bg: [[0.12, 0.08, 0.07], [0.22, 0.12, 0.09], [0.1, 0.16, 0.14], [0.2, 0.17, 0.09]], hi: [244, 241, 236], spot: 0 },
+    koth: { bg: [[0.06, 0.08, 0.14], [0.09, 0.13, 0.22], [0.16, 0.12, 0.08], [0.07, 0.11, 0.18]], hi: [244, 241, 236], spot: 0 },
   };
   let theme = 'home';
   // Spy home cycles through these (all dark): night teal, sodium street lamp, alarm red, night vision, cold steel.
