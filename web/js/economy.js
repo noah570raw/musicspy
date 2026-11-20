@@ -25,6 +25,8 @@
     // { level, currentLevelXp, required, left, progress (0-100), totalXp }
     progress: () => (econ() && econ().xpProgress) || { level: 1, currentLevelXp: 0, required: 100, left: 100, progress: 0, totalXp: 0 },
     booster: () => (econ() && econ().xpBooster) || null,
+    // the developer has infinite XP: their level and XP read ∞
+    isDev: () => Boolean(A.user && A.user.permissions && A.user.permissions.dev),
     daily: null,
   });
 
@@ -108,6 +110,15 @@
     const box = $('#levelBody');
     if (!box) return;
     const pr = E.progress();
+    if (E.isDev()) {
+      box.innerHTML = `
+        <div class="level-hero">
+          <span class="level-ring big inf" style="--p:100"><b>∞</b></span>
+          <div><b>Level ∞</b><small>Infinite XP. The developer is past every level</small>
+          <span class="xp-bar"><i style="width:100%"></i></span></div>
+        </div>`;
+      return;
+    }
     box.innerHTML = `
       <div class="level-hero">
         <span class="level-ring big" style="--p:${pr.progress}"><b>${pr.level}</b></span>
@@ -192,10 +203,10 @@
       <div class="rewards">
         <div class="rewards-top">
           ${v ? `<span class="reward-big">${coin()}+${fmt(v.total)}</span>` : ''}
-          ${x ? `<span class="reward-big xp">+${fmt(x.total)} XP${x.multiplier > 1 ? ` <small>booster x${x.multiplier}</small>` : ''}</span>` : ''}
+          ${x ? `<span class="reward-big xp">${E.isDev() ? '∞ XP' : `+${fmt(x.total)} XP`}${x.multiplier > 1 && !E.isDev() ? ` <small>booster x${x.multiplier}</small>` : ''}</span>` : ''}
         </div>
         <ul class="reward-lines">${lines.map((l) => `<li><span>${esc(l.label)}</span><b>+${fmt(l.amount)}${l.unit === 'xp' ? ' XP' : ''}</b></li>`).join('')}</ul>
-        ${x ? `<p class="reward-level">Level ${x.level}</p>` : ''}
+        ${x ? `<p class="reward-level">Level ${E.isDev() ? '∞' : x.level}</p>` : ''}
         ${ach.map((a) => `<p class="reward-ach"><b>Achievement: ${esc(a.label)}</b>${a.vinyls ? ` +${fmt(a.vinyls)} Vinyls` : ''}${a.unlock && MS.cos.item(a.unlock) ? `, unlocked ${esc(MS.cos.item(a.unlock).name)}` : ''}</p>`).join('')}
       </div>`;
   };
@@ -207,7 +218,7 @@
     const u = A.user;
     if (!u) { lastLevel = null; lastUserId = null; return; }
     const lvl = u.economy ? u.economy.level : 1;
-    if (lastUserId === u.id && lastLevel !== null && lvl > lastLevel) {
+    if (lastUserId === u.id && lastLevel !== null && lvl > lastLevel && !E.isDev()) {
       if (MS.sfx) MS.sfx.play('level');
       MS.toast(`Level ${lvl}! Keep playing Spy for more`);
     }

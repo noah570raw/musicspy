@@ -24,7 +24,7 @@
       <li class="lb-row ${mine ? 'me' : ''} ${e.rank <= 3 ? `top top${e.rank}` : ''}" data-act="viewProfile" data-id="${esc(e.accountId)}" tabindex="0">
         <span class="lb-rank">${e.rank}</span>
         ${MS.avatar(p, 'sm')}
-        <span class="lb-name"><b>${MS.cos.nick(e.displayName, p)}</b><small>@${esc(e.username || '')}${e.level ? ` · level ${e.level}` : ''}</small></span>
+        <span class="lb-name"><b>${MS.cos.nick(e.displayName, p)}</b><small>@${esc(e.username || '')}${e.level ? ` · level ${MS.cos.levelText(p, e.level)}` : ''}</small></span>
         <span class="lb-value"><b>${esc(e.value)}</b>${e.meta ? `<small>${esc(e.meta)}</small>` : ''}</span>
       </li>`;
   }

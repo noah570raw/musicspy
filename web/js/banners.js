@@ -126,6 +126,42 @@
     },
   };
 
+  // two scenes for the DEV collection: code rain and a circuit board
+  SCENES.matrix = (p) => {
+    const r = rng(21);
+    let g = '';
+    for (let x = 6; x < 600; x += 18) {
+      let y = -r() * 120;
+      while (y < 200) {
+        const len = 3 + Math.floor(r() * 9);
+        for (let k = 0; k < len; k += 1) {
+          const yy = y + k * 12;
+          const head = k === len - 1;
+          g += `<rect x="${x}" y="${yy.toFixed(1)}" width="7" height="8" rx="1.5" fill="${head ? p.head : p.glyph}" opacity="${head ? 0.9 : (0.12 + (k / len) * 0.55).toFixed(2)}"/>`;
+        }
+        y += len * 12 + 20 + r() * 60;
+      }
+    }
+    return svg(lin('s', p.sky), `${bg('s')}${g}`);
+  };
+  SCENES.circuit = (p) => {
+    const r = rng(33);
+    let g = '';
+    for (let i = 0; i < 14; i += 1) {
+      const y = 16 + i * 13;
+      const fromLeft = i % 2 === 0;
+      const a = 60 + r() * 140;
+      const dy = (r() > 0.5 ? 1 : -1) * 13;
+      const b = a + 40 + r() * 120;
+      const pts = fromLeft ? `0,${y} ${a},${y} ${a + 13},${y + dy} ${b},${y + dy}` : `600,${y} ${600 - a},${y} ${587 - a},${y + dy} ${600 - b},${y + dy}`;
+      const end = fromLeft ? b : 600 - b;
+      g += `<polyline points="${pts}" fill="none" stroke="${p.line}" stroke-width="2" opacity="0.45"/><circle cx="${end.toFixed(1)}" cy="${y + dy}" r="4" fill="none" stroke="${p.line}" stroke-width="2" opacity="0.8"/>`;
+    }
+    let pins = '';
+    for (let k = 0; k < 6; k += 1) pins += `<rect x="${262 + k * 13}" y="52" width="5" height="10" fill="${p.line}" opacity="0.7"/><rect x="${262 + k * 13}" y="138" width="5" height="10" fill="${p.line}" opacity="0.7"/>`;
+    return svg(lin('s', p.sky, 1, 1), `${bg('s')}${g}${pins}<rect x="255" y="60" width="90" height="80" rx="8" fill="${p.chip}" stroke="${p.line}" stroke-width="2"/><circle cx="270" cy="75" r="4" fill="${p.line}"/>`);
+  };
+
   const BANNERS = {
     banner_city_afterglow: ['skyline', { sky: ['#1b2338', '#5a3550', '#ff8a3d'], sun: '#ffb35c', city: '#121722', win: '#ffcf8a' }],
     banner_cosmic_studio: ['studio', { sky: ['#060b18', '#123a7a'], star: '#cfe8ff', label: '#41d6e6' }],
@@ -143,6 +179,11 @@
     dev_banner_jade_nebula: ['studio', { sky: ['#03140a', '#14532d'], star: '#bbf7d0', label: '#22c55e' }],
     dev_banner_mint_core: ['ripples', { sky: ['#022c22', '#065f46'], ring: '#99f6e4' }],
     dev_banner_viridian_infinite: ['waves', { sky: ['#03140a', '#15803d'], line: '#d9f99d' }],
+    dev_banner_obsidian_gold: ['stage', { sky: ['#050403', '#1a1205'], beam: '#ffe9a6', floor: '#2a1a08', curtain: '#0b0806' }],
+    dev_banner_ghost_chrome: ['ripples', { sky: ['#0b1220', '#475569'], ring: '#e2e8f0' }],
+    dev_banner_matrix_rain: ['matrix', { sky: ['#010a05', '#032412'], glyph: '#22c55e', head: '#d9ffe9' }],
+    dev_banner_solar_core: ['solar', { sky: ['#1a0603', '#4a120a'], ray: '#ffb13b', label: ['#fff7cc', '#ff4d4d'] }],
+    dev_banner_ice_circuit: ['circuit', { sky: ['#03131f', '#0c4a6e'], line: '#67e8f9', chip: '#0a2a3d' }],
   };
 
   MS.banners = {

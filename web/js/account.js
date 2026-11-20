@@ -56,7 +56,10 @@
     if (error) setTimeout(() => MS.toast(error), 300);
   }
 
+  // bumped by an explicit sign-in, so a slower session restore cannot overwrite it with "guest"
+  let signInEpoch = 0;
   A.restore = async () => {
+    const epoch = signInEpoch;
     const access = rawGet(ACCESS_KEY) || rawGet(LEGACY_ACCESS_KEY);
     if (access) {
       const res = await MS.emit('auth:session', { accessToken: access });
@@ -70,7 +73,7 @@
     }
     // Restores a Google / Discord cookie session if there is one, otherwise stays a guest.
     const res = await MS.emit('auth:guest', { name: A.guestName });
-    applyProfile(MS.okOf(res) ? res : null);
+    if (epoch === signInEpoch) applyProfile(MS.okOf(res) ? res : null);
     A.ready = true;
   };
 
@@ -154,6 +157,7 @@
       if (form.dataset.form === 'password') {
         res = await MS.emit(guestMode === 'register' ? 'auth:register' : 'auth:login', data);
         if (MS.okOf(res)) {
+          signInEpoch += 1;
           storeTokens(res);
           applyProfile(res);
           MS.toast(`Signed in as ${A.displayName()}`);

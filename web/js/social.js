@@ -62,7 +62,7 @@
     const fx = MS.cos.chatAttrs(p);
     const mine = A.user && m.accountId === A.user.id;
     const who = m.accountId ? `data-act="viewProfile" data-id="${esc(m.accountId)}"` : '';
-    return `<div class="msg ${mine ? 'mine' : ''} ${fx.cls}" style="${fx.style}"><button class="msg-face" ${who} aria-label="${esc(m.playerName)}">${MS.avatar(p, 'sm')}</button><p><b>${MS.cos.nick(m.playerName, p)}${m.level ? `<small class="lvl">${m.level}</small>` : ''}</b>${esc(m.text)}</p></div>`;
+    return `<div class="msg ${mine ? 'mine' : ''} ${fx.cls}" style="${fx.style}"><button class="msg-face" ${who} aria-label="${esc(m.playerName)}">${MS.avatar(p, 'sm')}</button><p><b>${MS.cos.nick(m.playerName, p)}${MS.cos.levelText(p, m.level) ? `<small class="lvl">${MS.cos.levelText(p, m.level)}</small>` : ''}</b>${esc(m.text)}</p></div>`;
   }
 
   function renderG(stick) {

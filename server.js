@@ -290,6 +290,38 @@ const SHOP_CATALOG = [
   { id: "dev_lobby_jade_hall", category: "lobbyEffect", name: "DEV Jade Hall", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#052e16,#166534,#4d7c0f)" },
   { id: "dev_lobby_mint_realm", category: "lobbyEffect", name: "DEV Mint Realm", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "radial-gradient(circle,#0f766e,#047857,#022c22)" },
   { id: "dev_lobby_viridian_prestige", category: "lobbyEffect", name: "DEV Viridian Prestige", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "conic-gradient(#052e16,#15803d,#365314,#052e16)" },
+
+  // DEV collection 2 (2026-11): five more lines per category, developer only
+  { id: "dev_nick_obsidian_gold", category: "nicknameColor", name: "DEV Obsidian Gold", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#f5a524,#120c05)" },
+  { id: "dev_nick_ghost_chrome", category: "nicknameColor", name: "DEV Ghost Chrome", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#e2e8f0,#64748b)" },
+  { id: "dev_nick_matrix_rain", category: "nicknameColor", name: "DEV Matrix Rain", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#22c55e,#02150a)" },
+  { id: "dev_nick_solar_core", category: "nicknameColor", name: "DEV Solar Core", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#ffb13b,#ff4d4d)" },
+  { id: "dev_nick_ice_circuit", category: "nicknameColor", name: "DEV Ice Circuit", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#67e8f9,#0c4a6e)" },
+
+  { id: "dev_frame_obsidian_gold", category: "avatarFrame", name: "DEV Obsidian Gold", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#f5a524,#120c05)" },
+  { id: "dev_frame_ghost_chrome", category: "avatarFrame", name: "DEV Ghost Chrome", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#e2e8f0,#64748b)" },
+  { id: "dev_frame_matrix_rain", category: "avatarFrame", name: "DEV Matrix Rain", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#22c55e,#02150a)" },
+  { id: "dev_frame_solar_core", category: "avatarFrame", name: "DEV Solar Core", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#ffb13b,#ff4d4d)" },
+  { id: "dev_frame_ice_circuit", category: "avatarFrame", name: "DEV Ice Circuit", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#67e8f9,#0c4a6e)" },
+
+  { id: "dev_banner_obsidian_gold", category: "profileBanner", name: "DEV Obsidian Gold", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#f5a524,#120c05)" },
+  { id: "dev_banner_ghost_chrome", category: "profileBanner", name: "DEV Ghost Chrome", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#e2e8f0,#64748b)" },
+  { id: "dev_banner_matrix_rain", category: "profileBanner", name: "DEV Matrix Rain", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#22c55e,#02150a)" },
+  { id: "dev_banner_solar_core", category: "profileBanner", name: "DEV Solar Core", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#ffb13b,#ff4d4d)" },
+  { id: "dev_banner_ice_circuit", category: "profileBanner", name: "DEV Ice Circuit", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#67e8f9,#0c4a6e)" },
+
+  { id: "dev_chat_obsidian_gold", category: "chatEffect", name: "DEV Obsidian Gold", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#f5a524,#120c05)" },
+  { id: "dev_chat_ghost_chrome", category: "chatEffect", name: "DEV Ghost Chrome", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#e2e8f0,#64748b)" },
+  { id: "dev_chat_matrix_rain", category: "chatEffect", name: "DEV Matrix Rain", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#22c55e,#02150a)" },
+  { id: "dev_chat_solar_core", category: "chatEffect", name: "DEV Solar Core", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#ffb13b,#ff4d4d)" },
+  { id: "dev_chat_ice_circuit", category: "chatEffect", name: "DEV Ice Circuit", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#67e8f9,#0c4a6e)" },
+
+  { id: "dev_lobby_obsidian_gold", category: "lobbyEffect", name: "DEV Obsidian Gold", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#f5a524,#120c05)" },
+  { id: "dev_lobby_ghost_chrome", category: "lobbyEffect", name: "DEV Ghost Chrome", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#e2e8f0,#64748b)" },
+  { id: "dev_lobby_matrix_rain", category: "lobbyEffect", name: "DEV Matrix Rain", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#22c55e,#02150a)" },
+  { id: "dev_lobby_solar_core", category: "lobbyEffect", name: "DEV Solar Core", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#ffb13b,#ff4d4d)" },
+  { id: "dev_lobby_ice_circuit", category: "lobbyEffect", name: "DEV Ice Circuit", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(135deg,#67e8f9,#0c4a6e)" },
+
   { id: "title_perfect_manipulator", category: "playerTitle", name: "Perfect Manipulator", rarity: "mythic", price: 0, achievementOnly: true, hidden: true, preview: "linear-gradient(90deg,#facc15,#ef4444,#020617)" },
 ];
 

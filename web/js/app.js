@@ -166,8 +166,9 @@
     const A = MS.account;
     const u = A.user;
     const pr = MS.econ.progress();
-    const level = u ? pr.level : 1;
-    const xpPct = u ? pr.progress : 0;
+    const inf = MS.econ.isDev(); // the developer: ∞
+    const level = inf ? '∞' : (u ? pr.level : 1);
+    const xpPct = inf ? 100 : (u ? pr.progress : 0);
     const booster = MS.econ.booster();
     const me = u ? { ...u, name: u.displayName || u.username } : { name: A.guestName || '?' };
     const banner = u ? MS.cos.banner(me) : '';
@@ -175,14 +176,14 @@
       <article class="player-card" data-build style="--b:3">
         <div class="pc-banner ${banner ? 'worn' : ''}" aria-hidden="true" style="${banner ? `background:${banner}` : ''}"><i></i><i></i></div>
         <div class="pc-main">
-          <div class="pc-avatar">${MS.avatar(me, 'lg')}<button class="level-ring" style="--p:${xpPct}" data-act="openLevel" aria-label="Level ${level}"><b>${level}</b></button></div>
+          <div class="pc-avatar">${MS.avatar(me, 'lg')}<button class="level-ring ${inf ? 'inf' : ''}" style="--p:${xpPct}" data-act="openLevel" aria-label="Level ${level}"><b>${level}</b></button></div>
           <div class="pc-name">
             <b>${u ? MS.cos.nick(me.name, me) : esc(A.guestName || 'Guest')}</b>
             <small>${u ? `@${esc(u.username)}` : 'Playing as a guest'}</small>
           </div>
           <button class="btn small" data-act="${u ? 'nav' : 'openAccount'}" data-v="profile">${u ? 'Profile' : 'Sign in'}</button>
         </div>
-        <button class="pc-xp" data-act="openLevel"><span>Level ${level}</span><span class="xp-bar"><i style="width:${xpPct}%"></i></span>${booster && booster.active ? `<span class="tag solid">XP x${booster.displayMultiplier}</span>` : u ? `<span class="pc-xp-left">${MS.econ.fmt(pr.left)} XP to ${level + 1}</span>` : '<span class="pc-xp-left">Sign in to level up</span>'}</button>
+        <button class="pc-xp" data-act="openLevel"><span>Level ${level}</span><span class="xp-bar"><i style="width:${xpPct}%"></i></span>${inf ? '<span class="pc-xp-left">Infinite XP</span>' : booster && booster.active ? `<span class="tag solid">XP x${booster.displayMultiplier}</span>` : u ? `<span class="pc-xp-left">${MS.econ.fmt(pr.left)} XP to ${level + 1}</span>` : '<span class="pc-xp-left">Sign in to level up</span>'}</button>
         ${u ? '' : `<label class="field pc-field"><span>Nickname</span><input id="nameInput" maxlength="18" autocomplete="nickname" placeholder="What should we call you" value="${esc(A.guestName)}"></label>`}
       </article>`;
   }

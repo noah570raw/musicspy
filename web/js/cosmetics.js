@@ -100,6 +100,33 @@
     dev_lobby_mint_realm: { c: ['#022c22', '#0f766e', '#5eead4'], p: 'radial' },
     dev_lobby_viridian_prestige: { c: ['#052e16', '#15803d', '#4d7c0f', '#052e16'], p: 'conic' },
 
+    // DEV collection 2
+    dev_nick_obsidian_gold: { c: ['#fff1c7', '#f5a524', '#b45309', '#fff1c7'] },
+    dev_nick_ghost_chrome: { c: ['#ffffff', '#94a3b8', '#f1f5f9', '#64748b'] },
+    dev_nick_matrix_rain: { c: ['#d9ffe9', '#22c55e', '#16a34a', '#bbf7d0'] },
+    dev_nick_solar_core: { c: ['#fff7cc', '#ffb13b', '#ff4d4d'] },
+    dev_nick_ice_circuit: { c: ['#e0fbff', '#67e8f9', '#0ea5e9'] },
+    dev_frame_obsidian_gold: { c: ['#120c05', '#f5a524', '#fff1c7', '#120c05', '#f5a524'], p: 'conic' },
+    dev_frame_ghost_chrome: { c: ['#f8fafc', '#64748b', '#e2e8f0', '#475569', '#f8fafc'], p: 'conic' },
+    dev_frame_matrix_rain: { c: ['#22c55e', '#02150a'], p: 'stripe' },
+    dev_frame_solar_core: { c: ['#fff7cc', '#ffb13b', '#ff4d4d', '#fff7cc'], p: 'conic' },
+    dev_frame_ice_circuit: { c: ['#e0fbff', '#0ea5e9', '#0c4a6e', '#67e8f9', '#e0fbff'], p: 'conic' },
+    dev_banner_obsidian_gold: { c: ['#050403', '#1a1205', '#f5a524'] },
+    dev_banner_ghost_chrome: { c: ['#0f172a', '#475569', '#e2e8f0'] },
+    dev_banner_matrix_rain: { c: ['#010a05', '#032412', '#22c55e'] },
+    dev_banner_solar_core: { c: ['#1a0603', '#4a120a', '#ffb13b'] },
+    dev_banner_ice_circuit: { c: ['#03131f', '#0c4a6e', '#67e8f9'] },
+    dev_chat_obsidian_gold: { c: ['#f5a524', '#fff1c7'] },
+    dev_chat_ghost_chrome: { c: ['#e2e8f0', '#64748b'] },
+    dev_chat_matrix_rain: { c: ['#22c55e', '#065f46'], p: 'stripe' },
+    dev_chat_solar_core: { c: ['#ffe066', '#ff4d4d'] },
+    dev_chat_ice_circuit: { c: ['#67e8f9', '#0ea5e9'] },
+    dev_lobby_obsidian_gold: { c: ['#120c05', '#f5a524'], p: 'dots' },
+    dev_lobby_ghost_chrome: { c: ['#64748b', '#e2e8f0', '#475569'] },
+    dev_lobby_matrix_rain: { c: ['#02150a', '#16a34a'], p: 'grid' },
+    dev_lobby_solar_core: { c: ['#2a0a05', '#ff4d4d', '#ffb13b'], p: 'radial' },
+    dev_lobby_ice_circuit: { c: ['#04263a', '#0ea5e9'], p: 'grid' },
+
     title_perfect_manipulator: { c: ['#facc15', '#ef4444'] },
   };
 
@@ -168,6 +195,11 @@
     isDev(p) {
       return Boolean(p && (p.dev || (p.permissions && p.permissions.dev) || (Array.isArray(p.roles) && p.roles.includes('dev'))));
     },
+    // level as shown to people: the developer is ∞
+    levelText(p, level) {
+      if (C.isDev(p)) return '∞';
+      return level !== undefined ? level : (p && p.level) || '';
+    },
     nick(name, p) {
       const id = equippedOf(p).nicknameColor;
       const g = id && grad(id);
@@ -193,7 +225,8 @@
     },
     // avatar + painted name + level, linking to the profile for signed-in players (lobby lists, faces)
     who(p, extra = '', size = 'sm') {
-      const name = `${C.nick(p.name, p)}${p.level ? `<small class="lvl" title="Level ${p.level}">${p.level}</small>` : ''}${extra}`;
+      const lvl = C.levelText(p);
+      const name = `${C.nick(p.name, p)}${lvl ? `<small class="lvl" title="Level ${lvl}">${lvl}</small>` : ''}${extra}`;
       return p.accountId
         ? `<button class="who" data-act="viewProfile" data-id="${esc(p.accountId)}" title="${esc(p.name)}'s profile">${MS.avatar(p, size)}<span>${name}</span></button>`
         : `${MS.avatar(p, size)}<span>${name}</span>`;

@@ -79,7 +79,7 @@
             <small>@${esc(u.username || '')}</small>
             ${MS.cos.title(p)}
           </div>
-          <button class="level-ring" style="--p:${pr.progress || 0}" ${own ? 'data-act="openLevel"' : ''} aria-label="Level ${pr.level}"><b>${pr.level}</b></button>
+          <button class="level-ring ${MS.cos.isDev(u) ? 'inf' : ''}" style="--p:${MS.cos.isDev(u) ? 100 : (pr.progress || 0)}" ${own ? 'data-act="openLevel"' : ''} aria-label="Level ${MS.cos.levelText(u, pr.level)}"><b>${MS.cos.levelText(u, pr.level)}</b></button>
         </div>
         ${lob.cls ? `<div class="prof-card-row"><span class="lfx-card ${lob.cls}" style="${lob.style}">${MS.avatar(p, 'sm')}<b>${MS.cos.nick(p.name, p)}</b><small>lobby card</small></span></div>` : ''}
       </div>`;
