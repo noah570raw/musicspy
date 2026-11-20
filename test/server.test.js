@@ -715,12 +715,12 @@ test("leaderboardMetric formats profile stat categories", () => {
     economy: { level: 7, xp: 6400 }
   };
 
-  assert.deepEqual(leaderboardMetric(user, "games"), { score: 8, tie: 6, value: "8", meta: "6 побед" });
-  assert.deepEqual(leaderboardMetric(user, "winrate"), { score: 0.75, tie: 6, value: "75%", meta: "6/8 побед" });
+  assert.deepEqual(leaderboardMetric(user, "games"), { score: 8, tie: 6, value: "8", meta: "6 wins" });
+  assert.deepEqual(leaderboardMetric(user, "winrate"), { score: 0.75, tie: 6, value: "75%", meta: "6/8 wins" });
   assert.deepEqual(leaderboardMetric(user, "spyWins"), { score: 2, tie: 2 / 3, value: "2/3", meta: "67%" });
   assert.deepEqual(leaderboardMetric(user, "civilianWins"), { score: 4, tie: 0.8, value: "4/5", meta: "80%" });
-  assert.deepEqual(leaderboardMetric(user, "winStreak"), { score: 5, tie: 2, value: "5", meta: "текущая: 2" });
-  assert.deepEqual(leaderboardMetric(user, "level"), { score: 15, tie: 6400, value: "LVL 15", meta: "" });
+  assert.deepEqual(leaderboardMetric(user, "winStreak"), { score: 5, tie: 2, value: "5", meta: "now 2" });
+  assert.deepEqual(leaderboardMetric(user, "level"), { score: 15, tie: 6400, value: "Level 15", meta: "6,400 XP" });
 });
 
 test("leaderboard exclusion hides configured usernames", () => {
@@ -729,4 +729,15 @@ test("leaderboard exclusion hides configured usernames", () => {
   assert.equal(isLeaderboardExcludedUser({ username: "noah570raw" }), true);
   assert.equal(isLeaderboardExcludedUser({ username: "@Noah570Raw" }), true);
   assert.equal(isLeaderboardExcludedUser({ username: "another-player" }), false);
+});
+
+test("normalizeEconomy keeps game history and the first-game-of-the-day time", () => {
+  const { normalizeEconomy } = require("../server");
+  const games = Array.from({ length: 12 }, (_, i) => ({ matchId: `m${i}`, mode: "spy" }));
+  const economy = normalizeEconomy({ xp: 250, recentGames: games, lastDailyMatchAt: "2026-11-20T10:00:00.000Z" });
+  assert.equal(economy.xp, 250);
+  assert.equal(economy.recentGames.length, 10, "capped at the history limit");
+  assert.equal(economy.recentGames[0].matchId, "m0");
+  assert.equal(economy.lastDailyMatchAt, "2026-11-20T10:00:00.000Z");
+  assert.equal(normalizeEconomy({ lastDailyMatchAt: "not a date" }).lastDailyMatchAt, null);
 });

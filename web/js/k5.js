@@ -115,6 +115,7 @@
                 <button class="btn small" data-act="copyLink">${MS.icon.link}Copy invite link</button>
                 <button class="btn small quiet" data-act="openFriends">Invite friends</button>
                 ${state.isHost ? `<button class="btn small quiet" data-act="switchGame">${MS.icon.swap}Switch game</button>` : ''}
+                <span id="openBox"></span>
               </div>
               <ul id="playerList" class="people"></ul>
             </footer>
@@ -166,12 +167,21 @@
     const s = state.settings;
     const src = state.source;
 
-    $('#playerList').innerHTML = state.players.map((p) => `
-      <li class="${p.connected ? '' : 'away'}" title="${p.connected ? '' : 'offline'}">
-        ${MS.avatar(p, 'sm')}<span>${esc(p.name)}${p.id === state.meId ? ' (you)' : ''}</span>${p.id === state.hostId ? '<small>host</small>' : ''}
+    $('#playerList').innerHTML = state.players.map((p) => {
+      const fx = MS.cos.lobbyAttrs(p);
+      return `
+      <li class="${p.connected ? '' : 'away'} ${fx.cls}" style="${fx.style}" title="${p.connected ? '' : 'offline'}">
+        ${MS.cos.who(p, p.id === state.meId ? ' (you)' : '')}${p.id === state.hostId ? '<small>host</small>' : ''}
         ${host && p.id !== state.meId ? `<button class="kick" data-act="kick" data-id="${esc(p.id)}" aria-label="Remove ${esc(p.name)}">${'✕'}</button>` : ''}
-      </li>`).join('') + (state.players.length < 2 ? '<li class="lonely">Send a friend the link and they show up here</li>' : '');
+      </li>`;
+    }).join('') + (state.players.length < 2 ? '<li class="lonely">Send a friend the link and they show up here</li>' : '');
 
+    const openBox = $('#openBox');
+    if (openBox) {
+      openBox.innerHTML = host
+        ? `<button class="btn small quiet open-toggle ${state.isOpen ? 'on' : ''}" data-act="toggleOpen" aria-pressed="${state.isOpen ? 'true' : 'false'}" title="Open rooms show up on everyone's home screen"><i></i>${state.isOpen ? 'Open room' : 'Private room'}</button>`
+        : (state.isOpen ? '<span class="tag">Open room</span>' : '');
+    }
     const cover = $('#lobCover');
     const coverKey = state.sourceLoading ? 'loading' : src ? `${src.type}:${src.id}` : `empty:${host}`;
     if (cover.dataset.key !== coverKey) {
@@ -315,7 +325,8 @@
         cls = 'done';
       }
       const away = online.get(p.id) === false || !online.has(p.id);
-      return `<li class="${cls} ${away ? 'away' : ''}" title="${esc(p.name)}: ${away ? 'offline' : status}">${MS.avatar(p, 'sm')}<span class="face-text"><b>${esc(p.name)}</b><small>${away ? 'offline' : status}</small></span></li>`;
+      const live = state.players.find((x) => x.id === p.id) || p;
+      return `<li class="${cls} ${away ? 'away' : ''}" title="${esc(p.name)}: ${away ? 'offline' : status}">${MS.avatar(live, 'sm')}<span class="face-text"><b>${MS.cos.nick(p.name, live)}</b><small>${away ? 'offline' : status}</small></span></li>`;
     }).join('');
 
     const lists = { keep: [], delete: [] };
@@ -379,6 +390,7 @@
     if (!mine || mine[g.round]) return;
     if (myCounts(g)[c] >= g.half) return;
     choosing = true;
+    if (MS.sfx) MS.sfx.play('pick');
     $$('.pick').forEach((b) => { b.disabled = true; });
     const btn = $(`.pick[data-v="${c}"]`);
     if (btn) btn.classList.add('picked');
@@ -530,6 +542,7 @@
       const v = el.dataset.v;
       switch (actName) {
         case 'openPicker': openPicker(); break;
+        case 'toggleOpen': act('setOpen', { open: !(state && state.isOpen) }); break;
         case 'count': act('setSettings', { trackCount: Number(v) }); break;
         case 'timer': act('setSettings', { timer: Number(v) }); break;
         case 'reveal': act('setSettings', { revealMode: v }); break;

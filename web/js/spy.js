@@ -170,6 +170,7 @@
                 <button class="btn small" data-act="copyLink">${MS.icon.link}Copy invite link</button>
                 <button class="btn small quiet" data-act="openFriends">Invite friends</button>
                 ${state.isHost ? `<button class="btn small quiet" data-act="switchGame">${MS.icon.swap}Switch game</button>` : ''}
+                <span id="openBox"></span>
               </div>
               <ul id="playerList" class="people"></ul>
             </footer>
@@ -220,9 +221,15 @@
     const mine = me();
     const dis = !host;
 
+    const openBox = $('#openBox');
+    if (openBox) {
+      openBox.innerHTML = host
+        ? `<button class="btn small quiet open-toggle ${state.isOpen ? 'on' : ''}" data-act="toggleOpen" aria-pressed="${state.isOpen ? 'true' : 'false'}" title="Open rooms show up on everyone's home screen"><i></i>${state.isOpen ? 'Open room' : 'Private room'}</button>`
+        : (state.isOpen ? '<span class="tag">Open room</span>' : '');
+    }
     $('#playerList').innerHTML = state.players.map((p) => `
-      <li class="${p.away ? 'away' : ''}">
-        ${MS.avatar(p, 'sm')}<span>${esc(p.name)}${p.id === state.meId ? ' (you)' : ''}</span>
+      <li class="${p.away ? 'away' : ''} ${MS.cos.lobbyAttrs(p).cls}" style="${MS.cos.lobbyAttrs(p).style}">
+        ${MS.cos.who(p, p.id === state.meId ? ' (you)' : '')}
         ${p.id === state.hostId ? '<small>host</small>' : ''}${p.ready ? '<small class="ready">ready</small>' : ''}
         ${host && p.id !== state.meId ? `<button class="kick" data-act="kick" data-id="${esc(p.id)}" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}
       </li>`).join('') + (n < state.minPlayers ? `<li class="lonely">Spy needs ${state.minPlayers} players. Send the link to ${state.minPlayers - n} more</li>` : '');
@@ -314,7 +321,7 @@
       const p = playerById(id) || { id, name: 'Player' };
       const cls = id === cur ? 'now' : i < idx ? 'done' : '';
       const label = id === cur ? (t ? 'playing' : 'picking') : i < idx ? 'played' : 'next';
-      return `<div class="turn ${cls} ${p.away ? 'away' : ''}">${MS.avatar(p, 'sm')}<b>${esc(p.name)}${id === state.meId ? ' (you)' : ''}</b><small>${label}</small></div>`;
+      return `<div class="turn ${cls} ${p.away ? 'away' : ''}">${MS.avatar(p, 'sm')}<b>${MS.cos.nick(p.name, p)}${id === state.meId ? ' (you)' : ''}</b><small>${label}</small></div>`;
     }).join('');
 
     // track card (centre)
@@ -532,6 +539,7 @@
   }
 
   // ---------- results ----------
+  let resultSfx = '';
   function updateResults() {
     const r = state.result;
     const main = $('#resultsMain');
@@ -541,6 +549,11 @@
     const pname = (id) => (players.find((p) => p.id === id) || {}).name || 'Player';
     const iAmSpy = (r.spies || []).includes(state.meId);
     const iWon = iAmSpy ? !r.civiliansWin : r.civiliansWin;
+    const resultKey = `${r.matchId || ''}|${r.code || ''}|${r.endedAt || ''}`;
+    if (resultKey !== resultSfx) {
+      resultSfx = resultKey;
+      if (MS.sfx) MS.sfx.play(iWon ? 'win' : 'lose');
+    }
     const spyNames = (r.spyNames || []).join(', ') || r.spyName || 'the spy';
     const suspected = b.suspectedNames || (r.suspected || []).map(pname);
     let story;
@@ -555,7 +568,7 @@
       const spy = (r.spies || []).includes(p.id);
       return `
         <article class="board">
-          <h2>${MS.avatar(p, 'sm')}${esc(p.name)}${spy ? ' <span class="tag solid">spy</span>' : ''}${p.id === state.meId ? ' <small>you</small>' : ''}</h2>
+          <h2>${MS.avatar(p, 'sm')}${MS.cos.nick(p.name, p)}${spy ? ' <span class="tag solid">spy</span>' : ''}${p.id === state.meId ? ' <small>you</small>' : ''}</h2>
           <div class="row"><span class="row-label">Tracks</span><ol style="--n:${Math.max(1, list.length)}">${list.length ? list.map((t) => `<li>${thumbsHtml([t]).replace(/^<li>|<\/li>$/g, '')}<span>${esc(t.title || 'Link')}</span></li>`).join('') : '<li><span>No tracks</span></li>'}</ol></div>
         </article>`;
     }).join('');
@@ -575,6 +588,7 @@
             ${votes ? `<div><span>Votes</span><div class="votes-line">${votes}</div></div>` : ''}
           </dl>
         </div>
+        ${MS.econ.rewardsHtml(r, state.meId)}
         <form class="comment-form" data-form="comment"><input maxlength="90" placeholder="${mineComment ? 'Change your line about the game' : 'One line about the game'}" aria-label="Comment"><button class="btn">Post</button></form>
         ${comments ? `<div class="comments">${comments}</div>` : ''}
         <div class="res-actions">
@@ -601,7 +615,7 @@
     session: () => (session ? { mode: 'spy', code: session.code } : null),
 
     async create(name) {
-      const r = await MS.emit('createLobby', { name, reconnectToken: reconnectToken(), settings: PRESETS.classic });
+      const r = await MS.emit('createLobby', { name, reconnectToken: reconnectToken(), settings: PRESETS.classic, isOpen: false });
       if (!r || !r.code) return { error: (r && r.error) || 'Could not create the room' };
       start(r.code);
       return { ok: true, code: r.code };
@@ -671,6 +685,7 @@
         case 'kick':
           if (confirm('Remove this player from the room?')) call('hostKickPlayer', { playerId: el.dataset.id });
           break;
+        case 'toggleOpen': call('updateLobbyMeta', { code: state.code, isOpen: !state.isOpen }); break;
         case 'openTrackPicker': openTrackPicker(); break;
         case 'react': call('trackReaction', { reaction: v }); break;
         case 'skip': call('skipTrackVote'); break;

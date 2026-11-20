@@ -90,34 +90,7 @@
     if (MS.sheet.isOpen('friends')) renderFriends();
   });
 
-  // ---------- account sheet ----------
-  function statsHtml(u) {
-    const s = u.stats || {};
-    const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '–');
-    const k5Avg = s.k5AgreeGames ? `${Math.round(s.k5AgreeSum / s.k5AgreeGames)}%` : '–';
-    const tile = (v, label) => `<div class="stat"><b>${esc(v)}</b><span>${esc(label)}</span></div>`;
-    return `
-      <p class="section-label">Spy</p>
-      <div class="stats">
-        ${tile(s.games || 0, 'Games')}
-        ${tile(pct(s.wins || 0, s.games || 0), 'Win rate')}
-        ${tile(s.spyWins || 0, 'Wins as spy')}
-        ${tile(s.civilianWins || 0, 'Wins as civilian')}
-        ${tile(s.bestWinStreak || 0, 'Best streak')}
-      </div>
-      <p class="section-label">Keep 5 Delete 5</p>
-      <div class="stats">
-        ${tile(s.k5Games || 0, 'Games')}
-        ${tile(s.k5Tracks || 0, 'Tracks judged')}
-        ${tile(k5Avg, 'Average match')}
-      </div>
-      <p class="section-label">King of the Hill</p>
-      <div class="stats">
-        ${tile(s.kothGames || 0, 'Games')}
-        ${tile(s.kothDuels || 0, 'Duels judged')}
-      </div>`;
-  }
-
+  // ---------- account sheet: sign in, or edit the profile (stats live on the Profile page, profile.js) ----------
   function guestHtml(mode) {
     const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
     return `
@@ -144,8 +117,7 @@
   function profileHtml(u) {
     return `
       <div class="sheet-body">
-        <div class="profile-head">${MS.avatar({ ...u, name: u.displayName }, 'lg')}<div><b>${esc(u.displayName || u.username)}</b><small>@${esc(u.username)}</small></div></div>
-        ${statsHtml(u)}
+        <div class="profile-head">${MS.avatar({ ...u, name: u.displayName }, 'lg')}<div><b>${MS.cos.nick(u.displayName || u.username, u)}</b><small>@${esc(u.username)}</small></div></div>
         <form class="form-grid" data-form="profile">
           <p class="section-label">Profile</p>
           <label class="field"><span>Display name</span><input name="displayName" maxlength="18" value="${esc(u.displayName || '')}"></label>
@@ -166,11 +138,11 @@
     if (!el) return;
     const content = el.querySelector('.sheet-content');
     content.innerHTML = A.user ? profileHtml(A.user) : guestHtml(guestMode);
-    el.querySelector('.sheet-head h2').textContent = A.user ? 'Account' : 'Sign in';
+    el.querySelector('.sheet-head h2').textContent = A.user ? 'Edit profile' : 'Sign in';
   }
 
   A.openAccount = () => {
-    const el = MS.sheet.open('account', { title: A.user ? 'Account' : 'Sign in', cls: 'narrow' });
+    const el = MS.sheet.open('account', { title: A.user ? 'Edit profile' : 'Sign in', cls: 'narrow' });
     renderAccount();
     el.addEventListener('submit', async (e) => {
       e.preventDefault();

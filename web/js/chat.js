@@ -36,7 +36,10 @@
 
   function msgHtml(m) {
     const player = (source.players || []).find((p) => p.id === m.playerId) || { name: m.playerName, id: m.playerId, color: m.color };
-    return `<div class="msg ${m.playerId === source.meId ? 'mine' : ''}">${MS.avatar({ ...player, name: m.playerName }, 'sm')}<p><b>${esc(m.playerName)}</b>${esc(m.text)}</p></div>`;
+    const p = { ...player, name: m.playerName };
+    const fx = MS.cos.chatAttrs(p);
+    const face = p.accountId ? `<button class="msg-face" data-act="viewProfile" data-id="${esc(p.accountId)}" aria-label="${esc(p.name)}">${MS.avatar(p, 'sm')}</button>` : MS.avatar(p, 'sm');
+    return `<div class="msg ${m.playerId === source.meId ? 'mine' : ''} ${fx.cls}" style="${fx.style}">${face}<p><b>${MS.cos.nick(m.playerName, p)}</b>${esc(m.text)}</p></div>`;
   }
 
   function renderList(stick) {
@@ -56,7 +59,11 @@
       <div class="chat-head"><b>Chat</b><button class="icon-btn plain" data-chat="close" aria-label="Hide chat">${MS.icon.close}</button></div>
       <div class="chat-list" aria-live="polite"></div>
       <form class="chat-form"><input maxlength="240" placeholder="Message" autocomplete="off" aria-label="Message"><button class="btn small">Send</button></form>`;
-    panel.addEventListener('click', (e) => { if (e.target.closest('[data-chat="close"]')) MS.chat.toggle(false); });
+    panel.addEventListener('click', (e) => {
+      if (e.target.closest('[data-chat="close"]')) MS.chat.toggle(false);
+      const who = e.target.closest('[data-act="viewProfile"]');
+      if (who) MS.profile.open(who.dataset.id);
+    });
     panel.querySelector('form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = panel.querySelector('input');
@@ -89,6 +96,10 @@
       }
       const roomChanged = next.roomKey !== seenRoom;
       source = next;
+      if (!roomChanged && open && next.messages.length > (source ? seenCount : 0)) {
+        const last = next.messages[next.messages.length - 1];
+        if (last && last.playerId !== next.meId && MS.sfx) MS.sfx.play('msg');
+      }
       if (roomChanged) {
         seenRoom = next.roomKey;
         seenCount = open ? next.messages.length : Math.max(0, next.messages.length - 0);

@@ -110,6 +110,22 @@ app.use(express.static(WEB_DIR, { index: "index.html" }));
 app.get(["/old", "/old/"], (req, res) => res.sendFile(path.join(LEGACY_DIR, "index.html")));
 app.use(express.static(LEGACY_DIR, { index: false }));
 registerMusicRoutes(app, { deezer, mock: MOCK_DEEZER });
+
+// The whole catalog, DEV items included, so anyone can draw the items other players wear. The shop hides DEV items.
+app.get("/api/shop/catalog", (req, res) => {
+  // revalidate every time (cheap with the ETag): a cached copy hid new items after an update
+  res.set("Cache-Control", "no-cache");
+  res.json({
+    ok: true,
+    categories: SHOP_CATEGORIES,
+    rarities: Object.fromEntries(Object.entries(COSMETIC_RARITIES).map(([id, r]) => [id, { label: r.label }])),
+    items: SHOP_CATALOG.map(({ preview, ...item }) => ({ ...item, devOnly: isDevShopItem(item) })),
+    achievements: ACHIEVEMENTS,
+    levels: { base: LEVEL_XP_BASE, growth: LEVEL_XP_GROWTH },
+    daily: DAILY_REWARD_STREAK_AMOUNTS,
+    booster: { multiplier: XP_BOOSTER_MULTIPLIER, durationMs: XP_BOOSTER_DURATION_MS, cooldownMs: XP_BOOSTER_COOLDOWN_MS }
+  });
+});
 const SPY_GUESS_SECONDS = 60;
 const SPY_TRACK_START_DELAY_MS = 1500; // everyone loads the preview, then it starts at the same moment
 const DECOY_GUESS_SECONDS = 3;
@@ -137,7 +153,7 @@ const DAILY_REWARD_STREAK_AMOUNTS = [300, 350, 400, 450, 500, 650, 700];
 const DAILY_REWARD_AMOUNT = DAILY_REWARD_STREAK_AMOUNTS[0];
 const DAILY_REWARD_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DAILY_FIRST_MATCH_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const RECENT_GAME_HISTORY_LIMIT = 5;
+const RECENT_GAME_HISTORY_LIMIT = 10;
 const DAILY_REWARD_STREAK_RESET_MS = DAILY_REWARD_INTERVAL_MS * 2;
 const XP_BOOSTER_DURATION_MS = 60 * 60 * 1000;
 const XP_BOOSTER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -174,7 +190,8 @@ const SHOP_CATEGORIES = [
   { id: "avatarFrame", label: "Avatar Frames", equipSlot: "avatarFrame" },
   { id: "profileBanner", label: "Profile Banners", equipSlot: "profileBanner" },
   { id: "chatEffect", label: "Chat Effects", equipSlot: "chatEffect" },
-  { id: "lobbyEffect", label: "Lobby Effects", equipSlot: "lobbyEffect" }
+  { id: "lobbyEffect", label: "Lobby Effects", equipSlot: "lobbyEffect" },
+  { id: "playerTitle", label: "Titles", equipSlot: "playerTitle" }
 ];
 
 const SHOP_CATALOG = [
@@ -222,6 +239,32 @@ const SHOP_CATALOG = [
   { id: "lobby_royal_chamber", category: "lobbyEffect", name: "Royal Chamber", rarity: "legendary", price: 2800, preview: "linear-gradient(135deg,#7c3aed,#111827,#ec4899)" },
   { id: "lobby_sunrise_core", category: "lobbyEffect", name: "Sunrise Core", rarity: "legendary", price: 2980, preview: "linear-gradient(135deg,#fde68a,#fb7185,#7c3aed)" },
   { id: "lobby_horizon_mirage", category: "lobbyEffect", name: "Horizon Mirage", rarity: "mythic", price: 3900, preview: "linear-gradient(135deg,#22d3ee,#a78bfa,#f472b6,#fde68a)" },
+
+  // Added 2026-11 so every category has 12 items (the new interface draws them in web/js/cosmetics.js)
+  { id: "nick_mint_cassette", category: "nicknameColor", name: "Mint Cassette", rarity: "common", price: 700, preview: "linear-gradient(90deg,#b8f5d8,#5fd3a8,#2fb08a)" },
+  { id: "nick_ember_tape", category: "nicknameColor", name: "Ember Tape", rarity: "rare", price: 1020, preview: "linear-gradient(90deg,#ffcf8a,#ff7a45,#e0413a)" },
+  { id: "nick_ocean_static", category: "nicknameColor", name: "Ocean Static", rarity: "epic", price: 1600, preview: "linear-gradient(90deg,#9ff3ff,#2bb4e8,#1d6fd8,#9ff3ff)" },
+  { id: "nick_aurora_crown", category: "nicknameColor", name: "Aurora Crown", rarity: "mythic", price: 3500, preview: "linear-gradient(90deg,#a7ffcf,#4fe3ff,#ffd36b,#ff8fb1)" },
+
+  { id: "frame_vinyl_groove", category: "avatarFrame", name: "Vinyl Groove", rarity: "common", price: 750, preview: "repeating-radial-gradient(circle,#1b1b1b 0 2px,#3a3a3a 2px 4px)" },
+  { id: "frame_ticket_stub", category: "avatarFrame", name: "Ticket Stub", rarity: "rare", price: 1150, preview: "repeating-linear-gradient(90deg,#ffd36b 0 6px,#ff7a45 6px 12px)" },
+  { id: "frame_sunset_bezel", category: "avatarFrame", name: "Sunset Bezel", rarity: "epic", price: 1800, preview: "conic-gradient(#ffb13b,#ff5e7e,#3b82f6,#ffb13b)" },
+  { id: "frame_prism_eclipse", category: "avatarFrame", name: "Prism Eclipse", rarity: "mythic", price: 3700, preview: "conic-gradient(#0b0f19,#4fe3ff,#ffe066,#ff5fa2,#0b0f19)" },
+
+  { id: "banner_mint_tape", category: "profileBanner", name: "Mint Tape", rarity: "common", price: 800, preview: "linear-gradient(135deg,#bff3dc,#5fd3a8)" },
+  { id: "banner_soundwave_sea", category: "profileBanner", name: "Soundwave Sea", rarity: "rare", price: 1300, preview: "linear-gradient(135deg,#0b2a4a,#1f7ae0,#7fd8ff)" },
+  { id: "banner_topo_pulse", category: "profileBanner", name: "Topo Pulse", rarity: "epic", price: 1950, preview: "linear-gradient(135deg,#0c2b26,#1fae8c,#c9f7e4)" },
+  { id: "banner_solar_vinyl", category: "profileBanner", name: "Solar Vinyl", rarity: "mythic", price: 3800, preview: "radial-gradient(circle at 70% 50%,#ffb13b,#e0413a 40%,#1a0f0c 70%)" },
+
+  { id: "chat_paper_note", category: "chatEffect", name: "Paper Note", rarity: "common", price: 860, preview: "linear-gradient(90deg,#f4efe4,#d9cdb4)" },
+  { id: "chat_bass_drop", category: "chatEffect", name: "Bass Drop", rarity: "rare", price: 1220, preview: "linear-gradient(90deg,#3b82f6,#0ea5e9,#22d3ee)" },
+  { id: "chat_sunburst", category: "chatEffect", name: "Sunburst", rarity: "epic", price: 1820, preview: "linear-gradient(90deg,#ffe066,#ff9a3d,#ff5e7e)" },
+  { id: "chat_aurora_ink", category: "chatEffect", name: "Aurora Ink", rarity: "mythic", price: 3600, preview: "linear-gradient(90deg,#a7ffcf,#4fe3ff,#ff8fb1,#ffe066)" },
+
+  { id: "lobby_tape_deck", category: "lobbyEffect", name: "Tape Deck", rarity: "common", price: 1000, preview: "linear-gradient(135deg,#3a3f47,#1c1f24)" },
+  { id: "lobby_neon_alley", category: "lobbyEffect", name: "Neon Alley", rarity: "rare", price: 1400, preview: "linear-gradient(135deg,#0f172a,#ff4d6d,#22d3ee)" },
+  { id: "lobby_ocean_floor", category: "lobbyEffect", name: "Ocean Floor", rarity: "epic", price: 2050, preview: "linear-gradient(135deg,#032c3a,#0e7490,#67e8f9)" },
+  { id: "lobby_crown_hall", category: "lobbyEffect", name: "Crown Hall", rarity: "mythic", price: 4000, preview: "linear-gradient(135deg,#1a1205,#f5a524,#fff1c7)" },
 
   { id: "dev_nick_emerald_sovereign", category: "nicknameColor", name: "DEV Emerald Sovereign", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#34d399,#10b981,#6ee7b7,#34d399)" },
   { id: "dev_nick_jade_flux", category: "nicknameColor", name: "DEV Jade Flux", rarity: "developer", price: 5000, devOnly: true, limited: true, preview: "linear-gradient(90deg,#22c55e,#86efac,#15803d)" },
@@ -506,7 +549,10 @@ function normalizeEconomy(economy = {}) {
     lastDailyRewardAt: economy.lastDailyRewardAt && !Number.isNaN(Date.parse(economy.lastDailyRewardAt)) ? economy.lastDailyRewardAt : null,
     dailyRewardStreak: Math.max(0, Math.min(DAILY_REWARD_STREAK_AMOUNTS.length, Math.floor(Number(economy.dailyRewardStreak || 0)))),
     xpBoosterActiveUntil: economy.xpBoosterActiveUntil && !Number.isNaN(Date.parse(economy.xpBoosterActiveUntil)) ? economy.xpBoosterActiveUntil : null,
-    xpBoosterCooldownUntil: economy.xpBoosterCooldownUntil && !Number.isNaN(Date.parse(economy.xpBoosterCooldownUntil)) ? economy.xpBoosterCooldownUntil : null
+    xpBoosterCooldownUntil: economy.xpBoosterCooldownUntil && !Number.isNaN(Date.parse(economy.xpBoosterCooldownUntil)) ? economy.xpBoosterCooldownUntil : null,
+    // kept through normalisation: without these the game history and the "first game of the day" bonus reset on every save
+    lastDailyMatchAt: economy.lastDailyMatchAt && !Number.isNaN(Date.parse(economy.lastDailyMatchAt)) ? economy.lastDailyMatchAt : null,
+    recentGames: Array.isArray(economy.recentGames) ? economy.recentGames.slice(0, RECENT_GAME_HISTORY_LIMIT) : []
   };
 }
 
@@ -556,12 +602,14 @@ function xpBoosterState(user, now = Date.now()) {
 
 
 const LEADERBOARD_CATEGORIES = [
-  { id: "games", icon: "🎮", label: "Игр сыграно" },
-  { id: "winrate", icon: "🏆", label: "Общий винрейт" },
-  { id: "spyWins", icon: "🕵️", label: "Побед за шпиона" },
-  { id: "civilianWins", icon: "🛡️", label: "Побед за мирных" },
-  { id: "winStreak", icon: "🔥", label: "Серия побед" },
-  { id: "level", icon: "⭐", label: "Уровень" }
+  { id: "games", icon: "🎮", label: "Spy games" },
+  { id: "winrate", icon: "🏆", label: "Win rate" },
+  { id: "spyWins", icon: "🕵️", label: "Wins as spy" },
+  { id: "civilianWins", icon: "🛡️", label: "Wins as civilian" },
+  { id: "winStreak", icon: "🔥", label: "Best streak" },
+  { id: "level", icon: "⭐", label: "Level" },
+  { id: "k5Games", icon: "", label: "Keep 5 Delete 5 games" },
+  { id: "kothGames", icon: "", label: "King of the Hill games" }
 ];
 
 function percentLabel(part, total) {
@@ -575,11 +623,11 @@ function leaderboardMetric(user, categoryId) {
   const economy = normalizeEconomy(user?.economy || {});
   switch (categoryId) {
     case "games":
-      return { score: Number(stats.games || 0), tie: Number(stats.wins || 0), value: String(Number(stats.games || 0)), meta: `${Number(stats.wins || 0)} побед` };
+      return { score: Number(stats.games || 0), tie: Number(stats.wins || 0), value: String(Number(stats.games || 0)), meta: `${Number(stats.wins || 0)} wins` };
     case "winrate": {
       const games = Number(stats.games || 0);
       const wins = Number(stats.wins || 0);
-      return { score: games ? wins / games : 0, tie: wins, value: percentLabel(wins, games), meta: `${wins}/${games} побед` };
+      return { score: games ? wins / games : 0, tie: wins, value: percentLabel(wins, games), meta: `${wins}/${games} wins` };
     }
     case "spyWins": {
       const wins = Number(stats.spyWins || 0);
@@ -594,10 +642,14 @@ function leaderboardMetric(user, categoryId) {
     case "winStreak": {
       const best = Number(stats.bestWinStreak || 0);
       const current = Number(stats.winStreak || 0);
-      return { score: best, tie: current, value: `${best}`, meta: `текущая: ${current}` };
+      return { score: best, tie: current, value: `${best}`, meta: `now ${current}` };
     }
     case "level":
-      return { score: Number(economy.level || 1), tie: Number(economy.xp || 0), value: `LVL ${Number(economy.level || 1)}`, meta: "" };
+      return { score: Number(economy.level || 1), tie: Number(economy.xp || 0), value: `Level ${Number(economy.level || 1)}`, meta: `${Number(economy.xp || 0).toLocaleString("en-US")} XP` };
+    case "k5Games":
+      return { score: Number(stats.k5Games || 0), tie: Number(stats.k5Tracks || 0), value: String(Number(stats.k5Games || 0)), meta: `${Number(stats.k5Tracks || 0)} tracks` };
+    case "kothGames":
+      return { score: Number(stats.kothGames || 0), tie: Number(stats.kothDuels || 0), value: String(Number(stats.kothGames || 0)), meta: `${Number(stats.kothDuels || 0)} duels` };
     default:
       return { score: 0, tie: 0, value: "0", meta: "" };
   }
@@ -609,13 +661,15 @@ function publicLeaderboardEntry(user, categoryId, rank) {
     rank,
     accountId: user.id,
     username: user.username,
-    displayName: user.displayName || user.username || "Игрок",
+    displayName: user.displayName || user.username || "Player",
     avatar: user.avatar || "",
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) },
     score: metric.score,
     value: metric.value,
-    meta: metric.meta
+    meta: metric.meta,
+    level: Number(user.economy?.level || 1),
+    equipped: { ...(user.economy?.equipped || {}) }
   };
 }
 
@@ -624,10 +678,10 @@ function isLeaderboardExcludedUser(user) {
   return LEADERBOARD_EXCLUDED_USERNAMES.has(username);
 }
 
-function buildLeaderboard(categoryId = "games", limit = 10) {
+function buildLeaderboard(categoryId = "games", limit = 10, viewerId = "") {
   const category = LEADERBOARD_CATEGORIES.find((entry) => entry.id === categoryId) || LEADERBOARD_CATEGORIES[0];
   const maxEntries = Math.max(1, Math.min(25, Math.floor(Number(limit || 10))));
-  const rankedUsers = (usersStore.users || [])
+  const allRanked = (usersStore.users || [])
     .filter((user) => user && !isLeaderboardExcludedUser(user))
     .map((user) => {
       ensureUserProgress(user);
@@ -636,13 +690,15 @@ function buildLeaderboard(categoryId = "games", limit = 10) {
     .filter(({ metric, user }) => metric.score > 0 || category.id === "level" || Number(user?.stats?.games || 0) > 0)
     .sort((a, b) => (b.metric.score - a.metric.score)
       || (b.metric.tie - a.metric.tie)
-      || String(a.user.displayName || a.user.username || "").localeCompare(String(b.user.displayName || b.user.username || ""), "ru"))
-    .slice(0, maxEntries);
+      || String(a.user.displayName || a.user.username || "").localeCompare(String(b.user.displayName || b.user.username || ""), "en"));
+  const rankedUsers = allRanked.slice(0, maxEntries);
+  const myIndex = viewerId ? allRanked.findIndex(({ user }) => user.id === viewerId) : -1;
 
   return {
     categories: LEADERBOARD_CATEGORIES,
     activeCategory: category.id,
-    entries: rankedUsers.map(({ user }, index) => publicLeaderboardEntry(user, category.id, index + 1))
+    entries: rankedUsers.map(({ user }, index) => publicLeaderboardEntry(user, category.id, index + 1)),
+    me: myIndex >= 0 ? publicLeaderboardEntry(allRanked[myIndex].user, category.id, myIndex + 1) : null
   };
 }
 
@@ -723,7 +779,7 @@ function grantShopItemToUser(user, item) {
 
 function parseDevCommandInput(raw) {
   const input = String(raw || "").trim();
-  if (!input) return { error: "Команда пустая. Напиши -help для списка." };
+  if (!input) return { error: "Empty command. Type -help for the list." };
   if (input === "-help" || input.toLowerCase() === "help") return { type: "help" };
   let match = input.match(/^-level\s+up\s+@?([a-z0-9_-]{3,24})\s+to\s+(\d{1,4})$/i);
   if (match) return { type: "setLevel", username: match[1], level: Number(match[2]) };
@@ -752,7 +808,7 @@ function parseDevCommandInput(raw) {
   match = input.match(/^-create\s+promocode\s+"([^"]+)"\s+reward:([a-z]+):([a-z0-9_]+)\s+limit:(\d+)\s+enddate:(\d{2}\.\d{2}\.\d{2})$/i);
   if (match) return { type: "createPromoCode", code: match[1], rewardType: match[2], rewardValue: match[3], limit: Number(match[4]), endDate: match[5] };
   if (input.toLowerCase().startsWith("-create promocode")) return { error: "Missing required arguments" };
-  return { error: "Неизвестная команда. Напиши -help." };
+  return { error: "Unknown command. Type -help." };
 }
 
 function parsePromoDate(value) {
@@ -842,7 +898,7 @@ function getUserPresence(userId) {
       mode: "spy",
       players: lobby.players.filter((item) => !item.disconnected).length,
       maxPlayers: lobby.settings?.maxPlayers || DEFAULT_MAX_PLAYERS,
-      canJoin: lobby.isOpen !== false && lobby.phase === "lobby"
+      canJoin: lobby.phase === "lobby"
     };
     return lobby.phase === "playing" || lobby.phase === "voting" || lobby.phase === "spyGuess"
       ? { online: true, activity: "Playing", lobby: lobbyInfo }
@@ -1284,6 +1340,7 @@ function playerFromSocket(socket, rawName, lobby = null, reconnectToken = "") {
     name,
     avatar: user?.avatar || "",
     equippedCosmetics,
+    level: Number(user?.economy?.level || 0) || null,
     roles: publicRoles(user),
     permissions: { dev: hasRole(user, DEV_ROLE) },
     ready: false,
@@ -1303,7 +1360,8 @@ function globalChatIdentity(socket, rawName = "") {
     avatar: player.avatar,
     roles: player.roles || [],
     permissions: player.permissions || {},
-    equippedCosmetics: player.equippedCosmetics || {}
+    equippedCosmetics: player.equippedCosmetics || {},
+    level: player.level || null
   };
 }
 
@@ -2108,7 +2166,9 @@ function spyViewFor(lobby, playerId) {
       accountId: player.accountId || null,
       guest: Boolean(player.guest),
       ready: Boolean(player.ready),
-      away: Boolean(player.disconnected)
+      away: Boolean(player.disconnected),
+      // worn items and level, read live from the account (the same as K5D5 / King of the Hill rooms)
+      ...(player.accountId ? roomDecorations(player.accountId) : {})
     })),
     chat: lobby.chatMessages || [],
     role: started && inGame ? (isSpy ? "spy" : "civilian") : null,
@@ -2562,14 +2622,14 @@ function buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected) 
       lines.push({ amount, label, code });
     };
 
-    if (!isSpy && civiliansWin) add(100, "Победа мирных", "civilian_win");
-    if (isSpy && !civiliansWin) add(perfectSpyIds.includes(player.id) ? 500 : 300, perfectSpyIds.includes(player.id) ? "Идеальная победа шпиона" : "Победа шпиона", perfectSpyIds.includes(player.id) ? "perfect_spy_win" : "spy_win");
-    if (!isSpy && correctVoters.has(player.id)) add(75, "Верное обвинение", "correct_accusation");
-    if (won && Number(user.stats.winStreak || 0) > 1) add(Math.min(150, Number(user.stats.winStreak || 0) * 25), "Серия побед", "win_streak");
-    if (!isSpy && civiliansWin && lobby.spies.every((spyId) => Number(finalVotes?.[spyId] || 0) > 0)) add(50, "Чистая командная работа", "flawless_civilians");
-    if (!hasRecentDailyFirstMatch(user.economy.lastDailyMatchAt, now)) add(100, "Первый матч за 24 часа", "daily_first_match");
-    if (longMatch) add(35, "Длинная партия", "long_match");
-    if (friendMatchAccountIds.has(user.id)) add(25, "Игра с друзьями", "social_friend");
+    if (!isSpy && civiliansWin) add(100, "Civilians win", "civilian_win");
+    if (isSpy && !civiliansWin) add(perfectSpyIds.includes(player.id) ? 500 : 300, perfectSpyIds.includes(player.id) ? "Perfect spy win" : "Spy win", perfectSpyIds.includes(player.id) ? "perfect_spy_win" : "spy_win");
+    if (!isSpy && correctVoters.has(player.id)) add(75, "Correct accusation", "correct_accusation");
+    if (won && Number(user.stats.winStreak || 0) > 1) add(Math.min(150, Number(user.stats.winStreak || 0) * 25), "Win streak", "win_streak");
+    if (!isSpy && civiliansWin && lobby.spies.every((spyId) => Number(finalVotes?.[spyId] || 0) > 0)) add(50, "Clean teamwork", "flawless_civilians");
+    if (!hasRecentDailyFirstMatch(user.economy.lastDailyMatchAt, now)) add(100, "First game of the day", "daily_first_match");
+    if (longMatch) add(35, "Long game", "long_match");
+    if (friendMatchAccountIds.has(user.id)) add(25, "Played with friends", "social_friend");
 
     rewards.push({ user, player, isSpy, won, total, lines });
   }
@@ -2577,7 +2637,7 @@ function buildEconomyRewardsForGame(lobby, civiliansWin, finalVotes, suspected) 
   const mvp = rewards.slice().sort((a, b) => b.total - a.total)[0];
   if (mvp && mvp.total > 0) {
     mvp.total += 100;
-    mvp.lines.push({ amount: 100, label: "MVP партии", code: "mvp" });
+    mvp.lines.push({ amount: 100, label: "Game MVP", code: "mvp" });
     mvp.user.stats.mvpAwards = Number(mvp.user.stats.mvpAwards || 0) + 1;
   }
 
@@ -2634,14 +2694,17 @@ function awardMatchExpRewards(lobby, civiliansWin, finalVotes = {}) {
       lines.push({ amount, label, code });
     };
 
-    add(won ? MATCH_XP_REWARDS.WIN : MATCH_XP_REWARDS.LOSS, won ? "Победа в матче" : "Поражение в матче", won ? "match_win" : "match_loss");
-    if (!isSpy && correctVoters.has(player.id)) add(MATCH_XP_REWARDS.CORRECT_SPY_VOTE, "Верный голос против шпиона", "correct_spy_vote");
+    add(won ? MATCH_XP_REWARDS.WIN : MATCH_XP_REWARDS.LOSS, won ? "Win" : "Game played", won ? "match_win" : "match_loss");
+    if (!isSpy && correctVoters.has(player.id)) add(MATCH_XP_REWARDS.CORRECT_SPY_VOTE, "Voted for the spy", "correct_spy_vote");
 
     const total = base * multiplier;
     if (total <= 0) continue;
 
-    economy.xp = Math.max(0, Math.floor(Number(economy.xp || 0))) + total;
-    economy.level = levelProgressFromXp(economy.xp).level;
+    // xpBoosterState() re-normalises user.economy into a new object, so write to the current one,
+    // not to `economy` taken before it (that copy is thrown away and the XP was lost)
+    const live = user.economy;
+    live.xp = Math.max(0, Math.floor(Number(live.xp || 0))) + total;
+    live.level = levelProgressFromXp(live.xp).level;
     user.updatedAt = new Date().toISOString();
     rewards.push({
       playerId: player.id,
@@ -2652,8 +2715,8 @@ function awardMatchExpRewards(lobby, civiliansWin, finalVotes = {}) {
       boosterActive: booster.active,
       matchId: lobby.matchId,
       lines,
-      xp: economy.xp,
-      level: economy.level
+      xp: live.xp,
+      level: live.level
     });
     console.info(`[xp] granted matchId=${lobby.matchId} code=${lobby.code} userId=${user.id} playerId=${player.id} amount=${total} base=${base} multiplier=${multiplier} boosterActive=${booster.active}`);
   }
@@ -2682,7 +2745,7 @@ function appendRecentGameHistory(lobby, finalResult) {
       role: isSpy ? "spy" : "civilian",
       won: Boolean(won),
       civiliansWin: Boolean(finalResult.civiliansWin),
-      playerName: player.name || "Игрок",
+      playerName: player.name || "Player",
       playerCount: (lobby.players || []).length,
       spyNames: finalResult.spyNames || []
     };
@@ -2977,6 +3040,20 @@ function emitSiteOnlineCount() {
 }
 
 // ---------- Keep 5 Delete 5 mode ----------
+// What K5D5 / King of the Hill rooms show next to a signed-in player: worn items and level (read live).
+function roomDecorations(accountId) {
+  const user = accountId ? findUserById(accountId) : null;
+  if (!user) return { cosmetics: {}, level: null };
+  return { cosmetics: { ...(user.economy?.equipped || {}) }, level: Number(user.economy?.level || 1), dev: hasRole(user, DEV_ROLE) };
+}
+
+// Recent games on the profile, for the room modes (Spy writes its own in appendRecentGameHistory).
+function appendRoomGameHistory(user, entry) {
+  ensureUserProgress(user);
+  const previous = Array.isArray(user.economy.recentGames) ? user.economy.recentGames : [];
+  user.economy.recentGames = [entry, ...previous.filter((item) => item?.matchId !== entry.matchId)].slice(0, RECENT_GAME_HISTORY_LIMIT);
+}
+
 function k5AccountForSocket(socket) {
   const user = socket.data.user;
   if (!user) return null;
@@ -3014,6 +3091,10 @@ function recordK5d5Results(room) {
       stats.k5AgreeGames = Number(stats.k5AgreeGames || 0) + 1;
     }
     user.stats = stats;
+    appendRoomGameHistory(user, {
+      mode: "k5", matchId: g.id, code: room.code, endedAt: new Date().toISOString(),
+      title: g.source?.title || "", cover: g.source?.cover || "", tracks: g.tracks.length, playerCount: g.roster.length
+    });
     user.updatedAt = new Date().toISOString();
     changed = true;
   }
@@ -3024,13 +3105,14 @@ const roomPresence = (socket) => {
   if (socket.data.user?.id) emitSocialForUserAndFriends(socket.data.user.id);
 };
 
-registerRoomSockets(io, {
+const k5Sockets = registerRoomSockets(io, {
   game: k5d5,
   deezer,
   isCodeTaken: (code) => Boolean(lobbies[code]) || koth.hasRoom(code),
   getAccount: k5AccountForSocket,
   onFinish: recordK5d5Results,
-  onPresence: roomPresence
+  onPresence: roomPresence,
+  decorate: roomDecorations
 });
 
 // ---------- King of the Hill mode ----------
@@ -3051,21 +3133,69 @@ function recordKothResults(room) {
     stats.kothGames = Number(stats.kothGames || 0) + 1;
     stats.kothDuels = Number(stats.kothDuels || 0) + duels;
     user.stats = stats;
+    const kings = g.style === "solo"
+      ? [g.solo[member.id]?.champion].filter((i) => i !== null && i !== undefined)
+      : (g.champions || []);
+    appendRoomGameHistory(user, {
+      mode: "koth", matchId: g.id, code: room.code, endedAt: new Date().toISOString(), style: g.style,
+      title: g.source?.title || "", cover: g.source?.cover || "", tracks: g.tracks.length, playerCount: g.roster.length,
+      king: kings.map((i) => g.tracks[i]?.title).filter(Boolean).join(" & ")
+    });
     user.updatedAt = new Date().toISOString();
     changed = true;
   }
   if (changed) saveUsersStore();
 }
 
-registerRoomSockets(io, {
+const kothSockets = registerRoomSockets(io, {
   prefix: "koth",
   game: koth,
   deezer,
   isCodeTaken: (code) => Boolean(lobbies[code]) || k5d5.hasRoom(code),
   getAccount: k5AccountForSocket,
   onFinish: recordKothResults,
-  onPresence: roomPresence
+  onPresence: roomPresence,
+  decorate: roomDecorations
 });
+
+// Open rooms of every mode for the home screen: Spy lobbies plus K5D5 / King of the Hill rooms the host opened.
+function openRoomsAllModes() {
+  const spy = publicOpenLobbies().filter((lobby) => lobby.playerCount < lobby.maxPlayers).map((lobby) => ({
+    mode: "spy", code: lobby.code, name: lobby.name, hostName: lobby.hostName, players: lobby.playerCount,
+    maxPlayers: lobby.maxPlayers, detail: `${lobby.rounds} rounds`, cover: "", createdAt: lobby.createdAt
+  }));
+  const rooms = [];
+  for (const [mode, game] of [["k5", k5d5], ["koth", koth]]) {
+    for (const room of game.rooms.values()) {
+      if (!room.isOpen || room.phase !== "lobby" || room.players.size >= 8) continue;
+      if (![...room.players.values()].some((player) => player.connected)) continue;
+      const host = room.players.get(room.hostId);
+      rooms.push({
+        mode, code: room.code, name: `${host?.name || "Host"}'s room`, hostName: host?.name || "Host",
+        players: room.players.size, maxPlayers: 8, detail: room.source?.title || "Picking the music",
+        cover: room.source?.cover || "", createdAt: new Date(room.createdAt || room.lastActive).toISOString()
+      });
+    }
+  }
+  return [...spy, ...rooms].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30);
+}
+
+// A player changed what they wear: Spy lobbies get player:cosmetics:update, room modes re-send their state.
+function pushCosmeticsToRooms(socket, user) {
+  syncUserProfileInLobbies(user);
+  for (const lobby of Object.values(lobbies)) {
+    const player = lobby.players.find((entry) => entry.id === socket.id || (entry.accountId && entry.accountId === user.id));
+    if (!player) continue;
+    player.equippedCosmetics = { ...(user.economy.equipped || {}) };
+    io.to(lobby.code).emit("player:cosmetics:update", { playerId: player.id, equippedCosmetics: { ...(user.economy.equipped || {}) } });
+    emitLobbyUpdate(lobby.code);
+  }
+  for (const [game, sockets] of [[k5d5, k5Sockets], [koth, kothSockets]]) {
+    for (const room of game.rooms.values()) {
+      if ([...room.players.values()].some((player) => player.accountId === user.id)) sockets.broadcast(room);
+    }
+  }
+}
 
 // The K5D5 / King of the Hill room a signed-in player is connected to (friends see it as their activity).
 function k5RoomForAccount(userId) {
@@ -3138,7 +3268,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("leaderboard:get", ({ category = "games", limit = 10 } = {}, cb = () => {}) => {
-    cb({ success: true, ...buildLeaderboard(category, limit) });
+    cb({ success: true, ...buildLeaderboard(category, limit, socket.data.user?.id || "") });
   });
 
   socket.on("globalChat:send", ({ name, text } = {}, cb = () => {}) => {
@@ -3320,7 +3450,7 @@ io.on("connection", (socket) => {
 
   socket.on("economy:get", (cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы открыть магазин" });
+    if (!user) return cb({ error: "Sign in to open the shop" });
     ensureUserProgress(user);
     const isDev = hasRole(user, DEV_ROLE);
     const catalog = SHOP_CATALOG.filter((item) => isDev || !isDevShopItem(item));
@@ -3329,15 +3459,15 @@ io.on("connection", (socket) => {
 
   socket.on("xpBooster:get", (cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы использовать XP Booster" });
+    if (!user) return cb({ error: "Sign in to use the XP booster" });
     cb({ success: true, xpBooster: xpBoosterState(user), economy: publicEconomy(user) });
   });
 
   socket.on("xpBooster:activate", (cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы использовать XP Booster" });
+    if (!user) return cb({ error: "Sign in to use the XP booster" });
     const currentState = xpBoosterState(user);
-    if (!currentState.canActivate) return cb({ error: "XP Booster перезаряжается", xpBooster: currentState, economy: publicEconomy(user) });
+    if (!currentState.canActivate) return cb({ error: "The XP booster is recharging", xpBooster: currentState, economy: publicEconomy(user) });
     const now = Date.now();
     user.economy.xpBoosterActiveUntil = new Date(now + XP_BOOSTER_DURATION_MS).toISOString();
     user.economy.xpBoosterCooldownUntil = new Date(now + XP_BOOSTER_COOLDOWN_MS).toISOString();
@@ -3350,15 +3480,15 @@ io.on("connection", (socket) => {
 
   socket.on("dailyReward:get", (cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы получать ежедневную награду" });
+    if (!user) return cb({ error: "Sign in to get the daily reward" });
     cb({ success: true, ...dailyRewardState(user) });
   });
 
   socket.on("dailyReward:claim", (cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы получать ежедневную награду" });
+    if (!user) return cb({ error: "Sign in to get the daily reward" });
     const currentState = dailyRewardState(user);
-    if (!currentState.canClaim) return cb({ error: "Новая награда будет доступна позже", dailyReward: currentState });
+    if (!currentState.canClaim) return cb({ error: "The next reward is not ready yet", dailyReward: currentState });
     addVinylTransaction(user, currentState.rewardAmount, "daily_reward", { intervalHours: 24, cycleDay: currentState.cycleDay });
     user.economy.dailyRewardStreak = currentState.cycleDay;
     user.economy.lastDailyRewardAt = new Date().toISOString();
@@ -3371,15 +3501,15 @@ io.on("connection", (socket) => {
 
   socket.on("shop:purchase", ({ itemId } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы покупать косметику" });
+    if (!user) return cb({ error: "Sign in to buy items" });
     ensureUserProgress(user);
     const item = catalogItemById(String(itemId || ""));
-    if (!item) return cb({ error: "Предмет не найден" });
-    if (item.achievementOnly) return cb({ error: "Этот предмет открывается достижением" });
-    if (isDevShopItem(item)) return cb({ error: "DEV-предметы не продаются" });
-    if (user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Уже в коллекции" });
+    if (!item) return cb({ error: "Item not found" });
+    if (item.achievementOnly) return cb({ error: "This item comes from an achievement" });
+    if (isDevShopItem(item)) return cb({ error: "DEV items are not for sale" });
+    if (user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "You already have it" });
     const isDev = hasRole(user, DEV_ROLE);
-    if (!isDev && user.economy.vinyls < item.price) return cb({ error: "Недостаточно Vinyls" });
+    if (!isDev && user.economy.vinyls < item.price) return cb({ error: "Not enough Vinyls" });
     if (!isDev) addVinylTransaction(user, -item.price, "shop_purchase", { itemId: item.id });
     user.economy.ownedCosmetics.push(item.id);
     user.updatedAt = new Date().toISOString();
@@ -3390,34 +3520,38 @@ io.on("connection", (socket) => {
 
   socket.on("shop:equip", ({ itemId } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы экипировать косметику" });
+    if (!user) return cb({ error: "Sign in to equip items" });
     ensureUserProgress(user);
     const item = catalogItemById(String(itemId || ""));
-    if (!item) return cb({ error: "Предмет не найден" });
-    if (!hasRole(user, DEV_ROLE) && !user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Сначала купи или открой предмет" });
+    if (!item) return cb({ error: "Item not found" });
+    if (!hasRole(user, DEV_ROLE) && !user.economy.ownedCosmetics.includes(item.id)) return cb({ error: "Buy or unlock the item first" });
     const category = SHOP_CATEGORIES.find((entry) => entry.id === item.category);
-    if (!category) return cb({ error: "Категория недоступна" });
+    if (!category) return cb({ error: "This category is not available" });
     user.economy.equipped[category.equipSlot] = item.id;
     user.updatedAt = new Date().toISOString();
-    syncUserProfileInLobbies(user);
-    for (const lobby of Object.values(lobbies)) {
-      const player = lobby.players.find((entry) => entry.id === socket.id || (entry.accountId && entry.accountId === user.id));
-      if (!player) continue;
-      player.equippedCosmetics = { ...(user.economy.equipped || {}) };
-      console.log(`[CS] player equipped:${JSON.stringify(player.equippedCosmetics || {})}`);
-      io.to(lobby.code).emit("player:cosmetics:update", {
-        playerId: player.id,
-        equippedCosmetics: { ...(user.economy.equipped || {}) }
-      });
-    }
+    pushCosmeticsToRooms(socket, user);
     saveUsersStore();
     cb({ success: true, item, economy: publicEconomy(user), profile: profileForSocket(socket) });
     io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
   });
 
+  socket.on("shop:unequip", ({ slot } = {}, cb = () => {}) => {
+    const user = socket.data.user;
+    if (!user) return cb({ error: "Sign in to change your items" });
+    ensureUserProgress(user);
+    const category = SHOP_CATEGORIES.find((entry) => entry.equipSlot === String(slot || ""));
+    if (!category) return cb({ error: "This category is not available" });
+    delete user.economy.equipped[category.equipSlot];
+    user.updatedAt = new Date().toISOString();
+    pushCosmeticsToRooms(socket, user);
+    saveUsersStore();
+    cb({ success: true, economy: publicEconomy(user), profile: profileForSocket(socket) });
+    io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
+  });
+
   socket.on("dev:command", ({ command } = {}, cb = () => {}) => {
     const actor = socket.data.user;
-    if (!actor || !hasRole(actor, DEV_ROLE)) return cb({ error: "Недостаточно прав" });
+    if (!actor || !hasRole(actor, DEV_ROLE)) return cb({ error: "Not allowed" });
     const parsed = parseDevCommandInput(command);
     if (parsed.error) return cb({ error: parsed.error });
     if (parsed.type === "help") {
@@ -3444,6 +3578,7 @@ io.on("connection", (socket) => {
       });
     }
     if (parsed.type === "createPromoCode") {
+      if (!pool) return cb({ error: "Promo codes need the database. They are off in local mode" });
       const promoCode = String(parsed.code || "").trim().toUpperCase();
       if (!promoCode) return cb({ error: "Missing required arguments" });
       if (!["vinyls", "xp", "item"].includes(String(parsed.rewardType || "").toLowerCase())) return cb({ error: "Invalid reward format" });
@@ -3495,12 +3630,12 @@ io.on("connection", (socket) => {
     if (parsed.type === "giveNicknameColor") {
       const wanted = normalizeShopItemName(parsed.colorName);
       const item = SHOP_CATALOG.find((entry) => entry.category === "nicknameColor" && normalizeShopItemName(entry.name) === wanted);
-      if (!item) return cb({ error: "Цвет не найден в магазине" });
+      if (!item) return cb({ error: "Colour not found in the shop" });
       grantShopItemToUser(target, item);
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
-      return cb({ success: true, output: [`${target.username}: выдан и экипирован ${item.name}`] });
+      return cb({ success: true, output: [`${target.username}: got and equipped ${item.name}`] });
     }
     if (["giveAvatarFrame", "giveProfileBanner", "giveShopItem"].includes(parsed.type)) {
       const wanted = normalizeShopItemName(parsed.itemName);
@@ -3508,12 +3643,12 @@ io.on("connection", (socket) => {
       const item = parsed.type === "giveShopItem"
         ? SHOP_CATALOG.find((entry) => normalizeShopItemName(entry.name) === wanted)
         : SHOP_CATALOG.find((entry) => entry.category === categoryByType[parsed.type] && normalizeShopItemName(entry.name) === wanted);
-      if (!item) return cb({ error: "Предмет не найден в магазине" });
+      if (!item) return cb({ error: "Item not found in the shop" });
       grantShopItemToUser(target, item);
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
-      return cb({ success: true, output: [`${target.username}: выдан и экипирован ${item.name}`] });
+      return cb({ success: true, output: [`${target.username}: got and equipped ${item.name}`] });
     }
     if (parsed.type === "addVinyls") {
       addVinylTransaction(target, Math.max(1, Math.floor(parsed.amount)), "dev_grant");
@@ -3548,15 +3683,15 @@ io.on("connection", (socket) => {
     if (parsed.type === "rainbowNicknameColor") {
       const available = SHOP_CATALOG.filter((entry) => entry.category === "nicknameColor");
       const item = available[Math.floor(Math.random() * available.length)];
-      if (!item) return cb({ error: "Цвета не найдены" });
+      if (!item) return cb({ error: "No colours found" });
       if (!target.economy.ownedCosmetics.includes(item.id)) target.economy.ownedCosmetics.push(item.id);
       target.economy.equipped.nicknameColor = item.id;
       target.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${target.id}`).emit("profile:updated", { profile: { user: publicUser(target), guest: false } });
-      return cb({ success: true, output: [`${target.username}: случайный цвет => ${item.name}`] });
+      return cb({ success: true, output: [`${target.username}: random colour => ${item.name}`] });
     }
-    return cb({ error: "Команда не выполнена" });
+    return cb({ error: "Command failed" });
   });
 
   socket.on("social:get", (cb = () => {}) => {
@@ -3567,19 +3702,20 @@ io.on("connection", (socket) => {
 
   socket.on("promo:redeem", async ({ code } = {}, cb = () => {}) => {
     const user = socket.data.user;
-    if (!user) return cb({ error: "Войди в аккаунт, чтобы активировать промокод" });
+    if (!user) return cb({ error: "Sign in to redeem a promo code" });
     const normalizedCode = String(code || "").trim().toUpperCase();
-    if (!normalizedCode) return cb({ error: "Промокод не найден" });
+    if (!normalizedCode) return cb({ error: "Promo code not found" });
+    if (!pool) return cb({ error: "Promo codes need the database. They are off in local mode" });
     ensureUserProgress(user);
     try {
       const { rows } = await pool.query("SELECT * FROM promo_codes WHERE code = $1 LIMIT 1", [normalizedCode]);
       const promo = rows[0];
-      if (!promo || !promo.active) return cb({ error: "Промокод не найден" });
+      if (!promo || !promo.active) return cb({ error: "Promo code not found" });
       const now = Date.now();
-      if (Date.parse(promo.expires_at) < now) return cb({ error: "Промокод истёк" });
-      if (Number(promo.used_count || 0) >= Number(promo.usage_limit || 0)) return cb({ error: "Лимит использований исчерпан" });
+      if (Date.parse(promo.expires_at) < now) return cb({ error: "This promo code has expired" });
+      if (Number(promo.used_count || 0) >= Number(promo.usage_limit || 0)) return cb({ error: "This promo code is used up" });
       const already = await pool.query("SELECT id FROM promo_redemptions WHERE user_id = $1 AND promo_id = $2 LIMIT 1", [Number(user.id), Number(promo.id)]);
-      if (already.rows[0]) return cb({ error: "Промокод уже использован" });
+      if (already.rows[0]) return cb({ error: "You already used this promo code" });
       const rewardLabel = grantPromoReward(user, promo);
       await pool.query("BEGIN");
       await pool.query("INSERT INTO promo_redemptions (user_id, promo_id) VALUES ($1, $2)", [Number(user.id), Number(promo.id)]);
@@ -3588,10 +3724,10 @@ io.on("connection", (socket) => {
       user.updatedAt = new Date().toISOString();
       saveUsersStore();
       io.to(`user:${user.id}`).emit("profile:updated", { profile: profileForSocket(socket) });
-      cb({ success: true, message: `Промокод активирован: ${rewardLabel}`, economy: publicEconomy(user), profile: profileForSocket(socket) });
+      cb({ success: true, message: `Promo code redeemed: ${rewardLabel}`, economy: publicEconomy(user), profile: profileForSocket(socket) });
     } catch (error) {
       await pool.query("ROLLBACK").catch(() => {});
-      cb({ error: error?.message === "INVALID_PROMO_ITEM" ? "Промокод не найден" : "Промокод не найден" });
+      cb({ error: error?.message === "INVALID_PROMO_ITEM" ? "Promo code not found" : "Promo code not found" });
     }
   });
 
@@ -3707,7 +3843,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("getOpenLobbies", (cb = () => {}) => {
-    cb({ success: true, lobbies: publicOpenLobbies() });
+    cb({ success: true, lobbies: publicOpenLobbies(), rooms: openRoomsAllModes() });
   });
 
   socket.on("createLobby", ({ name, reconnectToken, settings, lobbyName, isOpen } = {}, cb = () => {}) => {

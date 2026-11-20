@@ -156,6 +156,7 @@
             <button class="btn" data-mus="next" aria-label="Next track">Next</button>
           </div>
           <label class="field"><span>Music volume</span><input type="range" min="0" max="1" step="0.05" value="${volume}" data-mus="vol" aria-label="Music volume"></label>
+          <label class="switch-row"><span>Interface sounds</span><input type="checkbox" data-mus="sfx" ${MS.sfx && MS.sfx.on ? 'checked' : ''}><i aria-hidden="true"></i></label>
           <p class="empty-note">Music plays in the menu, 70% quieter in a room lobby, and stops when a game starts.</p>
         </div>`;
       const el = MS.sheet.open('music', { title: 'Music', cls: 'narrow', body: body() });
@@ -169,6 +170,11 @@
         if (b.dataset.mus === 'prev') MS.music.next(-1);
       });
       el.addEventListener('input', (e) => { if (e.target.dataset.mus === 'vol') MS.music.setVolume(e.target.value); });
+      el.addEventListener('change', (e) => {
+        if (e.target.dataset.mus !== 'sfx' || !MS.sfx) return;
+        MS.sfx.set(e.target.checked);
+        MS.sfx.play('tap');
+      });
       const obs = new MutationObserver(() => { if (!document.body.contains(el)) { off(); obs.disconnect(); } });
       obs.observe(document.getElementById('sheets'), { childList: true });
     },

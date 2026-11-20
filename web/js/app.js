@@ -11,6 +11,10 @@
   let booted = false;
   let homeMessage = '';
   let busy = false;
+  // home hub page: play | shop | leaderboard | profile (the page modules live in shop.js, leaderboard.js, profile.js)
+  const VIEWS = ['play', 'shop', 'leaderboard', 'profile'];
+  let hubView = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'play';
+  let mountedPage = null;
 
   const MODES = {
     spy: { title: 'Spy', blurb: 'Everyone gets a theme except the spy. Play tracks that fit it and find who is faking.', meta: '3 to 8 players' },
@@ -96,27 +100,24 @@
       <header class="topnav" data-build style="--b:0">
         <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i class="odd"></i></span><b>MusicSpy</b></div>
         <nav class="nav-tabs" aria-label="Main">
-          <button class="nav-tab active" data-act="nav" data-v="play" aria-current="page">Play</button>
-          <button class="nav-tab" data-act="nav" data-v="shop">Shop<span class="soon-dot" aria-label="coming soon"></span></button>
-          <button class="nav-tab" data-act="nav" data-v="leaderboard">Leaderboard<span class="soon-dot" aria-label="coming soon"></span></button>
-          <button class="nav-tab" data-act="nav" data-v="profile">Profile</button>
+          ${['play', 'shop', 'leaderboard', 'profile'].map((v) => `<button class="nav-tab ${hubView === v ? 'active' : ''}" data-act="nav" data-v="${v}" ${hubView === v ? 'aria-current="page"' : ''}>${v.charAt(0).toUpperCase()}${v.slice(1)}</button>`).join('')}
         </nav>
         <div class="nav-right">
-          <button class="pill" data-act="stub" data-v="vinyls" aria-label="Vinyls, coming soon">${vinylIcon}<b>${A.user && A.user.economy ? Number(A.user.economy.vinyls || 0).toLocaleString('en-US') : '0'}</b></button>
+          <button class="pill" data-act="wallet" aria-label="Vinyls">${vinylIcon}<b data-vinyls>${A.user && A.user.economy ? Number(A.user.economy.vinyls || 0).toLocaleString('en-US') : '0'}</b></button>
           ${MS.music.buttonHtml()}
-          <button class="icon-btn" data-act="stub" data-v="chat" aria-label="Global chat, coming soon">${MS.icon.chat}</button>
+          <button class="icon-btn" data-act="globalChat" aria-label="Global chat">${MS.icon.chat}</button>
           <button class="icon-btn" data-act="openFriends" aria-label="Friends">${MS.icon.friends}${reqs ? `<span class="badge">${reqs}</span>` : ''}</button>
-          <button class="avatar-btn" data-act="openAccount" aria-label="${A.user ? 'Account' : 'Sign in'}">${MS.avatar(me, 'sm')}</button>
+          <button class="avatar-btn" data-act="${A.user ? 'nav' : 'openAccount'}" data-v="profile" aria-label="${A.user ? 'Your profile' : 'Sign in'}">${MS.avatar(me, 'sm')}</button>
         </div>
       </header>`;
   }
 
   function bottomNav() {
-    const item = (v, label, icon, soon) => `<button class="bnav-item ${v === 'play' ? 'active' : ''}" data-act="nav" data-v="${v}">${icon}<span>${label}</span>${soon ? '<i class="soon-dot"></i>' : ''}</button>`;
+    const item = (v, label, icon) => `<button class="bnav-item ${v === hubView ? 'active' : ''}" data-act="nav" data-v="${v}">${icon}<span>${label}</span></button>`;
     return `<nav class="bottom-nav" aria-label="Main">
       ${item('play', 'Play', MS.icon.play)}
-      ${item('shop', 'Shop', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>', true)}
-      ${item('leaderboard', 'Leaders', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>', true)}
+      ${item('shop', 'Shop', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>')}
+      ${item('leaderboard', 'Leaders', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>')}
       ${item('profile', 'Profile', MS.icon.user)}
     </nav>`;
   }
@@ -164,20 +165,24 @@
   function playerCard() {
     const A = MS.account;
     const u = A.user;
-    const level = u && u.economy && u.economy.level ? u.economy.level : 1;
-    const xpPct = u && u.economy && u.economy.levelProgress ? Math.round((u.economy.levelProgress.progress || 0) * 100) : 0;
+    const pr = MS.econ.progress();
+    const level = u ? pr.level : 1;
+    const xpPct = u ? pr.progress : 0;
+    const booster = MS.econ.booster();
+    const me = u ? { ...u, name: u.displayName || u.username } : { name: A.guestName || '?' };
+    const banner = u ? MS.cos.banner(me) : '';
     return `
       <article class="player-card" data-build style="--b:3">
-        <div class="pc-banner" aria-hidden="true"><i></i><i></i></div>
+        <div class="pc-banner ${banner ? 'worn' : ''}" aria-hidden="true" style="${banner ? `background:${banner}` : ''}"><i></i><i></i></div>
         <div class="pc-main">
-          <div class="pc-avatar">${MS.avatar(u ? { ...u, name: u.displayName } : { name: A.guestName || '?' }, 'lg')}<button class="level-ring" data-act="stub" data-v="level" aria-label="Level ${level}, coming soon"><b>${level}</b></button></div>
+          <div class="pc-avatar">${MS.avatar(me, 'lg')}<button class="level-ring" style="--p:${xpPct}" data-act="openLevel" aria-label="Level ${level}"><b>${level}</b></button></div>
           <div class="pc-name">
-            <b>${esc(u ? (u.displayName || u.username) : (A.guestName || 'Guest'))}</b>
+            <b>${u ? MS.cos.nick(me.name, me) : esc(A.guestName || 'Guest')}</b>
             <small>${u ? `@${esc(u.username)}` : 'Playing as a guest'}</small>
           </div>
-          <button class="btn small" data-act="openAccount">${u ? 'Profile' : 'Sign in'}</button>
+          <button class="btn small" data-act="${u ? 'nav' : 'openAccount'}" data-v="profile">${u ? 'Profile' : 'Sign in'}</button>
         </div>
-        <button class="pc-xp" data-act="stub" data-v="level"><span>Level ${level}</span><span class="xp-bar"><i style="width:${xpPct}%"></i></span><span class="tag">Soon</span></button>
+        <button class="pc-xp" data-act="openLevel"><span>Level ${level}</span><span class="xp-bar"><i style="width:${xpPct}%"></i></span>${booster && booster.active ? `<span class="tag solid">XP x${booster.displayMultiplier}</span>` : u ? `<span class="pc-xp-left">${MS.econ.fmt(pr.left)} XP to ${level + 1}</span>` : '<span class="pc-xp-left">Sign in to level up</span>'}</button>
         ${u ? '' : `<label class="field pc-field"><span>Nickname</span><input id="nameInput" maxlength="18" autocomplete="nickname" placeholder="What should we call you" value="${esc(A.guestName)}"></label>`}
       </article>`;
   }
@@ -198,16 +203,37 @@
       </article>`;
   }
 
-  function stubCards() {
+  function sideCards() {
     return `
-      <button class="side-card stub-card" data-act="stub" data-v="daily" data-build style="--b:5">
-        <span class="side-label">Daily reward <span class="tag">Soon</span></span>
-        <span class="days">${[1, 2, 3, 4, 5, 6, 7].map((d) => `<i class="${d === 1 ? 'today' : ''}">${d}</i>`).join('')}</span>
-      </button>
-      <button class="side-card stub-card" data-act="stub" data-v="rooms" data-build style="--b:6">
-        <span class="side-label">Open rooms <span class="tag">Soon</span></span>
-        <span class="stub-line">Join a public game without a code</span>
-      </button>`;
+      <button class="side-card daily-card" id="dailyCard" data-act="daily" data-build style="--b:5">${MS.econ.dailyCardHtml()}</button>
+      <div class="side-card rooms-card" id="roomsCard" data-build style="--b:6">${MS.social.roomsHtml()}</div>`;
+  }
+
+  function refreshDaily() {
+    MS.econ.refreshDaily().then(() => {
+      const card = $('#dailyCard');
+      if (card) card.innerHTML = MS.econ.dailyCardHtml();
+    });
+  }
+
+  // Shop / Leaderboard / Profile: one page under the top navigation.
+  function renderPage() {
+    const page = MS.pages[hubView];
+    document.title = `${page.title} · MusicSpy`;
+    $('#app').innerHTML = `
+      <div class="screen home-screen page-screen">
+        ${topNav()}
+        <main class="hub-page" id="hubPage" data-page="${hubView}"></main>
+        ${bottomNav()}
+      </div>`;
+    mountedPage = page;
+    page.mount($('#hubPage'), pageOpts);
+    pageOpts = {};
+  }
+  let pageOpts = {};
+  function unmountPage() {
+    if (mountedPage && mountedPage.unmount) mountedPage.unmount();
+    mountedPage = null;
   }
 
   let buildTimer = null;
@@ -215,6 +241,14 @@
     if (current) return;
     MS.chat.setSource(null);
     MS.music.setContext('menu');
+    unmountPage();
+    if (hubView !== 'play') {
+      MS.social.stopRooms();
+      clearInterval(fanTimer);
+      backdropForHome();
+      renderPage();
+      return;
+    }
     document.title = `${MODES[selectedMode].title} · MusicSpy`;
     const invite = urlRoom();
     const mode = selectedMode;
@@ -238,7 +272,7 @@
           <aside class="hub-side">
             ${playerCard()}
             ${joinCard(invite)}
-            ${stubCards()}
+            ${sideCards()}
           </aside>
         </main>
         ${bottomNav()}
@@ -250,6 +284,8 @@
     if (build) buildTimer = setTimeout(() => { const s = $('.home-screen'); if (s) s.classList.remove('building', 'switching'); }, 1800);
     backdropForHome();
     startFan();
+    refreshDaily();
+    MS.social.startRooms();
     if (homeMessage) {
       MS.toast(homeMessage);
       homeMessage = '';
@@ -279,13 +315,17 @@
     MS.theme.go(mode, () => renderHome(true, true));
   }
 
-  function nav(where) {
-    if (where === 'play') {
-      if (current) return;
-      return renderHome();
-    }
-    if (where === 'profile') return MS.account.openAccount();
-    MS.ui.stub(where);
+  function nav(where, opts = {}) {
+    if (current || !VIEWS.includes(where)) return;
+    const name = $('#nameInput');
+    if (name) MS.account.guestName = name.value;
+    const same = where === hubView;
+    hubView = where;
+    pageOpts = opts;
+    history.replaceState(null, '', where === 'play' ? `/${location.search}` : `/${location.search}#${where}`);
+    if (MS.sfx && !same) MS.sfx.play('tap');
+    renderHome(where === 'play' && !same);
+    window.scrollTo(0, 0);
   }
 
   function readName() {
@@ -312,10 +352,15 @@
   }
 
   const appApi = (MS.app = {
+    nav,
+    inRoom: () => Boolean(current),
     roomStarted(controller) {
       if (current && current !== controller) current.destroy();
       current = controller;
       clearInterval(fanTimer);
+      unmountPage();
+      MS.social.stopRooms();
+      if (MS.gchat.isOpen) MS.gchat.toggle(false);
       saveRoom();
       history.replaceState(null, '', `/?room=${controller.code}`);
       MS.theme.apply(controller.mode);
@@ -449,12 +494,18 @@
   // Account changes (sign-in, friend requests, ...) only refresh the account parts of the home screen.
   MS.account.onChange(() => {
     if (current) return;
+    if (hubView !== 'play') {
+      const navEl = $('.topnav');
+      if (navEl) navEl.outerHTML = topNav();
+      return;
+    }
     const card = $('.player-card');
     const navEl = $('.topnav');
     if (!card || !navEl) return renderHome(false);
     const typed = $('#nameInput') ? $('#nameInput').value : null;
     card.outerHTML = playerCard();
     navEl.outerHTML = topNav();
+    if (!MS.econ.daily !== !MS.account.user) refreshDaily();
     if (typed !== null && $('#nameInput')) $('#nameInput').value = typed;
     bindNameInput();
   });
@@ -468,6 +519,13 @@
       case 'pickMode': pickMode(modeOf(el.dataset.v)); return;
       case 'nav': nav(el.dataset.v); return;
       case 'stub': MS.ui.stub(el.dataset.v); return;
+      case 'wallet': MS.econ.openWallet(); return;
+      case 'openLevel': MS.econ.openLevel(); return;
+      case 'daily': MS.econ.claimDaily(); return;
+      case 'globalChat': MS.gchat.toggle(); return;
+      case 'joinOpen': appApi.joinByCode(el.dataset.code); return;
+      case 'viewProfile': MS.profile.open(el.dataset.id); return;
+      case 'devConsole': MS.dev.open(); return;
       case 'howTo': MS.ui.howTo(current ? current.mode : selectedMode); return;
       case 'music': MS.music.openPanel(); return;
       case 'create': appApi.create(selectedMode); return;
@@ -494,6 +552,11 @@
   });
   document.addEventListener('keydown', (e) => {
     if (current && current.onKey) current.onKey(e);
+    // the dev console opens with the backslash key (same physical key in the Russian layout), anywhere outside text fields
+    if ((e.code === 'Backslash' || e.key === '\\') && !e.target.closest('input, textarea') && !MS.sheet.isOpen('dev') && MS.account.user && MS.account.user.permissions && MS.account.user.permissions.dev) {
+      e.preventDefault();
+      MS.dev.open();
+    }
   });
 
   // First paint before the socket connects.

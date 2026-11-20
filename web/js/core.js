@@ -74,7 +74,10 @@
     const inner = p.avatar
       ? `<img src="${MS.esc(p.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
       : MS.esc(name.trim().charAt(0).toUpperCase() || '?');
-    return `<span class="avatar ${size}" style="--c:${MS.esc(color)}">${inner}</span>`;
+    const face = `<span class="avatar ${size}" style="--c:${MS.esc(color)}">${inner}</span>`;
+    // the player's avatar frame (cosmetics.js), if they wear one
+    const frame = MS.cos ? MS.cos.frame(p) : '';
+    return frame ? `<span class="avatar-frame ${size}" style="--frame:${frame}">${face}</span>` : face;
   };
 
   // ---------- socket ----------
